@@ -1,0 +1,341 @@
+#
+# Copyright (C) 2005, 2013 Hong MingJian
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms are freely
+# permitted provided that the above copyright notice and this
+# paragraph and the following disclaimer are duplicated in all
+# such forms.
+#
+# This software is provided "AS IS" and without any express or
+# implied warranties, including, without limitation, the implied
+# warranties of merchantability and fitness for a particular
+# purpose.
+#
+# $Id: entry.S,v 1.1.1.1 2007/06/22 03:20:53 hmj Exp $
+#
+  .extern __bss_start
+  .extern _end
+  .extern _intr_vector
+  .extern _g_resched
+  .extern _schedule
+
+  .globl	_tmpstk
+
+#define KERNBASE 0xC0000000
+
+#define KDSEL 0x10
+#define KCSEL 0x8
+
+#define R(foo) ((foo)-KERNBASE)
+
+  .code32
+  .globl _entry
+_entry:
+  pushl %ebp
+  movl %esp, %ebp
+
+	pushl	$0x00000002
+	popfl
+
+	movw	%ds, %ax
+	movw	%ax, %fs
+	movw	%ax, %gs
+  movl $R(_tmpstk), %esp
+
+#
+# Zero BSS
+#
+  xorl %eax, %eax
+  movl $R(__bss_start), %edi
+  movl $R(_end), %ecx
+  subl %edi, %ecx
+  repnz stosb
+
+  call _cstart
+
+  hlt
+
+  .global	_inportb
+_inportb:
+  movw 4(%esp), %dx
+  inb	%dx, %al
+  movzx %al, %eax
+  ret
+
+  .global	_outportb
+_outportb:
+  movw 4(%esp), %dx
+  movb 8(%esp), %al
+  outb %al, %dx
+  movl $1000, %ecx
+_outportb.1:	
+  loop _outportb.1
+	ret
+
+  .global	_inportw
+_inportw:
+  movw 4(%esp), %dx
+  inw	%dx, %ax
+  movzx %ax, %eax
+  ret
+
+  .global	_outportw
+_outportw:
+  movw 4(%esp), %dx
+  movw 8(%esp), %ax
+  outw %ax, %dx
+  movl $1000, %ecx
+_outportw.1:	
+  loop _outportw.1
+  ret
+
+  .globl _exception_divide_error
+_exception_divide_error:
+	pushl	$0
+	pushl	$0
+	jmp		exception
+
+  .globl _exception_debug
+_exception_debug:
+	pushl	$0
+	pushl	$1
+	jmp		exception
+
+  .globl _exception_nmi
+_exception_nmi:
+	pushl   $0
+	pushl   $2
+	jmp		exception
+
+  .globl _exception_breakpoint
+_exception_breakpoint:
+	pushl   $0
+	pushl   $3
+	jmp		exception
+
+  .globl _exception_overflow
+_exception_overflow:
+	pushl	$0
+	pushl	$4
+	jmp		exception
+
+  .globl _exception_bounds_check
+_exception_bounds_check:
+	pushl	$0
+	pushl	$5
+	jmp		exception
+
+  .globl _exception_inval_opcode
+_exception_inval_opcode:
+	pushl	$0
+	pushl	$6
+	jmp		exception
+
+  .globl _exception_copr_not_avail
+_exception_copr_not_avail:
+	pushl	$0
+	pushl	$7
+	jmp		exception
+
+  .globl _exception_double_fault
+_exception_double_fault:
+	pushl	$8
+	jmp		exception
+
+  .globl _exception_copr_seg_overrun
+_exception_copr_seg_overrun:
+	pushl	$0
+	pushl	$9
+	jmp		exception
+
+  .globl _exception_inval_tss
+_exception_inval_tss:
+	pushl	$10
+	jmp		exception
+
+  .globl _exception_segment_not_present
+_exception_segment_not_present:
+	pushl	$11
+	jmp		exception
+
+  .globl _exception_stack_exception
+_exception_stack_exception:
+	pushl	$12
+	jmp		exception
+
+  .globl _exception_general_protection
+_exception_general_protection:
+	pushl	$13
+	jmp		exception
+
+  .globl _exception_page_fault
+_exception_page_fault:
+	pushl	$14
+	jmp		exception
+
+  .globl _exception_intel_reserved
+_exception_intel_reserved:
+	pushl	$0
+	pushl	$15
+	jmp		exception
+
+  .globl _exception_copr_error
+_exception_copr_error:
+	pushl	$0
+	pushl	$16
+	jmp		exception
+
+  .globl _exception_alignment_check
+_exception_alignment_check:
+	pushl	$17
+	jmp		exception
+
+  .globl _exception_machine_check
+_exception_machine_check:
+	pushl	$0
+	pushl	$18
+	jmp		exception
+
+  .globl _exception_simd_fp_exception
+_exception_simd_fp_exception:
+	pushl	$0
+	pushl	$19
+	jmp		exception
+
+exception:
+	pushal
+	call _exception
+  popal
+  addl $8, %esp
+  iret
+	
+#define hwint_master(irq)				\
+  pushl	$0;       \
+	pushl $irq;				\
+	pushal;					\
+	movl (_intr_vector + 4 * irq), %eax;	\
+	call *%eax;				\
+	movb  $0x20, %al;			\
+	outb  %al, $0x20;			\
+	cmpl $0, _g_resched;      \
+	je 1f;                   \
+	call _schedule;          \
+	1:;						\
+	popal;					\
+	addl $8, %esp;				\
+	iret
+
+  .globl _hwint00
+_hwint00:
+	hwint_master(0)
+
+  .globl _hwint01
+_hwint01:
+    hwint_master(1)
+
+  .globl _hwint02
+_hwint02:
+	hwint_master(2)
+
+  .globl _hwint03
+_hwint03:
+	hwint_master(3)
+  
+  .globl _hwint04
+_hwint04:
+	hwint_master(4)
+
+  .globl _hwint05
+_hwint05:
+	hwint_master(5)
+
+  .globl _hwint06
+_hwint06:
+	hwint_master(6)
+
+  .globl _hwint07
+_hwint07:
+	hwint_master(7)
+
+#define hwint_slave(irq)				\
+	pushl $0;				\
+	pushl $irq;				\
+	pushal;					\
+	movl (_intr_vector + 4 * irq), %eax;	\
+	call *%eax;				\
+	movb  $0x20, %al;			\
+	outb  %al, $0x20;			\
+	outb  %al, $0xa0;			\
+	cmpl $0, _g_resched;      \
+	je 2f;       			\
+	call _schedule;          \
+	2:;						\
+	popal;					\
+	addl $8, %esp;					\
+	iret
+
+  .globl _hwint08
+_hwint08:
+	hwint_slave(8)
+
+  .globl _hwint09
+_hwint09:
+	hwint_slave(9)
+
+  .globl _hwint10
+_hwint10:
+	hwint_slave(10)
+
+  .globl _hwint11
+_hwint11:
+	hwint_slave(11)
+
+  .globl _hwint12
+_hwint12:
+	hwint_slave(12)
+
+  .globl _hwint13
+_hwint13:
+	hwint_slave(13)
+
+  .globl _hwint14
+_hwint14:
+	hwint_slave(14)
+
+  .globl _hwint15
+_hwint15:
+	hwint_slave(15)
+
+  .globl _lgdt
+_lgdt:
+	movl	4(%esp),%eax
+	lgdt	(%eax)
+
+	/* flush the prefetch q */
+	jmp	1f
+	nop
+1:
+	/* reload "stale" selectors */
+	movl	$KDSEL,%eax
+	mov	%ax,%ds
+	mov	%ax,%es
+	mov	%ax,%gs
+	mov	%ax,%ss
+	mov	%ax,%fs
+
+	/* reload code selector by turning return into intersegmental return */
+	movl	(%esp),%eax
+	pushl	%eax
+	movl	$KCSEL,4(%esp)
+	lret
+
+  .globl _lidt
+_lidt:
+	movl	4(%esp),%eax
+	lidt	(%eax)
+	ret
+
+  .data
+	.space	0x2000		/* space for tmpstk - temporary stack */
+_tmpstk:

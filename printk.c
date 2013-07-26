@@ -1,0 +1,19 @@
+#include <stdarg.h>
+#include "utils.h"
+
+int printk(const char *fmt,...)
+{
+	char buf[1024];
+	va_list args;
+	int i, j;
+
+	va_start(args, fmt);
+	i=vsprintf(buf,fmt,args);
+	va_end(args);
+
+	for(j = 0; j < i; j++)
+		putchar(buf[j]);
+
+	return i;
+}
+

@@ -1,0 +1,31 @@
+OUTPUT_FORMAT("pei-i386")
+ENTRY(_start)
+SECTIONS {
+   . = 0x8000;
+   .text : {
+       *(.start)
+       *(.init)
+       *(.text)
+   }
+
+   . = ALIGN(4);
+   .rodata : {
+  	   *(.rodata)
+   }
+
+   . = ALIGN(4);
+   .data : {
+       *(.data)
+   }
+
+   . = ALIGN(4);
+   .bss : {
+       __bss_start__ = . ;
+       *(.bss)
+       *(COMMON)
+   }
+
+   . = ALIGN(4);
+   _end = .;
+}
+

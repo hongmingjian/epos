@@ -52,11 +52,11 @@
 /*#define USE_SBRK        (0) */
 /*#define USE_MMAP        (0) */
 
-#ifndef USE_PRINTF
-#define USE_PRINTF      (1)
-#endif
+//#ifndef USE_PRINTF
+//#define USE_PRINTF      (1)
+//#endif
 
-#include <string.h>
+//#include <string.h>
 
 #ifndef TLSF_USE_LOCKS
 #define	TLSF_USE_LOCKS 	(0)

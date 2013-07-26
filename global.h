@@ -18,7 +18,10 @@
 #define __CONCAT(x,y)		        __CONCAT1(x,y)
 #define __STRING(x)             #x              /* stringify without expanding x */
 #define __XSTRING(x)            __STRING(x)     /* expand x, then stringify */
+
+#ifndef __offsetof
 #define __offsetof(type, field) ( (size_t)( &( (type *) 0) -> field) )
+#endif
 
 #define min(x,y)			  ( ((x) > (y) ) ? (y) : (x) )
 #define max(x,y)			  ( ((x) < (y) ) ? (y) : (x) )

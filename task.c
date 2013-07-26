@@ -96,7 +96,7 @@ struct tcb* find_task(int tid)
 int task_create(void *stack_base, 
 	  void (*handler)(void *), void *param)
 {
-	static int tid = 0;
+	static int tid = 1;
 	struct tcb *new;
   uint32_t flags;
 
@@ -125,7 +125,7 @@ int task_create(void *stack_base,
   INIT_CONTEXT(new->context, new->stack_base, handler);
 
   PUSH_CONTEXT_STACK(new->context, param);
-  PUSH_CONTEXT_STACK(new->context, 0/*XXX*/);
+  PUSH_CONTEXT_STACK(new->context, 0);
 
 	save_flags_cli(flags);
   add_task(new);
@@ -318,27 +318,41 @@ static void foobar(void *pv)
 }
 #endif
 
-static void idle(void *pv)
+static void task0run(void *pv)
 {
 #ifdef _TESTING
     void *sem = sem_create(1);
-#endif
-	
-#ifdef _TESTING
     printk("%d: TID = %d\n\r", task_getid(), task_create(((char *)kmalloc(4096))+4096, foobar , (void *)sem));
 #endif
 
-    while(1) {
-        ;//printk("%d: %u\n\r", task_getid(), fib(30));
-    }
+    while(1)
+        ;
 }
+
+static struct tcb task0;
+extern char tmpstk;
 
 void init_task(void)
 {
   g_resched = 1;
 	g_task_running = NULL;
   g_task_all_head = NULL;
+  add_task(&task0);
 
-  printk("TID = %d\n\r", task_create(((char *)kmalloc(4096))+4096, idle, (void *)0x19770802));
+  task0.tid = 0;
+  task0.state = TASK_STATE_READY;
+  task0.quantum = DEFAULT_QUANTUM;
+  task0.stack_base = &tmpstk; /*XXX*/
+  task0.exit_code = 0;
+  task0.wait_cnt = 0;
+  task0.wait_head = NULL;
+  task0.wait_next = NULL;
+  task0.sem_next = NULL;
+  task0.all_next = NULL;
+
+  INIT_CONTEXT(task0.context, task0.stack_base, task0run);
+
+  PUSH_CONTEXT_STACK(task0.context, 0);
+  PUSH_CONTEXT_STACK(task0.context, 0);
 }
 

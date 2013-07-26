@@ -17,11 +17,11 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
-#include "libepc.h"
+#include "loader.h"
 
 /* Defines for accessing the upper and lower byte of an integer. */
-#define LOW_BYTE(x)         (x & 0x00FF)
-#define HI_BYTE(x)          ((x & 0xFF00) >> 8)
+#define LO_BYTE(x)           ((x) & 0xFF)
+#define HI_BYTE(x)          (((x) & 0xFF00) >> 8)
 
 /* Quick-access registers and ports for each DMA channel. */
 static unsigned char MaskReg[8]   = { 0x0A, 0x0A, 0x0A, 0x0A, 0xD4, 0xD4, 0xD4, 0xD4 };
@@ -50,7 +50,7 @@ static void _dma_xfer(unsigned char DMA_channel, unsigned char page, unsigned in
 
     /* Send the offset address.  The first byte is the low base offset, the */
     /* second byte is the high offset. */
-    outportb(AddrPort[DMA_channel], LOW_BYTE(offset));
+    outportb(AddrPort[DMA_channel], LO_BYTE(offset));
     outportb(AddrPort[DMA_channel], HI_BYTE(offset));
 
     outportb (0xd8,0xff);	//reset master flip-flop
@@ -59,7 +59,7 @@ static void _dma_xfer(unsigned char DMA_channel, unsigned char page, unsigned in
 //    outportb(PagePort[DMA_channel], page);
 
     /* Send the length of the data.  Again, low byte first. */
-    outportb(CountPort[DMA_channel], LOW_BYTE(length));
+    outportb(CountPort[DMA_channel], LO_BYTE(length));
     outportb(CountPort[DMA_channel], HI_BYTE(length));
 
     outportb (0x80,0);

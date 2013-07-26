@@ -32,7 +32,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
-#include "libepc.h"
+#include "loader.h"
 
 /**************************************************************************/
 
@@ -200,7 +200,7 @@ unsigned long init_delay(void)
     void (*pfnOld)(int irq)=intr_vector[IRQ_TIMER]; // Save ISR
 
     intr_vector[IRQ_TIMER] = delayCalibInt;  // Install ISR 
-    outportb(0x21, inportb(0x21) & ~0x01) ; // Enable the interrupt
+    enable_irq(IRQ_TIMER);
 
     /* Stage 1:  Coarse calibration                                   */
 

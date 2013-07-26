@@ -1,21 +1,6 @@
-#include "libepc.h"
+#include "loader.h"
 
 static unsigned char *SCREEN_BASE = (char *)0xB8000;
-
-void cls(void)
-{
-   unsigned int i;
-
-   for(i = 0; i < (80*25); i++) {
-      SCREEN_BASE[i*2  ] = 0x20;
-      SCREEN_BASE[i*2+1] = 0x07;
-   }
-
-   outportb(0x3d4, 0x0f);
-   outportb(0x3d5, 0);
-   outportb(0x3d4, 0x0e);
-   outportb(0x3d5, 0);
-}
 
 int putchar(int c)
 {

@@ -19,19 +19,19 @@ all: $(PROG).bin
 CFLAGS=		-fno-builtin -ffreestanding #-Wall
 LDFLAGS=	-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
-OBJS=		crt0.o loader.o console.o vsprintf.o utils.o delay.o floppy.o dma.o fat.o
+OBJS=		crt0.o loader.o putchar.o vsprintf.o utils.o delay.o floppy.o dma.o fat.o
 LIBS=
 
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
-	../../bin/winimage /h image.flp  /i $@
+	../../bin/winimage /h ../image.flp  /i $@
 
 debug:
-	-../../Bochs-2.6.2/bochsdbg.exe -q -f bochsrc.txt
+	-../../Bochs-2.6.2/bochsdbg.exe -q -f ../bochsrc.txt
 
 run:
-	-../../Bochs-2.6.2/bochs.exe -q -f bochsrc.txt
+	-../../Bochs-2.6.2/bochs.exe -q -f ../bochsrc.txt
 
 clean:
 	-$(RM)  *.o *.out *.bin *.*~ $(PROG).exe $(PROG).map

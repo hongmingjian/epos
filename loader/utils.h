@@ -1,34 +1,9 @@
-#ifndef UTILS_H
-#define UTILS_H 1
+#ifndef _UTILS_H
+#define _UTILS_H 1
 
-#include <sys/types.h>
+#include "loader.h"
 #include <stdarg.h>
 
-#define	LSB(u)		((u) & 0xFF)
-#define	MSB(u)		((u) >> 8)
-
-#define	ENTRIES(a)	(sizeof(a)/sizeof(a[0]))
-
-#ifndef __offsetof
-#define __offsetof(type, field) ((size_t)(&((type *)0)->field))
-#endif
-
-#ifndef NULL
-#define	NULL		((void *) 0)
-#endif
-
-#ifndef EOF
-#define	EOF		(-1)
-#endif
-
-
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-
-/*
- * Utilities
- */
 void *memcpy(void *, const void *, size_t);
 void *memset(void *, int, size_t);
 int   memcmp(const void *, const void *, size_t);
@@ -59,10 +34,13 @@ char toupper(char c);
 char tolower(char c);
 size_t strnlen(const char *str, size_t count);
 
-int sprintf(char * buf, const char *fmt, ...);
-int vsprintf(char *buf, const char *fmt, va_list args);
-
 int puts(const char *s);
 int printk(const char *fmt,...);
+
+/* ------------------------------------------------------------ */
+/* Support for functions implemented in vsprintf.c              */
+/* ------------------------------------------------------------ */
+int sprintf(char * buf, const char *fmt, ...);
+int vsprintf(char *buf, const char *fmt, va_list args);
 
 #endif /*UTILS_H*/

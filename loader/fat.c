@@ -8,14 +8,7 @@
  */
  
 #include "utils.h"
-#include "libepc.h"
-
-#ifdef DEBUG_FAT
-	#define dprintf	printk
-#else
-	#define dprintf
-#endif
-
+#include "loader.h"
 
 struct BOOTSECT {
     uint8_t    BS_jmpBoot[3];               /* jump inst E9xxxx or EBxx90 */
@@ -144,10 +137,10 @@ static struct FILE g_handles[FAT_MAX_FILDES];
 #define FirstSectOfClus(N) ((((N) - 2) * g_fat_struct.SectsPerClus) + g_fat_struct.FirstDataSect)
 #define SectNum2ClusNum(N) (((N) - g_fat_struct.FirstDataSect) / g_fat_struct.SectsPerClus + 2)
 
-static int fat_read_sect512(size_t logic_sect, char *sect_buf)
+static int do_read_sector(size_t lba, char *buf)
 {
-  uint8_t *buf = floppy_read_sector (logic_sect);
-  memcpy(sect_buf, buf, BYTES_PER_SECTOR);
+  uint8_t *p = floppy_read_sector (lba);
+  memcpy(buf, p, BYTES_PER_SECTOR);
   return 0;
 }
 
@@ -167,12 +160,10 @@ char* get_format83(const char *pathname)
 	int dir_len_count = 0, i;
 	
 	if(pathname == NULL || strlen(pathname) > 80 || *pathname != '\\') {
-		dprintf("[%s]@%d: invalid pre name\n", __FILE__, __LINE__);
 		return NULL;
 	}
 		
 	if(strlen(pathname) > 1 && pathname[strlen(pathname) - 1] == '\\') {
-		dprintf("[%s]@%d: invalid post name\n", __FILE__, __LINE__);
 		return NULL;
 	}
 		
@@ -187,7 +178,6 @@ char* get_format83(const char *pathname)
 				return format_name;
 			case '.':
 				if(dir_len_count > 8) {
-					dprintf("[%s]@%d: invalid name length\n", __FILE__, __LINE__);					
 					return NULL;
 				}
 				for(i = dir_len_count; i < 8; i++)
@@ -205,19 +195,16 @@ char* get_format83(const char *pathname)
 			case 0x3a: case 0x3b: case 0x3c: case 0x3d:
 			case 0x3e: case 0x3f: case 0x5b: case 0x5d:
 			case 0x7c:
-				dprintf("[%s]@%d: invalid char\n", __FILE__, __LINE__);				
 				return NULL;
 				
 			default:
 				if(pchar <= 0x20 && dir_len_count == 0) {
-					dprintf("[%s]@%d: invalid char\n", __FILE__, __LINE__);
 					return NULL;
 				}
 				
 				pname[dir_len_count++] = pchar;
 				
 				if(dir_len_count > 11) {
-					dprintf("[%s]@%d: over length\n", __FILE__, __LINE__);
 					return NULL;
 				}
 		}
@@ -246,7 +233,7 @@ uint32_t get_next_clus(uint32_t Cluster)
   ThisFATSecNum = RsvdSecCnt + (FATOffset / BytesPerSector);
   ThisFATEntOffset = FATOffset % BytesPerSector;
 
-  fat_read_sect512(ThisFATSecNum, tmpbuf);
+  do_read_sector(ThisFATSecNum, tmpbuf);
 
   if(FATType == FAT_TYPE_FAT12) {
     uint32_t N = Cluster;
@@ -260,7 +247,7 @@ uint32_t get_next_clus(uint32_t Cluster)
             /* sector). It is assumed that this is the strategy used here  */
             /* which makes this if test for a sector boundary span         */
             /* unnecessary.                                                */
-      fat_read_sect512(ThisFATSecNum+1, tmpbuf+BytesPerSector);
+      do_read_sector(ThisFATSecNum+1, tmpbuf+BytesPerSector);
     }
 
     Cluster = *((uint16_t *) &tmpbuf[ThisFATEntOffset]);
@@ -294,7 +281,7 @@ uint32_t sector_search(uint32_t lba, const char filename[11], struct FILE *fp)
 	struct DIRENTRY* dir;
 	uint32_t start_cluster;
 	
-	fat_read_sect512(lba, buf);
+	do_read_sector(lba, buf);
 	
 	dir_count = (g_fat_struct.BytsPerSect) / sizeof(struct DIRENTRY);
 	for(i = 0, dir = (struct DIRENTRY*)buf; i < dir_count; i++, dir++) {
@@ -395,7 +382,7 @@ void init_fat()
 	struct BPB *pbpb;
 	char buf[BYTES_PER_SECTOR];
 	
-	fat_read_sect512(0, buf);
+	do_read_sector(0, buf);
 	
 	pbpb = (struct BPB*)&buf[BS_BPB_OFFSET];
 	g_fat_struct.SectsPerClus = pbpb->BPB_SecPerClus;
@@ -432,7 +419,7 @@ void init_fat()
 	}
 }
 
-int fat_open(const char *pathname, int flag)
+int fat_fopen(const char *pathname, int flag)
 {
 	char *format83_pathname;
 	int i;
@@ -452,8 +439,6 @@ int fat_open(const char *pathname, int flag)
 	if(format83_pathname == NULL)
 		return -2;
 	
-	dprintf("format name=%s\n", format83_pathname);
-	
 	first_sector = fat_locate(format83_pathname, fp);
 	if(first_sector == -1)
 		return -3;
@@ -466,50 +451,27 @@ int fat_open(const char *pathname, int flag)
 	return i;
 }
 
-int fat_getlen(int fd)
+int fat_fgetsize(int fd)
 {
-	struct FILE *fp;
-	
 	if(fd < 0 || fd >= FAT_MAX_FILDES)
 		return -1;
 		
-	fp = &g_handles[fd];
-	
-	return fp->Dir.DIR_FileSize;
+	return g_handles[fd].Dir.DIR_FileSize;
 }
 
-int fat_close(int fd)
+int fat_fclose(int fd)
 {
-	struct FILE *fp;
-
 	if(fd < 0 || fd >= FAT_MAX_FILDES)
 		return -1;
-	fp = &g_handles[fd];
 
-#if 0
-	struct DIRENTRY *dir;
-	struct FatDateTime tm;
-	char buf[BYTES_PER_SECTOR];
-	
-	if(fat_datetime(&tm) > 0) {
-		fp->Dir.DIR_LstAccDate = fp->Dir.DIR_WrtDate = tm.Date;
-		fp->Dir.DIR_WrtTime = tm.Time;
-	
-		fat_read_sect512(fp->DirSect, buf);
-	
-		dir = (struct DIRENTRY *)buf;
-		dir += fp->DirIndex;
-	
-		memcpy(dir, &(fp->Dir), sizeof(struct DIRENTRY));
-		fat_write_sect512(fp->DirSect);
-	}
-#endif
-	
+	if(g_handles[fd].valid == 0)
+    return -1;
+
 	g_handles[fd].valid = 0;
 	return 0;
 }
 
-int fat_read(int fd, void *buf, size_t count)
+int fat_fread(int fd, void *buf, size_t count)
 {
 	int read_bytes = 0;
 	int i;
@@ -540,7 +502,7 @@ int fat_read(int fd, void *buf, size_t count)
 	
 	while(1) {
 		for(i = 0; i < g_fat_struct.SectsPerClus; i++) {
-			fat_read_sect512(fp->CurrentSect, tmpbuf);
+			do_read_sector(fp->CurrentSect, tmpbuf);
 			
 			read_bytes_per_sector = (g_fat_struct.BytsPerSect - fp->SectOffset) > (count - read_bytes)?
 				(count - read_bytes): (g_fat_struct.BytsPerSect - fp->SectOffset);

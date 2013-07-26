@@ -1,4 +1,4 @@
-#include "libepc.h"
+#include "loader.h"
 #include "utils.h"
 
 #define FDC_DOR  (0x3f2)   /* Digital Output Register */
@@ -176,7 +176,7 @@ static void reset(void)
 void init_floppy()
 {
   intr_vector[IRQ_FLOPPY] = isr_floppy;
-  outportb(0x21, inportb(0x21) & ~0x40) ;
+  enable_irq(IRQ_FLOPPY);
 
   reset();
 }

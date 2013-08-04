@@ -19,6 +19,7 @@
   .extern _intr_vector
   .extern _g_resched
   .extern _schedule
+  .extern _g_task_running
 
   .globl	_tmpstk
 
@@ -35,7 +36,7 @@ _entry:
   pushl %ebp
   movl %esp, %ebp
 
-	pushl	$0x00000002
+	pushl	$0x2
 	popfl
 
 	movw	%ds, %ax
@@ -204,26 +205,79 @@ _exception_simd_fp_exception:
 	jmp		exception
 
 exception:
+  pushl %ds
+  pushl %es
+  pushl %fs
+  pushl %gs
 	pushal
+  movl $KDSEL, %eax
+  movw %ax, %ds
+  movw %ax, %es
+  movw %ax, %fs
+  movw %ax, %gs
 	call _exception
   popal
+  popl %gs
+  popl %fs
+  popl %es
+  popl %ds
   addl $8, %esp
   iret
 	
-#define hwint_master(irq)				\
-  pushl	$0;       \
-	pushl $irq;				\
-	pushal;					\
-	movl (_intr_vector + 4 * irq), %eax;	\
-	call *%eax;				\
-	movb  $0x20, %al;			\
-	outb  %al, $0x20;			\
-	cmpl $0, _g_resched;      \
-	je 1f;                   \
-	call _schedule;          \
-	1:;						\
-	popal;					\
-	addl $8, %esp;				\
+
+#define hwint_master(irq) \
+  pushal; \
+  pushl %ds; \
+  pushl %es; \
+  pushl %fs; \
+  pushl %gs; \
+  ; \
+  movl $KDSEL, %eax; \
+  movw %ax, %ds; \
+  movw %ax, %es; \
+  movw %ax, %fs; \
+  movw %ax, %gs; \
+  ; \
+  movl _g_task_running, %eax; \
+  cmpl $0, %eax; \
+  je 1f; \
+  movl 52(%esp), %ebx; \
+  andl $3, %ebx; \
+  jz 1f; \
+  ; \
+  movl %esp, %esi; \
+  movl %eax, %edi; \
+  subl $(17*4), %edi; \
+  movl $17, %ecx; \
+  movl %edi, %edx; \
+  ; \
+  cld; \
+  rep; \
+  movsd; \
+  ; \
+  movl %edx, %esp; \
+1:; \
+	pushl $irq; \
+	movl (_intr_vector + 4 * irq), %eax; \
+	call *%eax; \
+	addl $4, %esp; \
+  ; \
+	movb  $0x20, %al; \
+	outb  %al, $0x20; \
+  ; \
+	cmpl $0, _g_resched; \
+	je 2f; \
+	call _schedule; \
+2:; \
+  jmp _ret_from_syscall
+
+  .globl _ret_from_syscall
+_ret_from_syscall:
+  popl %gs
+  popl %fs
+  popl %es
+  popl %ds
+	popal
 	iret
 
   .globl _hwint00
@@ -258,22 +312,53 @@ _hwint06:
 _hwint07:
 	hwint_master(7)
 
-#define hwint_slave(irq)				\
-	pushl $0;				\
-	pushl $irq;				\
-	pushal;					\
-	movl (_intr_vector + 4 * irq), %eax;	\
-	call *%eax;				\
-	movb  $0x20, %al;			\
-	outb  %al, $0x20;			\
+#define hwint_slave(irq) \
+	pushal; \
+  pushl %ds; \
+  pushl %es; \
+  pushl %fs; \
+  pushl %gs; \
+  ; \
+  movl $KDSEL, %eax; \
+  movw %ax, %ds; \
+  movw %ax, %es; \
+  movw %ax, %fs; \
+  movw %ax, %gs; \
+  ; \
+  movl _g_task_running, %eax; \
+  cmpl $0, %eax; \
+  je 1f; \
+  movl 52(%esp), %ebx; \
+  andl $3, %ebx; \
+  jz 1f; \
+  ; \
+  movl %esp, %esi; \
+  movl %eax, %edi; \
+  subl $(17*4), %edi; \
+  movl $17, %ecx; \
+  movl %edi, %edx; \
+  ; \
+  cld; \
+  rep; \
+  movsd; \
+  ; \
+  movl %edx, %esp; \
+1:; \
+	pushl $irq; \
+	movl (_intr_vector + 4 * irq), %eax; \
+	call *%eax; \
+	addl $4, %esp; \
+  ; \
+	movb  $0x20, %al; \
+	outb  %al, $0x20; \
 	outb  %al, $0xa0;			\
-	cmpl $0, _g_resched;      \
-	je 2f;       			\
-	call _schedule;          \
-	2:;						\
-	popal;					\
-	addl $8, %esp;					\
-	iret
+  ; \
+	cmpl $0, _g_resched; \
+	je 2f; \
+	call _schedule; \
+2:; \
+  jmp _ret_from_syscall
+
 
   .globl _hwint08
 _hwint08:

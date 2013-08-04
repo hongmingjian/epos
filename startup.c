@@ -1,7 +1,7 @@
 #include "utils.h"
 #include "kernel.h"
 
-void (*intr_vector[NR_IRQ])(struct frame fr);
+void (*intr_vector[NR_IRQ])(uint32_t irq, struct context ctx);
 
 uint32_t g_mem_zone[MEM_ZONE_LEN];
 
@@ -17,14 +17,23 @@ uint32_t g_frame_count = 0;
 uint8_t *g_kern_heap_base;
 uint32_t g_kern_heap_size = 0;
 
-void isr_default(struct frame fr)
+/*
+    struct segment {
+      uint32_t base;
+      uint32_t length;
+      uint32_t flags;
+      
+      struct segment *next;
+    } *g_user_segment_head = NULL;
+*/
+
+void isr_default(uint32_t irq, struct context ctx)
 {
   //printk("IRQ=0x%02x\n\r", fr.trapno);
 }
 
 int do_page_fault(uint32_t vaddr, uint32_t code)
 {
-//  printk("page fault: 0x%08x, 0x%08x\n\r", vaddr, code);
   if((code & 1) == 0) {
     int i, found = 0;
     for(i = 0; i < g_frame_count; i++) {
@@ -36,14 +45,17 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
 
     if(found) {
       uint32_t paddr;
-      paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
       g_frame_freemap[i] = 1;
-      *vtopte(vaddr)=paddr|PTE_V|PTE_RW;
+      paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
+      if(vaddr==0xbfc20120)
+        code |= PTE_U;
+      *vtopte(vaddr)=paddr|PTE_V|PTE_RW|((code&4)?PTE_U:0);
       invlpg(vaddr);
-//      printk("0x%08x -> 0x%08x\n\r", vaddr, paddr);
+      printk("PF: 0x%08x(0x%08x) -> 0x%08x\n\r", vaddr, code, paddr);
       return 0;
     }
   }
+  printk("PF: 0x%08x(0x%08x) -> ????????\n\r", vaddr, code);
   return -1;
 }
 
@@ -132,9 +144,48 @@ void cstart(void)
   init_task();
   init_callout();
 
-  sti();
+#if 1
+  if(1){
+    g_task_running = task0;
+
+    __asm__ __volatile__ (
+      "movl %0, %%eax\n\t"
+      "movl (%%eax), %%eax\n\t"
+      "pushl $1f\n\t"
+      "popl 52(%%eax)\n\t"
+      "movl %%eax, %%esp\n\t"
+      "ret\n\t"
+      "1:\n\t"
+      :
+      :"m"(task0)
+      :"eax"
+    );
+  }
+
+  printk("I'm the task #%d\n\r", task_getid());
+#endif
+
+
+#if 1  
+  if(1){
+    uint32_t flags;
+    int tid;
+
+    save_flags_cli(flags);
+    do_page_fault(0x08048000, PTE_U);
+    restore_flags(flags);
+    *(char *)0x08048000 = 0xeb;
+    *(char *)0x08048001 = 0xfe;
+
+    tid = task_create(1, 0x08049000, (void *)0x08048000, 0);
+    printk("task #%d created\n\r", tid);
+//    printk("%d: task #0x%08x created\n\r", task_getid(), tid);
+
+  }
+#endif
+
 
   while(1)
-    ;
+    ;//putchar('+');
 }
 

@@ -68,48 +68,28 @@ void disable_irq(uint32_t irq)
  */
 void switch_to(struct tcb *new)
 {
-    if(g_task_running != NULL) {
-      __asm__(
-        "pushal\n\t"
-        "movl %0, %%eax\n\t"
-        "popl 0(%%eax)\n\t"
-        "popl 4(%%eax)\n\t"
-        "popl 8(%%eax)\n\t"
-        "popl 12(%%eax)\n\t"
-        "popl 16(%%eax)\n\t"
-        "popl 20(%%eax)\n\t"
-        "popl 24(%%eax)\n\t"
-        "popl 28(%%eax)\n\t"
-        "leal 1f, %%ecx\n\t"
-        "movl %%ecx, 40(%%eax)\n\t"
-        "pushl %%cs\n\t"
-        "popl 44(%%eax)\n\t"
-        "pushfl\n\t"
-        "popl 48(%%eax)\n\t"
-        ::"m"(g_task_running)
-        );
-    }
+  if(g_task_running != NULL) {
+    __asm__ __volatile__ (
+      "pushal\n\t"
+      "pushl $1f\n\t"
+      "movl %0, %%eax\n\t"
+      "movl %%esp, (%%eax)\n\t"
+      :
+      :"m"(g_task_running)
+      :"eax"
+    );
+  }
 
-  g_task_running = new;
-
-  __asm__(
-    "movl %0, %%eax\n\t"
-    "movl 12(%%eax), %%esp\n\t"
-    "pushl 48(%%eax)\n\t"
-    "pushl 44(%%eax)\n\t"
-    "pushl 40(%%eax)\n\t"
-    "pushl 28(%%eax)\n\t"
-    "pushl 24(%%eax)\n\t"
-    "pushl 20(%%eax)\n\t"
-    "pushl 16(%%eax)\n\t"
-    "pushl $0\n\t"
-    "pushl 8(%%eax)\n\t"
-    "pushl 4(%%eax)\n\t"
-    "pushl 0(%%eax)\n\t"
-    "popal\n\t"
-    "iret\n\t"
+  __asm__ __volatile__ (
+    "movl 40(%%esp), %%eax\n\t" // g_task_running = 
+    "movl %%eax, %0\n\t"        //                  new;
+    "movl (%%eax), %%esp\n\t"
+    "ret\n\t"
     "1:\n\t"
-    ::"m"(g_task_running)
+    "popal\n\t"
+    :
+    :"m"(g_task_running)
+    :"eax"
     );
 }
 
@@ -126,7 +106,7 @@ void switch_to(struct tcb *new)
 #define	GSEL_KCODE  1	/* Kernel Code Descriptor */
 #define	GSEL_KDATA  2	/* Kernel Data Descriptor */
 #define	GSEL_UCODE  3	/* User Code Descriptor */
-#define	GSEL_UDATAL	4	/* Kernel Data Descriptor */
+#define	GSEL_UDATA	4	/* Kernel Data Descriptor */
 #define	GSEL_TSS    5	/* TSS Descriptor */
 #define NR_GDT        6
 
@@ -247,11 +227,13 @@ struct region_descriptor {
 	unsigned base:32 __attribute__ ((packed));
 };
 
+extern char tmpstk;
+
 void lgdt(struct region_descriptor *rdp);
 static void init_gdt(void)
 {
     struct region_descriptor rd;
-    uint32_t base = (uint32_t)&tss, limit = base + sizeof(struct tss);
+    uint32_t base = (uint32_t)&tss, limit = sizeof(struct tss);
 
     gdt[GSEL_TSS].lolimit = limit & 0xffff;
     gdt[GSEL_TSS].lobase = base & 0xffffff;
@@ -269,8 +251,8 @@ static void init_gdt(void)
     lgdt(&rd);
 
     memset(&tss, 0, sizeof(struct tss));
-    tss.ss0  = GSEL_KDATA;
-    tss.esp0 = 0;/*XXX*/
+    tss.ss0  = GSEL_KDATA<<3;
+    tss.esp0 = (uint32_t)&tmpstk;/*XXX*/
 
     __asm__ __volatile__(
         "movw $((8*5)|3), %%ax\n\t"
@@ -390,31 +372,57 @@ static void init_idt()
     lidt(&rd);
 }
 
+
 /**
  *
  *
  *
  */
-void exception(struct frame fr)
+struct exceptionframe {
+	uint32_t	edi;
+	uint32_t	esi;
+	uint32_t	ebp;
+	uint32_t	isp;
+	uint32_t	ebx;
+	uint32_t	edx;
+	uint32_t	ecx;
+	uint32_t	eax;
+  uint32_t   gs;
+  uint32_t   fs;
+  uint32_t   es;
+  uint32_t   ds;
+  uint32_t  trapno;
+  uint32_t  code;
+	/* below portion defined in 386 hardware */
+	uint32_t	eip;
+	uint32_t	 cs;
+	uint32_t	eflags;
+	/* below only when crossing rings (e.g. user to kernel) */
+	uint32_t	esp;
+	uint32_t	 ss;
+};
+void exception(struct exceptionframe ef)
 {
-  switch(fr.trapno) {
+  switch(ef.trapno) {
   case 14://page fault
     {
       uint32_t vaddr;
       __asm__ __volatile__("movl %%cr2,%0" : "=r" (vaddr));
-      if(do_page_fault(vaddr, fr.code) == 0)
+      if(do_page_fault(vaddr, ef.code) == 0)
         return;
     }
     break;
   }
-  printk("edi=0x%08x, esi=0x%08x\n\r", fr.edi, fr.esi);
-  printk("ebp=0x%08x, isp=0x%08x\n\r", fr.ebp, fr.isp);
-  printk("ebx=0x%08x, edx=0x%08x\n\r", fr.ebx, fr.edx);
-  printk("ecx=0x%08x, eax=0x%08x\n\r", fr.ecx, fr.eax);
-  printk("trapno=0x%02x, code=0x%08x\n\r", fr.trapno, fr.code);
-  printk("eip=0x%08x, cs=0x%04x, eflags=0x%08x\n\r", fr.eip, fr.cs, fr.eflags);
-  printk("esp=0x%08x\n\r", fr.esp);
-  printk("ss=0x%04x\n\r", fr.ss);
+  printk("edi=0x%08x, esi=0x%08x\n\r", ef.edi, ef.esi);
+  printk("ebp=0x%08x, isp=0x%08x\n\r", ef.ebp, ef.isp);
+  printk("ebx=0x%08x, edx=0x%08x\n\r", ef.ebx, ef.edx);
+  printk("ecx=0x%08x, eax=0x%08x\n\r", ef.ecx, ef.eax);
+  printk("trapno=0x%02x, code=0x%08x\n\r", ef.trapno, ef.code);
+  printk("eip=0x%08x, cs=0x%04x, eflags=0x%08x\n\r", ef.eip, ef.cs, ef.eflags);
+  if(ef.cs & 0x3) {
+    printk("esp=0x%08x\n\r", ef.esp);
+    printk("ss=0x%04x\n\r", ef.ss);
+  }
   while(1);
 }
 

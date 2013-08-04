@@ -1,11 +1,10 @@
 #include "utils.h"
 #include "kernel.h"
 
-#define _TESTING
-
 int g_resched;
 struct tcb *g_task_running;
 struct tcb *g_task_all_head;
+struct tcb *task0;
 
 void schedule()
 {
@@ -93,28 +92,30 @@ struct tcb* find_task(int tid)
 	return tsk;
 }
 
-int task_create(void *stack_base, 
+int task_create(int user, uint32_t user_stack, 
 	  void (*handler)(void *), void *param)
 {
 	static int tid = 1;
 	struct tcb *new;
+  char *p;
   uint32_t flags;
 
-  if(stack_base == NULL)
-    return -1;
-
-  if(((uint32_t)stack_base) & 3)
+  if(((uint32_t)user_stack) & 3)
     return -1;
     
-	if((new = (struct tcb *)kmalloc(sizeof(struct tcb))) == NULL) {
-		return -2;
-  }
+	p = (char *)kmalloc(PAGE_SIZE/*XXX - enough?*/);
+  if(p == NULL)
+    return -2;
+
+  p = p + PAGE_SIZE;
+  p -= sizeof(struct tcb);
+  new = (struct tcb *)p;
 
 	memset(new, 0, sizeof(struct tcb));
 
+	new->kern_stack = (uint32_t)new;
 	new->tid = tid++;
 	new->state = TASK_STATE_READY;
-	new->stack_base = stack_base;
 	new->quantum = DEFAULT_QUANTUM;
   new->wait_cnt = 0;
   new->wait_head = NULL;
@@ -122,10 +123,12 @@ int task_create(void *stack_base,
   new->sem_next = NULL;
   new->all_next = NULL;
 
-  INIT_CONTEXT(new->context, new->stack_base, handler);
+  if(user_stack != 0) {
+    PUSH_TASK_STACK(user_stack, 0);
+    PUSH_TASK_STACK(user_stack, param);
+  }
 
-  PUSH_CONTEXT_STACK(new->context, param);
-  PUSH_CONTEXT_STACK(new->context, 0);
+  INIT_TASK_CONTEXT(user, new->kern_stack, user_stack, handler);
 
 	save_flags_cli(flags);
   add_task(new);
@@ -207,6 +210,16 @@ int32_t task_getid()
     return (g_task_running==NULL)?-1:g_task_running->tid;
 }
 
+struct tcb *task_get(int tid)
+{
+  uint32_t flags;
+  struct tcb *p;
+  save_flags_cli(flags);
+  p = find_task(tid);
+  restore_flags(flags);
+  return p;
+}
+
 void task_yield()
 {
     uint32_t flags;
@@ -234,125 +247,41 @@ void task_sleep(int32_t msec)
     }
 }
 
-#ifdef _TESTING
-static unsigned fib(unsigned n)
+void init_task()
 {
-     if (n == 0)
-        return 0;
-     if (n == 1)
-        return 1;
-     return fib(n - 1) + fib(n - 2);
-}
-
-static void xxx(void *pv)
-{
-    printk("%d: xxx 0x%08x\n\r", task_getid(), pv);
-}
-
-static void foo(void *pv)
-{
-    int i;
-//    printk("%d: 0x%08x\n\r", task_getid(), pv);
-
-//    set_callout(1, xxx, (void *)0x19770802);
-//    set_callout(1, xxx, (void *)0x19760206);
-//    set_callout(3, xxx, (void *)0x20060907);
-
-//    sem_wait(pv);
-    for(i = 0; i < 5; i++) {
-        printk("%d: %u\n\r", task_getid(), fib(30));
-    }
-    printk("%d: Done\n\r", task_getid());
-//    sem_signal(pv);
-
-    task_exit((int)pv);
-}
-
-static void bar(void *pv)
-{
-    int32_t code;
-    int i, tid=4;
-
-    printk("%d: TID = %d\n\r", task_getid(), task_create(((char *)kmalloc(4096))+4096, foo , pv));
-    printk("%d: Waiting task #%d\n\r", task_getid(), tid);
-    task_wait(tid, &code);
-    printk("%d: Task #%d finished(0x%08x)!\n\r", task_getid(), tid, code);
-//    sem_wait(pv);
-    for(i = 0; i < 5; i++) {
-        printk("%d: %u\n\r", task_getid(), fib(30));
-    }
-    printk("%d: Done\n\r", task_getid());
-//    sem_signal(pv);
-
-    task_exit((int)pv);
-}
-
-static void foobar(void *pv)
-{
-    int32_t code;
-    int i, tid = 3;
-
-    printk("%d: TID = %d\n\r", task_getid(), task_create(((char *)kmalloc(4096))+4096, bar , pv));
-
-//    sem_wait(pv);
-    printk("%d: Waiting task #%d\n\r", task_getid(), tid);
-    task_wait(tid, &code);
-    printk("%d: Task #%d finished(0x%08x)!\n\r", task_getid(), tid, code);
-    for(i = 0; i < 2; i++) {
-        printk("%d: %u\n\r", task_getid(), fib(30));
-    }
-//    tid=2;
-//    printk("%d: Waiting task #%d\n\r", task_getid(), tid);
-//    task_wait(tid, &code);
-//    printk("%d: Task #%d finished(0x%08x)!\n\r", task_getid(), tid, code);
-//    task_sleep(500000);
-    for(i = 0; i < 3; i++) {
-        printk("%d: %u\n\r", task_getid(), fib(30));
-    }
-    printk("%d: Done\n\r", task_getid());
-//    sem_signal(pv);
-
-//   printk("%d: %d\n\r", task_getid(), task_wait(1, &code));
-
-    task_exit((int)pv);
-}
-#endif
-
-static void task0run(void *pv)
-{
-#ifdef _TESTING
-    void *sem = sem_create(1);
-    printk("%d: TID = %d\n\r", task_getid(), task_create(((char *)kmalloc(4096))+4096, foobar , (void *)sem));
-#endif
-
-    while(1)
-        ;
-}
-
-static struct tcb task0;
-extern char tmpstk;
-
-void init_task(void)
-{
-  g_resched = 1;
-	g_task_running = NULL;
+  g_resched = 0;
+  g_task_running = NULL;
   g_task_all_head = NULL;
-  add_task(&task0);
 
-  task0.tid = 0;
-  task0.state = TASK_STATE_READY;
-  task0.quantum = DEFAULT_QUANTUM;
-  task0.stack_base = &tmpstk; /*XXX*/
-  task0.exit_code = 0;
-  task0.wait_cnt = 0;
-  task0.wait_head = NULL;
-  task0.wait_next = NULL;
-  task0.sem_next = NULL;
-  task0.all_next = NULL;
+#if 1
+  {
+    char *p;
+	  p = (char *)kmalloc(PAGE_SIZE);
 
-  INIT_CONTEXT(task0.context, task0.stack_base, task0run);
+    p = p + PAGE_SIZE;
+    p -= sizeof(struct tcb);
+    task0 = (struct tcb *)p;
+  }
 
-  PUSH_CONTEXT_STACK(task0.context, 0);
-  PUSH_CONTEXT_STACK(task0.context, 0);
+	memset(task0, 0, sizeof(struct tcb));
+
+	task0->kern_stack = (uint32_t)task0;
+	task0->tid = 0;
+	task0->state = TASK_STATE_READY;
+	task0->quantum = DEFAULT_QUANTUM;
+  task0->wait_cnt = 0;
+  task0->wait_head = NULL;
+  task0->wait_next = NULL;
+  task0->sem_next = NULL;
+  task0->all_next = NULL;
+
+  INIT_TASK_CONTEXT(0, task0->kern_stack, 0, 0);
+#else
+  //XXX - calling task_create doesn't work, why?
+  printk("init_task: %d\n\r", task_create(0, 0, NULL, 0));
+  task0 = task_get(0);
+  printk("init_task: 0x%08x\n\r", task0);
+#endif
+
+  add_task(task0);
 }
-

@@ -4,7 +4,7 @@
 #include "machdep.h"
 
 #define HZ   100
-extern void (*intr_vector[])(struct frame fr);
+extern void (*intr_vector[])(uint32_t irq, struct context ctx);
 
 #define VADDR(pdi, pti) ((uint32_t)(((pdi)<<PGDR_SHIFT)|((pti)<<PAGE_SHIFT)))
 
@@ -57,7 +57,10 @@ extern uint8_t *g_kern_heap_base;
 extern uint32_t g_kern_heap_size;
 
 struct tcb {
-  struct frame    context;
+  /*hardcoded*/
+  uint32_t        kern_stack;   /*saved top of the kernel stack for this task*/
+
+
   int32_t	        tid;     /* task id */
   int32_t         state;   /* -1:blocked, 0:running, 1:ready, 2:zombie */
 #define TASK_STATE_BLOCKED 	-1
@@ -67,8 +70,7 @@ struct tcb {
   int32_t         quantum;
 #define DEFAULT_QUANTUM 10
 
-  uint8_t        *stack_base;   /* stack base for this task */
-  int32_t         exit_code;    /* exit code */
+  int32_t         exit_code;
 
   int32_t         wait_cnt;
   struct tcb     *wait_head;
@@ -81,21 +83,24 @@ struct tcb {
 
 extern struct tcb *g_task_running;
 extern struct tcb *g_task_all_head;
+extern struct tcb *task0;
 
 extern int g_resched;
 void schedule();
 void switch_to(struct tcb *new);
 
 void init_task(void);
-int  task_create(void *stack_base, void (*handler)(void *), void *param);
+int  task_create(int user, uint32_t user_stack, void (*handler)(void *), void *param);
 void task_exit(int val);
 int  task_wait(int32_t tid, int32_t *exit_code);
 int32_t task_getid();
+struct tcb *task_get(int tid);
 void task_yield();
 void task_sleep(int32_t msec);
+extern void *ret_from_syscall;
 
 extern unsigned volatile ticks;
-void isr_timer(struct frame fr);
+void isr_timer(uint32_t irq, struct context ctx);
 
 int do_page_fault(uint32_t vaddr, uint32_t code); 
 

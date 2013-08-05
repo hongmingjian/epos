@@ -103,5 +103,6 @@ extern unsigned volatile ticks;
 void isr_timer(uint32_t irq, struct context ctx);
 
 int do_page_fault(uint32_t vaddr, uint32_t code); 
+void syscall(struct context ctx); 
 
 #endif

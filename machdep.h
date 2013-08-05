@@ -16,7 +16,7 @@ struct context {
   uint32_t	edi;/*16*/
   uint32_t	esi;/*20*/
   uint32_t	ebp;/*24*/
-  uint32_t	esp;/*28*/
+  uint32_t	isp;/*28*/
   uint32_t	ebx;/*32*/
   uint32_t	edx;/*36*/
   uint32_t	ecx;/*40*/
@@ -26,8 +26,8 @@ struct context {
   uint32_t	 cs;/*52*/
   uint32_t	eflags;/*56*/
   /* below only when crossing rings (e.g. user to kernel) */
-  uint32_t	esp3;/*60*/
-  uint32_t	 ss3;/*64*/
+  uint32_t	esp;/*60*/
+  uint32_t	 ss;/*64*/
 };
 
 #define PUSH_TASK_STACK(sp, value) do { \

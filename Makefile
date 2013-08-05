@@ -34,3 +34,6 @@ run:
 
 clean:
 	-$(RM)  *.o *.out *.bin *.*~ $(PROG).exe $(PROG).map
+
+test.out:
+	$(CC) -o $@ -Ttext=0x08048000 -nostdlib test.s

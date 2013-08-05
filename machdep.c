@@ -193,10 +193,10 @@ struct segment_descriptor	{
 
 static
 struct tss {
-   uint32_t prev;
-   uint32_t esp0;       // loaded when we change to kernel mode.
+   uint32_t prev;       // UNUSED
+   uint32_t esp0;       // loaded when CPU changed from user to kernel mode.
    uint32_t ss0;        // ditto
-   uint32_t esp1;       // everything below here is unusued 
+   uint32_t esp1;       // everything below is UNUSUED 
    uint32_t ss1;
    uint32_t esp2;
    uint32_t ss2;
@@ -278,7 +278,7 @@ extern idt_handler_t
   IDT_EXCEPTION(copr_seg_overrun),IDT_EXCEPTION(inval_tss),         IDT_EXCEPTION(segment_not_present), 
   IDT_EXCEPTION(stack_exception), IDT_EXCEPTION(general_protection),IDT_EXCEPTION(page_fault),   
   IDT_EXCEPTION(intel_reserved),  IDT_EXCEPTION(copr_error),        IDT_EXCEPTION(alignment_check),   
-  IDT_EXCEPTION(machine_check),   IDT_EXCEPTION(simd_fp_exception); 
+  IDT_EXCEPTION(machine_check),   IDT_EXCEPTION(simd_fp_exception), int0x80_syscall; 
 
 #define	IDT_INTERRUPT(name)	__CONCAT(hwint,name)
 extern idt_handler_t
@@ -288,7 +288,7 @@ extern idt_handler_t
   IDT_INTERRUPT(12),IDT_INTERRUPT(13), IDT_INTERRUPT(14), IDT_INTERRUPT(15);
 
 #define ICU_IDT_OFFSET 32
-#define NR_IDT (ICU_IDT_OFFSET+NR_IRQ)
+#define NR_IDT 129
 static
 struct gate_descriptor	{
 	unsigned looffset:16 ;
@@ -304,7 +304,7 @@ struct gate_descriptor	{
 	unsigned hioffset:16 ;
 } idt[NR_IDT];
 
-static void setidt(int idx, idt_handler_t *func, int typ)
+static void setidt(int idx, idt_handler_t *func, int typ, int dpl)
 {
 	struct gate_descriptor *ip;
 
@@ -314,7 +314,7 @@ static void setidt(int idx, idt_handler_t *func, int typ)
 	ip->stkcpy = 0;
 	ip->xx = 0;
 	ip->type = typ;
-	ip->dpl = SEL_KPL;
+	ip->dpl = dpl;
 	ip->p = 1;
 	ip->hioffset = ((uint32_t)func)>>16 ;
 }
@@ -327,45 +327,47 @@ static void init_idt()
     struct region_descriptor rd;
 
     for (i = 0; i < NR_IDT; i++)
-      setidt(i, &IDT_EXCEPTION(intel_reserved), GT_386TRAP);
+      setidt(i, &IDT_EXCEPTION(intel_reserved), GT_386TRAP, SEL_KPL);
 
-  	setidt(0,  &IDT_EXCEPTION(divide_error),         GT_386TRAP);
-  	setidt(1,  &IDT_EXCEPTION(debug),                GT_386TRAP);
-  	setidt(2,  &IDT_EXCEPTION(nmi),                  GT_386TRAP);
-    setidt(3,  &IDT_EXCEPTION(breakpoint),           GT_386TRAP);
-    setidt(4,  &IDT_EXCEPTION(overflow),             GT_386TRAP);
-    setidt(5,  &IDT_EXCEPTION(bounds_check),         GT_386TRAP);
-    setidt(6,  &IDT_EXCEPTION(inval_opcode),         GT_386TRAP);
-    setidt(7,  &IDT_EXCEPTION(copr_not_avail),       GT_386TRAP);
-    setidt(8,  &IDT_EXCEPTION(double_fault),         GT_386TRAP);
-    setidt(9,  &IDT_EXCEPTION(copr_seg_overrun),     GT_386TRAP);
-    setidt(10, &IDT_EXCEPTION(inval_tss),            GT_386TRAP);
-    setidt(11, &IDT_EXCEPTION(segment_not_present),  GT_386TRAP);
-    setidt(12, &IDT_EXCEPTION(stack_exception),      GT_386TRAP);
-    setidt(13, &IDT_EXCEPTION(general_protection),   GT_386TRAP);
-    setidt(14, &IDT_EXCEPTION(page_fault),           GT_386INTR/*Ref. III-5.12.1.2*/);
-    setidt(15, &IDT_EXCEPTION(intel_reserved),       GT_386TRAP);
-    setidt(16, &IDT_EXCEPTION(copr_error),           GT_386TRAP);
-    setidt(17, &IDT_EXCEPTION(alignment_check),      GT_386TRAP);
-    setidt(18, &IDT_EXCEPTION(machine_check),        GT_386TRAP);
-    setidt(19, &IDT_EXCEPTION(simd_fp_exception),    GT_386TRAP);
+  	setidt(0,  &IDT_EXCEPTION(divide_error),         GT_386TRAP, SEL_KPL);
+  	setidt(1,  &IDT_EXCEPTION(debug),                GT_386TRAP, SEL_KPL);
+  	setidt(2,  &IDT_EXCEPTION(nmi),                  GT_386TRAP, SEL_KPL);
+    setidt(3,  &IDT_EXCEPTION(breakpoint),           GT_386TRAP, SEL_KPL);
+    setidt(4,  &IDT_EXCEPTION(overflow),             GT_386TRAP, SEL_KPL);
+    setidt(5,  &IDT_EXCEPTION(bounds_check),         GT_386TRAP, SEL_KPL);
+    setidt(6,  &IDT_EXCEPTION(inval_opcode),         GT_386TRAP, SEL_KPL);
+    setidt(7,  &IDT_EXCEPTION(copr_not_avail),       GT_386TRAP, SEL_KPL);
+    setidt(8,  &IDT_EXCEPTION(double_fault),         GT_386TRAP, SEL_KPL);
+    setidt(9,  &IDT_EXCEPTION(copr_seg_overrun),     GT_386TRAP, SEL_KPL);
+    setidt(10, &IDT_EXCEPTION(inval_tss),            GT_386TRAP, SEL_KPL);
+    setidt(11, &IDT_EXCEPTION(segment_not_present),  GT_386TRAP, SEL_KPL);
+    setidt(12, &IDT_EXCEPTION(stack_exception),      GT_386TRAP, SEL_KPL);
+    setidt(13, &IDT_EXCEPTION(general_protection),   GT_386TRAP, SEL_KPL);
+    setidt(14, &IDT_EXCEPTION(page_fault),           GT_386INTR/*Ref. III-5.12.1.2*/, SEL_KPL);
+    setidt(15, &IDT_EXCEPTION(intel_reserved),       GT_386TRAP, SEL_KPL);
+    setidt(16, &IDT_EXCEPTION(copr_error),           GT_386TRAP, SEL_KPL);
+    setidt(17, &IDT_EXCEPTION(alignment_check),      GT_386TRAP, SEL_KPL);
+    setidt(18, &IDT_EXCEPTION(machine_check),        GT_386TRAP, SEL_KPL);
+    setidt(19, &IDT_EXCEPTION(simd_fp_exception),    GT_386TRAP, SEL_KPL);
     
-    setidt(ICU_IDT_OFFSET+0, &IDT_INTERRUPT(00), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+1, &IDT_INTERRUPT(01), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+2, &IDT_INTERRUPT(02), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+3, &IDT_INTERRUPT(03), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+4, &IDT_INTERRUPT(04), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+5, &IDT_INTERRUPT(05), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+6, &IDT_INTERRUPT(06), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+7, &IDT_INTERRUPT(07), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+8, &IDT_INTERRUPT(08), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+9, &IDT_INTERRUPT(09), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+10,&IDT_INTERRUPT(10), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+11,&IDT_INTERRUPT(11), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+12,&IDT_INTERRUPT(12), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+13,&IDT_INTERRUPT(13), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+14,&IDT_INTERRUPT(14), GT_386INTR);
-    setidt(ICU_IDT_OFFSET+15,&IDT_INTERRUPT(15), GT_386INTR);
+    setidt(ICU_IDT_OFFSET+0, &IDT_INTERRUPT(00), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+1, &IDT_INTERRUPT(01), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+2, &IDT_INTERRUPT(02), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+3, &IDT_INTERRUPT(03), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+4, &IDT_INTERRUPT(04), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+5, &IDT_INTERRUPT(05), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+6, &IDT_INTERRUPT(06), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+7, &IDT_INTERRUPT(07), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+8, &IDT_INTERRUPT(08), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+9, &IDT_INTERRUPT(09), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+10,&IDT_INTERRUPT(10), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+11,&IDT_INTERRUPT(11), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+12,&IDT_INTERRUPT(12), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+13,&IDT_INTERRUPT(13), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+14,&IDT_INTERRUPT(14), GT_386INTR, SEL_KPL);
+    setidt(ICU_IDT_OFFSET+15,&IDT_INTERRUPT(15), GT_386INTR, SEL_KPL);
+
+    setidt(0x80, &int0x80_syscall, GT_386INTR, SEL_UPL);
 
     rd.limit = NR_IDT*sizeof(idt[0]) - 1;
     rd.base = (uint32_t) idt;
@@ -379,6 +381,10 @@ static void init_idt()
  *
  */
 struct exceptionframe {
+  uint32_t   gs;
+  uint32_t   fs;
+  uint32_t   es;
+  uint32_t   ds;
 	uint32_t	edi;
 	uint32_t	esi;
 	uint32_t	ebp;
@@ -387,10 +393,6 @@ struct exceptionframe {
 	uint32_t	edx;
 	uint32_t	ecx;
 	uint32_t	eax;
-  uint32_t   gs;
-  uint32_t   fs;
-  uint32_t   es;
-  uint32_t   ds;
   uint32_t  trapno;
   uint32_t  code;
 	/* below portion defined in 386 hardware */
@@ -424,6 +426,26 @@ void exception(struct exceptionframe ef)
     printk("ss=0x%04x\n\r", ef.ss);
   }
   while(1);
+}
+
+/**
+ *
+ *
+ */
+void syscall(struct context ctx)
+{
+  switch(ctx.eax) {
+  case 0:
+    {
+      uint32_t *p=(uint32_t *)ctx.esp;
+      putchar((*p)&0xff);
+    }
+    break;
+  default:
+    printk("syscall #%d not implemented.\n\r", ctx.eax);
+    ctx.eax = -ctx.eax;
+    break;
+  }
 }
 
 /**
@@ -549,9 +571,9 @@ static void init_mem(uint32_t physfree)
   	  uint32_t LengthH;
   	  uint32_t Type;
       #define SMAP_TYPE_RAM		1 /**< Normal memory */
-//      #define SMAP_TYPE_RESERVED	2 /**< Reserved and unavailable */
-//      #define SMAP_TYPE_ACPI		3 /**< ACPI reclaim memory */
-//      #define SMAP_TYPE_NVS		4 /**< ACPI NVS memory */
+      #define SMAP_TYPE_RESERVED	2 /**< Reserved and unavailable */
+      #define SMAP_TYPE_ACPI		3 /**< ACPI reclaim memory */
+      #define SMAP_TYPE_NVS		4 /**< ACPI NVS memory */
     
   	  uint32_t ACPI;
     }__attribute__((packed)) *smap=(struct SMAP_entry *)0x804/*XXX*/;

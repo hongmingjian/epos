@@ -152,7 +152,7 @@ void cstart(void)
       "movl %0, %%eax\n\t"
       "movl (%%eax), %%eax\n\t"
       "pushl $1f\n\t"
-      "popl 52(%%eax)\n\t"
+      "popl (48+4)(%%eax)\n\t"
       "movl %%eax, %%esp\n\t"
       "ret\n\t"
       "1:\n\t"
@@ -174,8 +174,24 @@ void cstart(void)
     save_flags_cli(flags);
     do_page_fault(0x08048000, PTE_U);
     restore_flags(flags);
-    *(char *)0x08048000 = 0xeb;
-    *(char *)0x08048001 = 0xfe;
+
+    *(char *)0x08048000 = 0xe8;
+    *(char *)0x08048001 = 0x02;
+    *(char *)0x08048002 = 0x00;
+    *(char *)0x08048003 = 0x00;
+    *(char *)0x08048004 = 0x00;
+    *(char *)0x08048005 = 0xeb;
+    *(char *)0x08048006 = 0xf9;
+    *(char *)0x08048007 = 0x6a;
+    *(char *)0x08048008 = 0x73;
+    *(char *)0x08048009 = 0x31;
+    *(char *)0x0804800a = 0xc0;
+    *(char *)0x0804800b = 0xcd;
+    *(char *)0x0804800c = 0x80;
+    *(char *)0x0804800d = 0x83;
+    *(char *)0x0804800e = 0xc4;
+    *(char *)0x0804800f = 0x04;
+    *(char *)0x08048010 = 0xc3;
 
     tid = task_create(1, 0x08049000, (void *)0x08048000, 0);
     printk("task #%d created\n\r", tid);
@@ -186,6 +202,6 @@ void cstart(void)
 
 
   while(1)
-    ;//putchar('+');
+    putchar('+');
 }
 

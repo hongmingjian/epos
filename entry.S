@@ -20,6 +20,7 @@
   .extern _g_resched
   .extern _schedule
   .extern _g_task_running
+  .extern _syscall
 
   .globl	_tmpstk
 
@@ -205,27 +206,71 @@ _exception_simd_fp_exception:
 	jmp		exception
 
 exception:
+	pushal
   pushl %ds
   pushl %es
   pushl %fs
   pushl %gs
-	pushal
   movl $KDSEL, %eax
   movw %ax, %ds
   movw %ax, %es
   movw %ax, %fs
   movw %ax, %gs
 	call _exception
-  popal
   popl %gs
   popl %fs
   popl %es
   popl %ds
+  popal
   addl $8, %esp
   iret
 	
+  .globl _int0x80_syscall
+_int0x80_syscall:
+  pushal 
+  pushl %ds
+  pushl %es
+  pushl %fs
+  pushl %gs
+  movl $KDSEL, %eax
+  movw %ax, %ds
+  movw %ax, %es
+  movw %ax, %fs
+  movw %ax, %gs
 
-#define hwint_master(irq) \
+  movl _g_task_running, %eax
+  movl %esp, %esi
+  movl %eax, %edi
+  subl $(17*4), %edi
+  movl $17, %ecx
+  movl %edi, %edx
+  cld
+  rep
+  movsd
+  movl %edx, %esp
+
+  sti
+  call _syscall
+  cli
+
+  .globl _ret_from_syscall
+_ret_from_syscall:
+  popl %gs
+  popl %fs
+  popl %es
+  popl %ds
+	popal
+	iret
+
+#define	ENABLE_ICU1 \
+	movb  $0x20, %al; \
+	outb  %al, $0x20
+
+#define	ENABLE_ICU1_AND_2 \
+  ENABLE_ICU1; \
+	outb  %al, $0xa0
+
+#define hwint(irq, enable_icus) \
   pushal; \
   pushl %ds; \
   pushl %es; \
@@ -262,135 +307,77 @@ exception:
 	call *%eax; \
 	addl $4, %esp; \
   ; \
-	movb  $0x20, %al; \
-	outb  %al, $0x20; \
+	enable_icus; \
   ; \
 	cmpl $0, _g_resched; \
 	je 2f; \
 	call _schedule; \
 2:; \
   jmp _ret_from_syscall
-
-  .globl _ret_from_syscall
-_ret_from_syscall:
-  popl %gs
-  popl %fs
-  popl %es
-  popl %ds
-	popal
-	iret
 
   .globl _hwint00
 _hwint00:
-	hwint_master(0)
+	hwint(0, ENABLE_ICU1)
 
   .globl _hwint01
 _hwint01:
-    hwint_master(1)
+  hwint(1, ENABLE_ICU1)
 
   .globl _hwint02
 _hwint02:
-	hwint_master(2)
+	hwint(2, ENABLE_ICU1)
 
   .globl _hwint03
 _hwint03:
-	hwint_master(3)
+	hwint(3, ENABLE_ICU1)
   
   .globl _hwint04
 _hwint04:
-	hwint_master(4)
+	hwint(4, ENABLE_ICU1)
 
   .globl _hwint05
 _hwint05:
-	hwint_master(5)
+	hwint(5, ENABLE_ICU1)
 
   .globl _hwint06
 _hwint06:
-	hwint_master(6)
+	hwint(6, ENABLE_ICU1)
 
   .globl _hwint07
 _hwint07:
-	hwint_master(7)
-
-#define hwint_slave(irq) \
-	pushal; \
-  pushl %ds; \
-  pushl %es; \
-  pushl %fs; \
-  pushl %gs; \
-  ; \
-  movl $KDSEL, %eax; \
-  movw %ax, %ds; \
-  movw %ax, %es; \
-  movw %ax, %fs; \
-  movw %ax, %gs; \
-  ; \
-  movl _g_task_running, %eax; \
-  cmpl $0, %eax; \
-  je 1f; \
-  movl 52(%esp), %ebx; \
-  andl $3, %ebx; \
-  jz 1f; \
-  ; \
-  movl %esp, %esi; \
-  movl %eax, %edi; \
-  subl $(17*4), %edi; \
-  movl $17, %ecx; \
-  movl %edi, %edx; \
-  ; \
-  cld; \
-  rep; \
-  movsd; \
-  ; \
-  movl %edx, %esp; \
-1:; \
-	pushl $irq; \
-	movl (_intr_vector + 4 * irq), %eax; \
-	call *%eax; \
-	addl $4, %esp; \
-  ; \
-	movb  $0x20, %al; \
-	outb  %al, $0x20; \
-	outb  %al, $0xa0;			\
-  ; \
-	cmpl $0, _g_resched; \
-	je 2f; \
-	call _schedule; \
-2:; \
-  jmp _ret_from_syscall
-
+	hwint(7, ENABLE_ICU1)
 
   .globl _hwint08
 _hwint08:
-	hwint_slave(8)
+	hwint(8, ENABLE_ICU1_AND_2)
 
   .globl _hwint09
 _hwint09:
-	hwint_slave(9)
+	hwint(9, ENABLE_ICU1_AND_2)
 
   .globl _hwint10
 _hwint10:
-	hwint_slave(10)
+	hwint(10, ENABLE_ICU1_AND_2)
 
   .globl _hwint11
 _hwint11:
-	hwint_slave(11)
+	hwint(11, ENABLE_ICU1_AND_2)
 
   .globl _hwint12
 _hwint12:
-	hwint_slave(12)
+	hwint(12, ENABLE_ICU1_AND_2)
 
   .globl _hwint13
 _hwint13:
-	hwint_slave(13)
+	hwint(13, ENABLE_ICU1_AND_2)
 
   .globl _hwint14
 _hwint14:
-	hwint_slave(14)
+	hwint(14, ENABLE_ICU1_AND_2)
 
   .globl _hwint15
 _hwint15:
-	hwint_slave(15)
+	hwint(15, ENABLE_ICU1_AND_2)
 
   .globl _lgdt
 _lgdt:

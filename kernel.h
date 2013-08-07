@@ -11,6 +11,7 @@ extern void (*intr_vector[])(uint32_t irq, struct context ctx);
 #define KERN_MAX_ADDR VADDR(1023, 1023)
 #define KERN_MIN_ADDR VADDR(767, 767)
 #define USER_MAX_ADDR VADDR(767, 0)
+#define USER_MIN_ADDR VADDR(1, 0)
 
 #define	KERNBASE  VADDR(768, 0)
 #define R(x) ((x)-KERNBASE)
@@ -104,5 +105,27 @@ void isr_timer(uint32_t irq, struct context ctx);
 
 int do_page_fault(uint32_t vaddr, uint32_t code); 
 void syscall(struct context ctx); 
+
+void init_floppy();
+uint8_t *floppy_read_sector (uint32_t lba);
+
+void init_fat();
+int  fat_fopen(const char *pathname, int flag);
+#define O_RDONLY		1
+#define O_WRONLY		2
+#define O_RDWR			(O_RDONLY | O_WRONLY)
+
+int  fat_fclose(int fd);
+int  fat_fgetsize(int fd);
+
+#define EOF (-1)
+int  fat_fread(int fd, void *buf, size_t count);
+
+#define SEEK_SET		0
+#define SEEK_CUR		1
+#define SEEK_END		2
+int  fat_fseek(int fd, unsigned int offset, int whence);
+
+uint32_t load_pe(char *file);
 
 #endif

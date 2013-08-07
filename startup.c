@@ -1,12 +1,13 @@
 #include "utils.h"
 #include "kernel.h"
+#include "pe.h"
 
 void (*intr_vector[NR_IRQ])(uint32_t irq, struct context ctx);
 
 uint32_t g_mem_zone[MEM_ZONE_LEN];
 
-uint32_t  *PT  = (uint32_t *)((((KERNBASE>>22)-1)<<22)),
-          *PTD = (uint32_t *)((((KERNBASE>>22)-1)<<22)+(((KERNBASE>>22)-1)<<PAGE_SHIFT));
+uint32_t  *PT  = (uint32_t *)USER_MAX_ADDR,
+          *PTD = (uint32_t *)KERN_MIN_ADDR;
 
 uint32_t g_kern_cur_addr;
 uint32_t g_kern_end_addr;
@@ -34,8 +35,21 @@ void isr_default(uint32_t irq, struct context ctx)
 
 int do_page_fault(uint32_t vaddr, uint32_t code)
 {
-  if((code & 1) == 0) {
+  if((code & PTE_V) == 0) {
     int i, found = 0;
+    
+    if(code&PTE_U) {
+      if ((vaddr <  USER_MIN_ADDR) || 
+          (vaddr >= USER_MAX_ADDR)) {
+        printk("PF: Invalid memory access: 0x%08x(0x%08x)\n\r", vaddr, code);
+        return -1;
+      }
+    } else {
+      if((vaddr >= (uint32_t)vtopte(USER_MIN_ADDR)) && 
+         (vaddr <  (uint32_t)vtopte(USER_MAX_ADDR)))
+        code |= PTE_U;
+    }
+
     for(i = 0; i < g_frame_count; i++) {
       if(g_frame_freemap[i] == 0) {
         found = 1;
@@ -47,9 +61,7 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
       uint32_t paddr;
       g_frame_freemap[i] = 1;
       paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
-      if(vaddr==0xbfc20120)
-        code |= PTE_U;
-      *vtopte(vaddr)=paddr|PTE_V|PTE_RW|((code&4)?PTE_U:0);
+      *vtopte(vaddr)=paddr|PTE_V|PTE_RW|(code&PTE_U);
       invlpg(vaddr);
       printk("PF: 0x%08x(0x%08x) -> 0x%08x\n\r", vaddr, code, paddr);
       return 0;
@@ -125,6 +137,9 @@ void cstart(void)
 
     g_frame_count = (g_mem_zone[1]-g_mem_zone[0])>>PAGE_SHIFT;
 
+//    printk("vtopte(0x%08x)=0x%08x\n\r", 0x0, vtopte(0x0));
+//    printk("vtopte(0x%08x)=0x%08x\n\r", 0x400000, vtopte(0x400000));
+//    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MAX_ADDR, vtopte(USER_MAX_ADDR));
 //    printk("g_frame_freemap=0x%08x\n\r", g_frame_freemap);
 //    printk("g_frame_count=%d\n\r", g_frame_count);
 //    printk("vtopte(0x%08x)=0x%08x\n\r", g_frame_freemap, vtopte((uint32_t)g_frame_freemap));
@@ -158,50 +173,47 @@ void cstart(void)
       "1:\n\t"
       :
       :"m"(task0)
-      :"eax"
+      :"%eax"
     );
   }
 
   printk("I'm the task #%d\n\r", task_getid());
 #endif
 
+  init_floppy();
+  init_fat();
 
 #if 1  
   if(1){
-    uint32_t flags;
+    uint32_t entry;
     int tid;
 
-    save_flags_cli(flags);
-    do_page_fault(0x08048000, PTE_U);
-    restore_flags(flags);
+    char *filename="\\a.exe";
 
-    *(char *)0x08048000 = 0xe8;
-    *(char *)0x08048001 = 0x02;
-    *(char *)0x08048002 = 0x00;
-    *(char *)0x08048003 = 0x00;
-    *(char *)0x08048004 = 0x00;
-    *(char *)0x08048005 = 0xeb;
-    *(char *)0x08048006 = 0xf9;
-    *(char *)0x08048007 = 0x6a;
-    *(char *)0x08048008 = 0x73;
-    *(char *)0x08048009 = 0x31;
-    *(char *)0x0804800a = 0xc0;
-    *(char *)0x0804800b = 0xcd;
-    *(char *)0x0804800c = 0x80;
-    *(char *)0x0804800d = 0x83;
-    *(char *)0x0804800e = 0xc4;
-    *(char *)0x0804800f = 0x04;
-    *(char *)0x08048010 = 0xc3;
+    entry = load_pe(filename);
 
-    tid = task_create(1, 0x08049000, (void *)0x08048000, 0);
-    printk("task #%d created\n\r", tid);
-//    printk("%d: task #0x%08x created\n\r", task_getid(), tid);
+    printk("entry=0x%08x\n\r", entry);
 
+    if(entry) {
+      uint32_t flags;
+      save_flags_cli(flags);
+      do_page_fault(USER_MAX_ADDR-PAGE_SIZE, PTE_U);
+      restore_flags(flags);
+
+      tid = task_create(1, USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
+//      printk("task #%d created\n\r", tid);
+//      printk("%d: task #0x%08x created\n\r", task_getid(), tid);
+    }
   }
 #endif
 
 
-  while(1)
-    putchar('+');
+  while(1) {
+    int i;
+    for(i = 0; i < 1000000; i++)
+      ;
+    putchar('K');
+  }
 }
+
 

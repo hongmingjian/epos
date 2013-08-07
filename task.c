@@ -103,11 +103,11 @@ int task_create(int user, uint32_t user_stack,
   if(((uint32_t)user_stack) & 3)
     return -1;
     
-	p = (char *)kmalloc(PAGE_SIZE/*XXX - enough?*/);
+	p = (char *)kmalloc(PAGE_SIZE+PAGE_SIZE);
   if(p == NULL)
     return -2;
 
-  p = p + PAGE_SIZE;
+  p = p + PAGE_SIZE+PAGE_SIZE;
   p -= sizeof(struct tcb);
   new = (struct tcb *)p;
 
@@ -124,8 +124,8 @@ int task_create(int user, uint32_t user_stack,
   new->all_next = NULL;
 
   if(user_stack != 0) {
-    PUSH_TASK_STACK(user_stack, 0);
     PUSH_TASK_STACK(user_stack, param);
+    PUSH_TASK_STACK(user_stack, 0);
   }
 
   INIT_TASK_CONTEXT(user, new->kern_stack, user_stack, handler);
@@ -256,9 +256,9 @@ void init_task()
 #if 1
   {
     char *p;
-	  p = (char *)kmalloc(PAGE_SIZE);
+	  p = (char *)kmalloc(PAGE_SIZE+PAGE_SIZE);
 
-    p = p + PAGE_SIZE;
+    p = p + PAGE_SIZE + PAGE_SIZE;
     p -= sizeof(struct tcb);
     task0 = (struct tcb *)p;
   }

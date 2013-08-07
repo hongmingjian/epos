@@ -27,11 +27,5 @@ $(PROG).bin: $(OBJS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
 	../../bin/winimage /h ../image.flp  /i $@
 
-debug:
-	-../../Bochs-2.6.2/bochsdbg.exe -q -f ../bochsrc.txt
-
-run:
-	-../../Bochs-2.6.2/bochs.exe -q -f ../bochsrc.txt
-
 clean:
 	-$(RM)  *.o *.out *.bin *.*~ $(PROG).exe $(PROG).map

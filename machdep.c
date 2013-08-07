@@ -251,14 +251,14 @@ static void init_gdt(void)
     lgdt(&rd);
 
     memset(&tss, 0, sizeof(struct tss));
-    tss.ss0  = GSEL_KDATA<<3;
+    tss.ss0  = GSEL_KDATA*sizeof(gdt[0]);
     tss.esp0 = (uint32_t)&tmpstk;/*XXX*/
 
     __asm__ __volatile__(
-        "movw $((8*5)|3), %%ax\n\t"
+        "movw %0, %%ax\n\t"
         "ltr %%ax\n\t"
         :
-        :
+        :"i"((GSEL_TSS*sizeof(gdt[0]))|SEL_UPL)
         :"%ax"
         );
 }
@@ -421,7 +421,7 @@ void exception(struct exceptionframe ef)
   printk("ecx=0x%08x, eax=0x%08x\n\r", ef.ecx, ef.eax);
   printk("trapno=0x%02x, code=0x%08x\n\r", ef.trapno, ef.code);
   printk("eip=0x%08x, cs=0x%04x, eflags=0x%08x\n\r", ef.eip, ef.cs, ef.eflags);
-  if(ef.cs & 0x3) {
+  if(ef.cs & SEL_UPL) {
     printk("esp=0x%08x\n\r", ef.esp);
     printk("ss=0x%04x\n\r", ef.ss);
   }

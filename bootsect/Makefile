@@ -29,9 +29,6 @@ $(PROG).bin: $(OBJS)
 	$(OBJCOPY) -S -O binary $(PROG).out $(PROG)
 	dd if=$(PROG) of=$@ bs=512 count=1
 
-image.flp: $(PROG) base2.flp
-	cat $^ >$@
-
 clean:
-	${RM} *.o $(PROG).out $(PROG) $(PROG).bin image.flp *.*~
+	${RM} *.o $(PROG).out $(PROG) $(PROG).bin *.*~
 

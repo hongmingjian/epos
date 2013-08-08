@@ -380,28 +380,28 @@ static void init_idt()
  *
  *
  */
-void exception(struct context ctx)
+void exception(struct context *ctx)
 {
-  switch(ctx.trapno) {
+  switch(ctx->trapno) {
   case 14://page fault
     {
       uint32_t vaddr;
       __asm__ __volatile__("movl %%cr2,%0" : "=r" (vaddr));
-      if(do_page_fault(vaddr, ctx.code) == 0)
+      if(do_page_fault(vaddr, ctx->code) == 0)
         return;
     }
     break;
   }
-  printk(" fs=0x%08x,  es=0x%08x,  ds=0x%08x\n\r", ctx.fs, ctx.es, ctx.ds);
-  printk("edi=0x%08x, esi=0x%08x\n\r", ctx.edi, ctx.esi);
-  printk("ebp=0x%08x, isp=0x%08x\n\r", ctx.ebp, ctx.isp);
-  printk("ebx=0x%08x, edx=0x%08x\n\r", ctx.ebx, ctx.edx);
-  printk("ecx=0x%08x, eax=0x%08x\n\r", ctx.ecx, ctx.eax);
-  printk("trapno=0x%02x, code=0x%08x\n\r", ctx.trapno, ctx.code);
-  printk("eip=0x%08x, cs=0x%04x, eflags=0x%08x\n\r", ctx.eip, ctx.cs, ctx.eflags);
-  if(ctx.cs & SEL_UPL) {
-    printk("esp=0x%08x\n\r", ctx.esp);
-    printk("ss=0x%04x\n\r", ctx.ss);
+  printk(" fs=0x%08x,  es=0x%08x,  ds=0x%08x\n\r", ctx->fs, ctx->es, ctx->ds);
+  printk("edi=0x%08x, esi=0x%08x\n\r", ctx->edi, ctx->esi);
+  printk("ebp=0x%08x, isp=0x%08x\n\r", ctx->ebp, ctx->isp);
+  printk("ebx=0x%08x, edx=0x%08x\n\r", ctx->ebx, ctx->edx);
+  printk("ecx=0x%08x, eax=0x%08x\n\r", ctx->ecx, ctx->eax);
+  printk("trapno=0x%02x, code=0x%08x\n\r", ctx->trapno, ctx->code);
+  printk("eip=0x%08x, cs=0x%04x, eflags=0x%08x\n\r", ctx->eip, ctx->cs, ctx->eflags);
+  if(ctx->cs & SEL_UPL) {
+    printk("esp=0x%08x\n\r", ctx->esp);
+    printk("ss=0x%04x\n\r", ctx->ss);
   }
   while(1);
 }
@@ -410,18 +410,42 @@ void exception(struct context ctx)
  *
  *
  */
-void syscall(struct context ctx)
+void syscall(struct context *ctx)
 {
-  switch(ctx.eax) {
+//    printk("task #%d syscalling #%d.\n\r", task_getid(), ctx->eax);
+  switch(ctx->eax) {
   case 0:
+    ctx->eax = putchar((*((uint32_t *)ctx->esp))&0xff);
+    break;
+  case 1:
+    ctx->eax=task_getid();
+    break;
+  case 2:
+    task_yield();
+    break;
+  case 3:
+    ctx->eax = task_sleep(*((uint32_t *)ctx->esp));
+    break;
+  case 4:
     {
-      uint32_t *p=(uint32_t *)ctx.esp;
-      putchar((*p)&0xff);
+      uint32_t user_stack = *((uint32_t *)(ctx->esp+0));
+      uint32_t user_entry = *((uint32_t *)(ctx->esp+4));
+      uint32_t user_pvoid = *((uint32_t *)(ctx->esp+8));
+//      printk("stack: 0x%08x, entry: 0x%08x, pvoid: 0x%08x\n\r", user_stack, user_entry, user_pvoid);
+      if((user_stack < USER_MIN_ADDR) || (user_stack >= USER_MAX_ADDR) ||
+         (user_entry < USER_MIN_ADDR) || (user_entry >= USER_MAX_ADDR)) {
+        ctx->eax = -ctx->eax;
+        break;
+      }
+      ctx->eax = task_create(user_stack, (void *)user_entry, (void *)user_pvoid);
     }
     break;
+  case 5:
+    task_exit(*((uint32_t *)ctx->esp));
+    break;
   default:
-    printk("syscall #%d not implemented.\n\r", ctx.eax);
-    ctx.eax = -ctx.eax;
+    printk("syscall #%d not implemented.\n\r", ctx->eax);
+    ctx->eax = -ctx->eax;
     break;
   }
 }

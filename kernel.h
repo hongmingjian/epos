@@ -4,7 +4,7 @@
 #include "machdep.h"
 
 #define HZ   100
-extern void (*intr_vector[])(uint32_t irq, struct context ctx);
+extern void (*intr_vector[])(uint32_t irq, struct context *ctx);
 
 #define VADDR(pdi, pti) ((uint32_t)(((pdi)<<PGDR_SHIFT)|((pti)<<PAGE_SHIFT)))
 
@@ -97,14 +97,14 @@ int  task_wait(int32_t tid, int32_t *exit_code);
 int32_t task_getid();
 struct tcb *task_get(int tid);
 void task_yield();
-void task_sleep(int32_t msec);
+int task_sleep(uint32_t msec);
 extern void *ret_from_syscall;
 
 extern unsigned volatile ticks;
-void isr_timer(uint32_t irq, struct context ctx);
+void isr_timer(uint32_t irq, struct context *ctx);
 
 int do_page_fault(uint32_t vaddr, uint32_t code); 
-void syscall(struct context ctx); 
+void syscall(struct context *ctx); 
 
 void init_floppy();
 uint8_t *floppy_read_sector (uint32_t lba);

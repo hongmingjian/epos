@@ -3,7 +3,7 @@
 
 unsigned volatile ticks = 0;
 
-void isr_timer(uint32_t irq, struct context ctx)
+void isr_timer(uint32_t irq, struct context *ctx)
 {
 	ticks++;
 //  putchar('.');

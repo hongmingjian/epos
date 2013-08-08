@@ -2,7 +2,7 @@
 #include "kernel.h"
 #include "pe.h"
 
-void (*intr_vector[NR_IRQ])(uint32_t irq, struct context ctx);
+void (*intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
 
 uint32_t g_mem_zone[MEM_ZONE_LEN];
 
@@ -28,7 +28,7 @@ uint32_t g_kern_heap_size = 0;
     } *g_user_segment_head = NULL;
 */
 
-void isr_default(uint32_t irq, struct context ctx)
+void isr_default(uint32_t irq, struct context *ctx)
 {
   //printk("IRQ=0x%02x\n\r", irq);
 }
@@ -47,6 +47,10 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
     } else {
       if((vaddr >= (uint32_t)vtopte(USER_MIN_ADDR)) && 
          (vaddr <  (uint32_t)vtopte(USER_MAX_ADDR)))
+        code |= PTE_U;
+
+      if ((vaddr >= USER_MIN_ADDR) || 
+          (vaddr <  USER_MAX_ADDR))
         code |= PTE_U;
     }
 
@@ -137,10 +141,9 @@ void cstart(void)
 
     g_frame_count = (g_mem_zone[1]-g_mem_zone[0])>>PAGE_SHIFT;
 
-    printk("vtopte(0x%08x)=0x%08x\n\r", 0x0, vtopte(0x0));
-//    printk("vtopte(0x%08x)=0x%08x\n\r", 0x400000, vtopte(0x400000));
-    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MAX_ADDR, vtopte(USER_MAX_ADDR));
-    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MIN_ADDR, vtopte(USER_MIN_ADDR));
+//    printk("vtopte(0x%08x)=0x%08x\n\r", 0x0, vtopte(0x0));
+//    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MAX_ADDR, vtopte(USER_MAX_ADDR));
+//    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MIN_ADDR, vtopte(USER_MIN_ADDR));
 
 //    printk("g_frame_freemap=0x%08x\n\r", g_frame_freemap);
 //    printk("g_frame_count=%d\n\r", g_frame_count);
@@ -217,5 +220,4 @@ void cstart(void)
     putchar('K');
   }
 }
-
 

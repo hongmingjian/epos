@@ -17,13 +17,19 @@ PROG=	a
 all: $(PROG).exe
 
 CFLAGS=		-fno-builtin -ffreestanding -O #-Wall
-LDFLAGS=	-nostdlib -nostartfiles -Wl,-Map,$(PROG).map
+LDFLAGS=	-nostdlib -nostartfiles #-Wl,-Map,$(PROG).map
 
 OBJS=		crt0.o utils.o vsprintf.o main.o
 
 $(PROG).exe: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 	../../bin/winimage.exe /h ../image.flp  /i $@
+
+run:
+	$(MAKE) -C .. run
+
+debug:
+	$(MAKE) -C .. debug 
 
 vsprintf.o: ../vsprintf.c
 	$(CC) -c $(CFLAGS) $^

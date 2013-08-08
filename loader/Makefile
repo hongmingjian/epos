@@ -27,5 +27,11 @@ $(PROG).bin: $(OBJS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
 	../../bin/winimage /h ../image.flp  /i $@
 
+run:
+	$(MAKE) -C .. run
+
+debug:
+	$(MAKE) -C .. debug 
+
 clean:
 	-$(RM)  *.o *.out *.bin *.*~ $(PROG).exe $(PROG).map

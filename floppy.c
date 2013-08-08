@@ -328,7 +328,7 @@ static void floppy_lba2chs(size_t lba, uint8_t *head, uint8_t *track, uint8_t *s
    *sector = lba % FLOPPY_SECTORS_PER_TRACK + 1;
 }
 
-static void isr_floppy(uint32_t irq, struct context ctx)
+static void isr_floppy(uint32_t irq, struct context *ctx)
 {
     _FloppyIRQ = 1;
 }

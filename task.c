@@ -100,7 +100,7 @@ int task_create(uint32_t user_stack,
   char *p;
   uint32_t flags;
 
-  if(((uint32_t)user_stack) & 3)
+  if(user_stack & 3)
     return -1;
     
 	p = (char *)kmalloc(PAGE_SIZE+PAGE_SIZE);
@@ -155,7 +155,7 @@ void task_exit(int val)
 	g_task_running->exit_code = val;
 	g_task_running->state = TASK_STATE_ZOMBIE;
 
-    g_task_running = NULL;
+//  g_task_running = NULL;
 
 	schedule();
 }
@@ -235,7 +235,7 @@ static void task_sleep_callout(void *pv)
 //    printk("%d: ticks=%d, wakeup %d\n\r", task_getid(), ticks, tsk->tid);
 }
 
-void task_sleep(int32_t msec)
+int task_sleep(uint32_t msec)
 {
     if(NULL != set_callout(1+(HZ*msec)/1000, task_sleep_callout, g_task_running)) {
         uint32_t flags;
@@ -244,7 +244,10 @@ void task_sleep(int32_t msec)
         g_task_running->state = TASK_STATE_BLOCKED;
         schedule();
         restore_flags(flags);
+        return 0;
     }
+
+    return -1;
 }
 
 void init_task()

@@ -3,7 +3,12 @@
 
 int sprintf(char *buf, const char *fmt, ...);
 int vsprintf(char *buf, const char *fmt, va_list args);
-void putc(int c);
+int putchar(int c);
+int task_getid();
+void task_yield();
+int task_sleep(unsigned msec);
+int task_create(unsigned stack, void *func, unsigned pv);
+int task_exit(int val);
 
 int printf(const char *fmt,...)
 {
@@ -16,26 +21,50 @@ int printf(const char *fmt,...)
 	va_end(args);
 
 	for(j = 0; j < i; j++)
-		putc(buf[j]);
+		putchar(buf[j]);
 
 	return i;
 }
 
+static unsigned fib(unsigned n)
+{
+     if (n == 0)
+        return 0;
+     if (n == 1)
+        return 1;
+     return fib(n - 1) + fib(n - 2);
+}
+
+static void foo(void *pv)
+{
+    int i;
+    printf("%d: 0x%08x\n\r", task_getid(), pv);
+
+    for(i = 0; i < 5; i++) {
+        printf("%d: %u\n\r", task_getid(), fib(31));
+    }
+    printf("%d: Exiting\n\r", task_getid());
+
+    task_exit((int)pv);
+}
+
 void main(void *pv)
 {
-  printf("Hello, world!\n\r");
-  printf("pv=0x%08x\n\r", pv);
+  printf("%d: Hello, world!\n\r", task_getid());
+  printf("%d: pv=0x%08x\n\r", task_getid(), pv);
 
-//  *(int *)0 = 0;
+  printf("%d: task #%d created\n\r", task_getid(), task_create(0x10000000, foo, 0x19760206));
 
   while(1) {
     int i;
-    for(i = 0; i < 1000000; i++)
-      ;
-    printf("U");
+    task_sleep(500000);
+    printf("%d: %d\n\r", task_getid(), fib(30));
   }
 }
 
 void __main()
 {
 }
+
+
+

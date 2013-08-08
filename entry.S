@@ -208,17 +208,19 @@ exception:
   movw %ax, %ds
   movw %ax, %es
   movw %ax, %fs
+  pushl %esp
 	call _exception
+  addl $4, %esp
   popl %fs
   popl %es
   popl %ds
   popal
-  addl $8, %esp
+  addl $8, %esp # discard trapno and code
   iret
 	
   .globl _int0x80_syscall
 _int0x80_syscall:
-  subl $8, %esp
+  subl $8, %esp # fake trapno and code
   pushal 
   pushl %ds
   pushl %es
@@ -239,9 +241,11 @@ _int0x80_syscall:
   movsd
   movl %edx, %esp
 
+  pushl %esp
   sti
   call _syscall
   cli
+  addl $4, %esp
 
   .globl _ret_from_syscall
 _ret_from_syscall:
@@ -291,10 +295,11 @@ _ret_from_syscall:
   ; \
   movl %edx, %esp; \
 1:; \
+  pushl %esp; \
 	pushl $irq; \
 	movl (_intr_vector + 4 * irq), %eax; \
 	call *%eax; \
-	addl $4, %esp; \
+	addl $8, %esp; \
   ; \
 	enable_icus; \
   ; \

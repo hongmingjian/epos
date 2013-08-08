@@ -46,7 +46,7 @@ e820:
 e820.1:
   movl $0x0534D4150, %edx	# "SMAP"
   movl $0xe820, %eax
-  movl $24, %ecx
+  movl $20, %ecx
   int  $0x15
 
   jc e820.2	
@@ -56,7 +56,7 @@ e820.1:
   incl %ebp
   testl %ebx, %ebx
   jz e820.2
-  addw $24, %di
+  addw $20, %di
   jmp e820.1
 e820.2:
   movl $SMAP, %eax

@@ -70,9 +70,6 @@ _outportb:
   movw 4(%esp), %dx
   movb 8(%esp), %al
   outb %al, %dx
-  movl $1000, %ecx
-_outportb.1:	
-  loop _outportb.1
 	ret
 
   .global	_inportw
@@ -87,9 +84,6 @@ _outportw:
   movw 4(%esp), %dx
   movw 8(%esp), %ax
   outw %ax, %dx
-  movl $1000, %ecx
-_outportw.1:	
-  loop _outportw.1
   ret
 
   .globl _exception_divide_error
@@ -210,14 +204,11 @@ exception:
   pushl %ds
   pushl %es
   pushl %fs
-  pushl %gs
   movl $KDSEL, %eax
   movw %ax, %ds
   movw %ax, %es
   movw %ax, %fs
-  movw %ax, %gs
 	call _exception
-  popl %gs
   popl %fs
   popl %es
   popl %ds
@@ -227,22 +218,21 @@ exception:
 	
   .globl _int0x80_syscall
 _int0x80_syscall:
+  subl $8, %esp
   pushal 
   pushl %ds
   pushl %es
   pushl %fs
-  pushl %gs
   movl $KDSEL, %eax
   movw %ax, %ds
   movw %ax, %es
   movw %ax, %fs
-  movw %ax, %gs
 
   movl _g_task_running, %eax
   movl %esp, %esi
   movl %eax, %edi
-  subl $(17*4), %edi
-  movl $17, %ecx
+  subl $(18*4), %edi
+  movl $18, %ecx
   movl %edi, %edx
   cld
   rep
@@ -255,11 +245,11 @@ _int0x80_syscall:
 
   .globl _ret_from_syscall
 _ret_from_syscall:
-  popl %gs
   popl %fs
   popl %es
   popl %ds
 	popal
+  addl $8, %esp
 	iret
 
 #define	ENABLE_ICU1 \
@@ -271,29 +261,28 @@ _ret_from_syscall:
 	outb  %al, $0xa0
 
 #define hwint(irq, enable_icus) \
+  subl $8, %esp; \
   pushal; \
   pushl %ds; \
   pushl %es; \
   pushl %fs; \
-  pushl %gs; \
   ; \
   movl $KDSEL, %eax; \
   movw %ax, %ds; \
   movw %ax, %es; \
   movw %ax, %fs; \
-  movw %ax, %gs; \
   ; \
   movl _g_task_running, %eax; \
   cmpl $0, %eax; \
   je 1f; \
-  movl 52(%esp), %ebx; \
+  movl 56(%esp), %ebx; \
   andl $3, %ebx; \
   jz 1f; \
   ; \
   movl %esp, %esi; \
   movl %eax, %edi; \
-  subl $(17*4), %edi; \
-  movl $17, %ecx; \
+  subl $(18*4), %edi; \
+  movl $18, %ecx; \
   movl %edi, %edx; \
   ; \
   cld; \

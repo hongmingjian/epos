@@ -91,7 +91,7 @@ void schedule();
 void switch_to(struct tcb *new);
 
 void init_task(void);
-int  task_create(int user, uint32_t user_stack, void (*handler)(void *), void *param);
+int  task_create(uint32_t user_stack, void (*handler)(void *), void *param);
 void task_exit(int val);
 int  task_wait(int32_t tid, int32_t *exit_code);
 int32_t task_getid();

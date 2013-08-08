@@ -92,7 +92,7 @@ struct tcb* find_task(int tid)
 	return tsk;
 }
 
-int task_create(int user, uint32_t user_stack, 
+int task_create(uint32_t user_stack, 
 	  void (*handler)(void *), void *param)
 {
 	static int tid = 1;
@@ -128,7 +128,7 @@ int task_create(int user, uint32_t user_stack,
     PUSH_TASK_STACK(user_stack, 0);
   }
 
-  INIT_TASK_CONTEXT(user, new->kern_stack, user_stack, handler);
+  INIT_TASK_CONTEXT(user_stack, new->kern_stack, handler);
 
 	save_flags_cli(flags);
   add_task(new);
@@ -275,10 +275,10 @@ void init_task()
   task0->sem_next = NULL;
   task0->all_next = NULL;
 
-  INIT_TASK_CONTEXT(0, task0->kern_stack, 0, 0);
+  INIT_TASK_CONTEXT(0, task0->kern_stack, 0/*XXX - to be filled*/);
 #else
   //XXX - calling task_create doesn't work, why?
-  printk("init_task: %d\n\r", task_create(0, 0, NULL, 0));
+  printk("init_task: %d\n\r", task_create(0, 0/*XXX - to be filled*/, NULL));
   task0 = task_get(0);
   printk("init_task: 0x%08x\n\r", task0);
 #endif

@@ -136,7 +136,7 @@ int kill_callout(void *co)
 
 void init_callout()
 {
-  if(task_create(0, 0, task_callout, (void*)NULL) >= 0) {
+  if(task_create(0, task_callout, (void*)NULL) >= 0) {
     g_sem_callout = sem_create(0);
     sem_mutex = sem_create(1);
   } else {

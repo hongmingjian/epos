@@ -30,12 +30,12 @@ uint32_t g_kern_heap_size = 0;
 
 void isr_default(uint32_t irq, struct context ctx)
 {
-  //printk("IRQ=0x%02x\n\r", fr.trapno);
+  //printk("IRQ=0x%02x\n\r", irq);
 }
 
 int do_page_fault(uint32_t vaddr, uint32_t code)
 {
-  if((code & PTE_V) == 0) {
+  if((code&PTE_V) == 0) {
     int i, found = 0;
     
     if(code&PTE_U) {
@@ -67,7 +67,7 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
       return 0;
     }
   }
-  printk("PF: 0x%08x(0x%08x) -> ????????\n\r", vaddr, code);
+  printk("PF: 0x%08x(0x%08x) ->   ????????\n\r", vaddr, code);
   return -1;
 }
 
@@ -137,9 +137,11 @@ void cstart(void)
 
     g_frame_count = (g_mem_zone[1]-g_mem_zone[0])>>PAGE_SHIFT;
 
-//    printk("vtopte(0x%08x)=0x%08x\n\r", 0x0, vtopte(0x0));
+    printk("vtopte(0x%08x)=0x%08x\n\r", 0x0, vtopte(0x0));
 //    printk("vtopte(0x%08x)=0x%08x\n\r", 0x400000, vtopte(0x400000));
-//    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MAX_ADDR, vtopte(USER_MAX_ADDR));
+    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MAX_ADDR, vtopte(USER_MAX_ADDR));
+    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MIN_ADDR, vtopte(USER_MIN_ADDR));
+
 //    printk("g_frame_freemap=0x%08x\n\r", g_frame_freemap);
 //    printk("g_frame_count=%d\n\r", g_frame_count);
 //    printk("vtopte(0x%08x)=0x%08x\n\r", g_frame_freemap, vtopte((uint32_t)g_frame_freemap));
@@ -167,7 +169,7 @@ void cstart(void)
       "movl %0, %%eax\n\t"
       "movl (%%eax), %%eax\n\t"
       "pushl $1f\n\t"
-      "popl (48+4)(%%eax)\n\t"
+      "popl (52+4)(%%eax)\n\t"
       "movl %%eax, %%esp\n\t"
       "ret\n\t"
       "1:\n\t"
@@ -200,7 +202,7 @@ void cstart(void)
       do_page_fault(USER_MAX_ADDR-PAGE_SIZE, PTE_U);
       restore_flags(flags);
 
-      tid = task_create(1, USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
+      tid = task_create(USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
 //      printk("task #%d created\n\r", tid);
 //      printk("%d: task #0x%08x created\n\r", task_getid(), tid);
     }

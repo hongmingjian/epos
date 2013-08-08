@@ -343,7 +343,7 @@ static void init_idt()
     setidt(11, &IDT_EXCEPTION(segment_not_present),  GT_386TRAP, SEL_KPL);
     setidt(12, &IDT_EXCEPTION(stack_exception),      GT_386TRAP, SEL_KPL);
     setidt(13, &IDT_EXCEPTION(general_protection),   GT_386TRAP, SEL_KPL);
-    setidt(14, &IDT_EXCEPTION(page_fault),           GT_386INTR/*Ref. III-5.12.1.2*/, SEL_KPL);
+    setidt(14, &IDT_EXCEPTION(page_fault),           GT_386INTR/*!*/, SEL_KPL);
     setidt(15, &IDT_EXCEPTION(intel_reserved),       GT_386TRAP, SEL_KPL);
     setidt(16, &IDT_EXCEPTION(copr_error),           GT_386TRAP, SEL_KPL);
     setidt(17, &IDT_EXCEPTION(alignment_check),      GT_386TRAP, SEL_KPL);
@@ -367,7 +367,7 @@ static void init_idt()
     setidt(ICU_IDT_OFFSET+14,&IDT_INTERRUPT(14), GT_386INTR, SEL_KPL);
     setidt(ICU_IDT_OFFSET+15,&IDT_INTERRUPT(15), GT_386INTR, SEL_KPL);
 
-    setidt(0x80, &int0x80_syscall, GT_386INTR, SEL_UPL);
+    setidt(0x80, &int0x80_syscall, GT_386INTR/*!*/, SEL_UPL/*!*/);
 
     rd.limit = NR_IDT*sizeof(idt[0]) - 1;
     rd.base = (uint32_t) idt;
@@ -380,50 +380,28 @@ static void init_idt()
  *
  *
  */
-struct exceptionframe {
-  uint32_t   gs;
-  uint32_t   fs;
-  uint32_t   es;
-  uint32_t   ds;
-	uint32_t	edi;
-	uint32_t	esi;
-	uint32_t	ebp;
-	uint32_t	isp;
-	uint32_t	ebx;
-	uint32_t	edx;
-	uint32_t	ecx;
-	uint32_t	eax;
-  uint32_t  trapno;
-  uint32_t  code;
-	/* below portion defined in 386 hardware */
-	uint32_t	eip;
-	uint32_t	 cs;
-	uint32_t	eflags;
-	/* below only when crossing rings (e.g. user to kernel) */
-	uint32_t	esp;
-	uint32_t	 ss;
-};
-void exception(struct exceptionframe ef)
+void exception(struct context ctx)
 {
-  switch(ef.trapno) {
+  switch(ctx.trapno) {
   case 14://page fault
     {
       uint32_t vaddr;
       __asm__ __volatile__("movl %%cr2,%0" : "=r" (vaddr));
-      if(do_page_fault(vaddr, ef.code) == 0)
+      if(do_page_fault(vaddr, ctx.code) == 0)
         return;
     }
     break;
   }
-  printk("edi=0x%08x, esi=0x%08x\n\r", ef.edi, ef.esi);
-  printk("ebp=0x%08x, isp=0x%08x\n\r", ef.ebp, ef.isp);
-  printk("ebx=0x%08x, edx=0x%08x\n\r", ef.ebx, ef.edx);
-  printk("ecx=0x%08x, eax=0x%08x\n\r", ef.ecx, ef.eax);
-  printk("trapno=0x%02x, code=0x%08x\n\r", ef.trapno, ef.code);
-  printk("eip=0x%08x, cs=0x%04x, eflags=0x%08x\n\r", ef.eip, ef.cs, ef.eflags);
-  if(ef.cs & SEL_UPL) {
-    printk("esp=0x%08x\n\r", ef.esp);
-    printk("ss=0x%04x\n\r", ef.ss);
+  printk(" fs=0x%08x,  es=0x%08x,  ds=0x%08x\n\r", ctx.fs, ctx.es, ctx.ds);
+  printk("edi=0x%08x, esi=0x%08x\n\r", ctx.edi, ctx.esi);
+  printk("ebp=0x%08x, isp=0x%08x\n\r", ctx.ebp, ctx.isp);
+  printk("ebx=0x%08x, edx=0x%08x\n\r", ctx.ebx, ctx.edx);
+  printk("ecx=0x%08x, eax=0x%08x\n\r", ctx.ecx, ctx.eax);
+  printk("trapno=0x%02x, code=0x%08x\n\r", ctx.trapno, ctx.code);
+  printk("eip=0x%08x, cs=0x%04x, eflags=0x%08x\n\r", ctx.eip, ctx.cs, ctx.eflags);
+  if(ctx.cs & SEL_UPL) {
+    printk("esp=0x%08x\n\r", ctx.esp);
+    printk("ss=0x%04x\n\r", ctx.ss);
   }
   while(1);
 }
@@ -574,8 +552,6 @@ static void init_mem(uint32_t physfree)
       #define SMAP_TYPE_RESERVED	2 /**< Reserved and unavailable */
       #define SMAP_TYPE_ACPI		3 /**< ACPI reclaim memory */
       #define SMAP_TYPE_NVS		4 /**< ACPI NVS memory */
-    
-  	  uint32_t ACPI;
     }__attribute__((packed)) *smap=(struct SMAP_entry *)0x804/*XXX*/;
 
     for(i = 0; i < *((uint32_t*)0x800/*XXX*/); i++) {

@@ -1,6 +1,21 @@
+/**
+ *
+ * Copyright (C) 2013 Hong MingJian
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms are freely
+ * permitted provided that the above copyright notice and this
+ * paragraph and the following disclaimer are duplicated in all
+ * such forms.
+ *
+ * This software is provided "AS IS" and without any express or
+ * implied warranties, including, without limitation, the implied
+ * warranties of merchantability and fitness for a particular
+ * purpose.
+ *
+ */
 #include "utils.h"
 #include "kernel.h"
-#include "pe.h"
 
 void (*intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
 

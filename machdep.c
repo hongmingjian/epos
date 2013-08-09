@@ -1,8 +1,24 @@
+/**
+ *
+ * Copyright (C) 2005, 2008, 2013 Hong MingJian
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms are freely
+ * permitted provided that the above copyright notice and this
+ * paragraph and the following disclaimer are duplicated in all
+ * such forms.
+ *
+ * This software is provided "AS IS" and without any express or
+ * implied warranties, including, without limitation, the implied
+ * warranties of merchantability and fitness for a particular
+ * purpose.
+ *
+ */
 #include "machdep.h"
 #include "kernel.h"
 
-#define	IO_ICU1		0x020		/* 8259A Interrupt Controller #1 */
-#define	IO_ICU2		0x0A0		/* 8259A Interrupt Controller #2 */
+#define	IO_ICU1		0x20		/* 8259A Interrupt Controller #1 */
+#define	IO_ICU2		0xA0		/* 8259A Interrupt Controller #2 */
 #define	IRQ_SLAVE	0x04
 #define	ICU_SLAVEID	2
 #define ICU_IMR_OFFSET		1	/* IO_ICU{1,2} + 1 */
@@ -67,6 +83,7 @@ void switch_to(struct tcb *new)
   g_task_running = new;
 
   __asm__ __volatile__ (
+    "movl %0, %%eax\n\t"
     "movl (%%eax), %%esp\n\t"
     "ret\n\t"
     "1:\n\t"
@@ -205,7 +222,7 @@ struct region_descriptor {
 	unsigned base:32 __attribute__ ((packed));
 };
 
-extern char tmpstk;
+extern char kern_stack;
 
 void lgdt(struct region_descriptor *rdp);
 static void init_gdt(void)
@@ -230,13 +247,13 @@ static void init_gdt(void)
 
     memset(&tss, 0, sizeof(struct tss));
     tss.ss0  = GSEL_KDATA*sizeof(gdt[0]);
-    tss.esp0 = (uint32_t)&tmpstk;/*XXX*/
+    tss.esp0 = (uint32_t)&kern_stack;
 
     __asm__ __volatile__(
         "movw %0, %%ax\n\t"
         "ltr %%ax\n\t"
         :
-        :"i"((GSEL_TSS*sizeof(gdt[0]))|SEL_UPL)
+        :"i"((GSEL_TSS * sizeof(gdt[0])) | SEL_UPL)
         :"%ax"
         );
 }
@@ -544,7 +561,7 @@ static void init_mem(uint32_t physfree)
 
     g_mem_zone[n] = 0;
     g_mem_zone[n+1] = 0;
-  }
+}
 
 void init_machdep(uint32_t physfree)
 {

@@ -22,7 +22,6 @@
   .extern _g_task_running
   .extern _syscall
 
-  .globl	_tmpstk
 
 #define KERNBASE 0xC0000000
 
@@ -43,7 +42,7 @@ _entry:
 	movw	%ds, %ax
 	movw	%ax, %fs
 	movw	%ax, %gs
-  movl $R(_tmpstk), %esp
+  movl $R(_kern_stack), %esp
 
 #
 # Zero BSS
@@ -199,6 +198,10 @@ _exception_simd_fp_exception:
 	pushl	$19
 	jmp		exception
 
+#
+# XXX - Should we handle the exception
+#       in the context of the running task?
+#
 exception:
 	pushal
   pushl %ds
@@ -378,11 +381,11 @@ _lgdt:
 	movl	4(%esp),%eax
 	lgdt	(%eax)
 
-	/* flush the prefetch q */
+	# flush the prefetch q
 	jmp	1f
 	nop
 1:
-	/* reload "stale" selectors */
+	# reload "stale" selectors
 	movl	$KDSEL,%eax
 	mov	%ax,%ds
 	mov	%ax,%es
@@ -390,7 +393,7 @@ _lgdt:
 	mov	%ax,%ss
 	mov	%ax,%fs
 
-	/* reload code selector by turning return into intersegmental return */
+	# reload code selector by turning return into intersegmental return
 	movl	(%esp),%eax
 	pushl	%eax
 	movl	$KCSEL,4(%esp)
@@ -403,5 +406,6 @@ _lidt:
 	ret
 
   .data
-	.space	0x2000		/* space for tmpstk - temporary stack */
-_tmpstk:
+	.space	0x2000		# stack for the kernel
+_kern_stack:
+  .globl	_kern_stack

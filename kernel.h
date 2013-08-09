@@ -1,9 +1,24 @@
+/**
+ *
+ * Copyright (C) 2013 Hong MingJian
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms are freely
+ * permitted provided that the above copyright notice and this
+ * paragraph and the following disclaimer are duplicated in all
+ * such forms.
+ *
+ * This software is provided "AS IS" and without any express or
+ * implied warranties, including, without limitation, the implied
+ * warranties of merchantability and fitness for a particular
+ * purpose.
+ *
+ */
 #ifndef _KERNEL_H
 #define _KERNEL_H
 
 #include "machdep.h"
 
-#define HZ   100
 extern void (*intr_vector[])(uint32_t irq, struct context *ctx);
 
 #define VADDR(pdi, pti) ((uint32_t)(((pdi)<<PGDR_SHIFT)|((pti)<<PAGE_SHIFT)))
@@ -112,6 +127,7 @@ void task_yield();
 int task_sleep(uint32_t msec);
 extern void *ret_from_syscall;
 
+#define HZ   100
 extern unsigned volatile ticks;
 void isr_timer(uint32_t irq, struct context *ctx);
 

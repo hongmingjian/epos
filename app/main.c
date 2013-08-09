@@ -38,7 +38,7 @@ static unsigned fib(unsigned n)
 static void foo(void *pv)
 {
     int i;
-    printf("%d: 0x%08x\n\r", task_getid(), pv);
+    printf("%d: pv=0x%08x\n\r", task_getid(), pv);
 
     for(i = 0; i < 5; i++) {
         printf("%d: %u\n\r", task_getid(), fib(31));

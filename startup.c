@@ -18,16 +18,6 @@ uint32_t g_frame_count = 0;
 uint8_t *g_kern_heap_base;
 uint32_t g_kern_heap_size = 0;
 
-/*
-    struct segment {
-      uint32_t base;
-      uint32_t length;
-      uint32_t flags;
-      
-      struct segment *next;
-    } *g_user_segment_head = NULL;
-*/
-
 void isr_default(uint32_t irq, struct context *ctx)
 {
   //printk("IRQ=0x%02x\n\r", irq);
@@ -49,7 +39,7 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
          (vaddr <  (uint32_t)vtopte(USER_MAX_ADDR)))
         code |= PTE_U;
 
-      if ((vaddr >= USER_MIN_ADDR) || 
+      if ((vaddr >= USER_MIN_ADDR) && 
           (vaddr <  USER_MAX_ADDR))
         code |= PTE_U;
     }
@@ -67,7 +57,7 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
       paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
       *vtopte(vaddr)=paddr|PTE_V|PTE_RW|(code&PTE_U);
       invlpg(vaddr);
-      printk("PF: 0x%08x(0x%08x) -> 0x%08x\n\r", vaddr, code, paddr);
+//      printk("PF: 0x%08x(0x%08x) -> 0x%08x\n\r", vaddr, code, paddr);
       return 0;
     }
   }
@@ -123,8 +113,8 @@ void cstart(void)
     uint32_t size;
     uint32_t i, vaddr, paddr;
 
-    size=((g_mem_zone[1/*XXX*/]-g_mem_zone[0/*XXX*/])>>PAGE_SHIFT);
-    size=PAGE_ROUNDUP(size);
+    size = (g_mem_zone[1/*XXX*/] - g_mem_zone[0/*XXX*/]) >> PAGE_SHIFT;
+    size = PAGE_ROUNDUP(size);
     g_frame_freemap = (uint8_t *)g_kern_cur_addr;
     g_kern_cur_addr += size;
 
@@ -141,14 +131,8 @@ void cstart(void)
 
     g_frame_count = (g_mem_zone[1]-g_mem_zone[0])>>PAGE_SHIFT;
 
-//    printk("vtopte(0x%08x)=0x%08x\n\r", 0x0, vtopte(0x0));
-//    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MAX_ADDR, vtopte(USER_MAX_ADDR));
-//    printk("vtopte(0x%08x)=0x%08x\n\r", USER_MIN_ADDR, vtopte(USER_MIN_ADDR));
-
 //    printk("g_frame_freemap=0x%08x\n\r", g_frame_freemap);
 //    printk("g_frame_count=%d\n\r", g_frame_count);
-//    printk("vtopte(0x%08x)=0x%08x\n\r", g_frame_freemap, vtopte((uint32_t)g_frame_freemap));
-//    printk("*vtopte(0x%08x)=0x%08x\n\r", g_frame_freemap, *vtopte((uint32_t)g_frame_freemap));
   }
 
   if(1){
@@ -180,9 +164,9 @@ void cstart(void)
       :"m"(task0)
       :"%eax"
     );
-  }
 
-  printk("I'm the task #%d\n\r", task_getid());
+    printk("Now, I'm running in the context of task #%d\n\r", task_getid());
+  }
 #endif
 
   init_floppy();
@@ -190,34 +174,27 @@ void cstart(void)
 
 #if 1  
   if(1){
-    uint32_t entry;
-    int tid;
-
     char *filename="\\a.exe";
+    uint32_t entry;
 
     entry = load_pe(filename);
 
-    printk("entry=0x%08x\n\r", entry);
-
     if(entry) {
-      uint32_t flags;
-      save_flags_cli(flags);
-      do_page_fault(USER_MAX_ADDR-PAGE_SIZE, PTE_U);
-      restore_flags(flags);
-
+      int tid;
       tid = task_create(USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
-//      printk("task #%d created\n\r", tid);
-//      printk("%d: task #0x%08x created\n\r", task_getid(), tid);
-    }
+      if(tid < 0)
+        printk("failed to create the first user task\n\r");
+    } else
+      printk("load_pe(%s) failed\n\r", filename);
   }
 #endif
 
 
   while(1) {
-    int i;
-    for(i = 0; i < 1000000; i++)
-      ;
-    putchar('K');
+//    int i;
+//    for(i = 0; i < 1000000; i++);
+//    putchar('K');
+    __asm__ __volatile__ ("hlt\n\t"::);
   }
 }
 

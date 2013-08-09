@@ -1,12 +1,6 @@
 #include "machdep.h"
 #include "kernel.h"
 
-
-/**
- *
- *
- *
- */
 #define	IO_ICU1		0x020		/* 8259A Interrupt Controller #1 */
 #define	IO_ICU2		0x0A0		/* 8259A Interrupt Controller #2 */
 #define	IRQ_SLAVE	0x04
@@ -29,13 +23,9 @@ static void init_i8259(uint8_t idt_offset)
 	outportb(IO_ICU2, 0x0a); //OCW3
 }
 
-/**
- *
- *
- */
-static void init_i8253(uint32_t hz)
+static void init_i8253(uint32_t freq)
 {
-  uint16_t latch = 1193182/hz;
+  uint16_t latch = 1193182/freq;
   outportb(0x43, 0x36);
   outportb(0x40, latch&0xff);
   outportb(0x40, (latch&0xff00)>>16);
@@ -61,44 +51,32 @@ void disable_irq(uint32_t irq)
   }
 }
 
-/**
- *
- *
- *
- */
 void switch_to(struct tcb *new)
 {
-  if(g_task_running != NULL) {
-    __asm__ __volatile__ (
-      "pushal\n\t"
-      "pushl $1f\n\t"
-      "movl %0, %%eax\n\t"
-      "movl %%esp, (%%eax)\n\t"
-      :
-      :"m"(g_task_running)
-      :"eax"
-    );
-  }
+  __asm__ __volatile__ (
+    "pushal\n\t"
+    "pushl $1f\n\t"
+    "movl %0, %%eax\n\t"
+    "movl %%esp, (%%eax)\n\t"
+    "addl $36, %%esp\n\t"
+    :
+    :"m"(g_task_running)
+    :"%eax"
+  );
+
+  g_task_running = new;
 
   __asm__ __volatile__ (
-    "movl 40(%%esp), %%eax\n\t" // g_task_running = 
-    "movl %%eax, %0\n\t"        //                  new;
     "movl (%%eax), %%esp\n\t"
     "ret\n\t"
     "1:\n\t"
     "popal\n\t"
     :
     :"m"(g_task_running)
-    :"eax"
+    :"%eax"
     );
 }
 
-
-/**
- *
- *
- *
- */
 #define	SEL_KPL	0		/* kernel priority level */
 #define	SEL_UPL	3		/* user priority level */
 
@@ -108,7 +86,7 @@ void switch_to(struct tcb *new)
 #define	GSEL_UCODE  3	/* User Code Descriptor */
 #define	GSEL_UDATA	4	/* Kernel Data Descriptor */
 #define	GSEL_TSS    5	/* TSS Descriptor */
-#define NR_GDT        6
+#define NR_GDT      6
 
 static
 struct segment_descriptor	{
@@ -263,12 +241,6 @@ static void init_gdt(void)
         );
 }
 
-
-/**
- *
- *
- *
- */
 typedef void (*idt_handler_t)(uint32_t eip, uint32_t cs, uint32_t eflags, uint32_t esp, uint32_t ss);
 #define	IDT_EXCEPTION(name)	__CONCAT(exception_,name)
 extern idt_handler_t
@@ -310,7 +282,7 @@ static void setidt(int idx, idt_handler_t *func, int typ, int dpl)
 
 	ip = idt + idx;
 	ip->looffset = (uint32_t)func;
-	ip->selector = (GSEL_KCODE << 3)|SEL_KPL;
+	ip->selector = (GSEL_KCODE * sizeof(gdt[0])) | SEL_KPL;
 	ip->stkcpy = 0;
 	ip->xx = 0;
 	ip->type = typ;
@@ -374,12 +346,6 @@ static void init_idt()
     lidt(&rd);
 }
 
-
-/**
- *
- *
- *
- */
 void exception(struct context *ctx)
 {
   switch(ctx->trapno) {
@@ -393,16 +359,13 @@ void exception(struct context *ctx)
     break;
   }
   printk(" fs=0x%08x,  es=0x%08x,  ds=0x%08x\n\r", ctx->fs, ctx->es, ctx->ds);
-  printk("edi=0x%08x, esi=0x%08x\n\r", ctx->edi, ctx->esi);
-  printk("ebp=0x%08x, isp=0x%08x\n\r", ctx->ebp, ctx->isp);
-  printk("ebx=0x%08x, edx=0x%08x\n\r", ctx->ebx, ctx->edx);
-  printk("ecx=0x%08x, eax=0x%08x\n\r", ctx->ecx, ctx->eax);
+  printk("edi=0x%08x, esi=0x%08x, ebp=0x%08x, isp=0x%08x\n\r", ctx->edi, ctx->esi, ctx->ebp, ctx->isp);
+  printk("ebx=0x%08x, edx=0x%08x, ecx=0x%08x, eax=0x%08x\n\r", ctx->ebx, ctx->edx, ctx->ecx, ctx->eax);
   printk("trapno=0x%02x, code=0x%08x\n\r", ctx->trapno, ctx->code);
-  printk("eip=0x%08x, cs=0x%04x, eflags=0x%08x\n\r", ctx->eip, ctx->cs, ctx->eflags);
-  if(ctx->cs & SEL_UPL) {
-    printk("esp=0x%08x\n\r", ctx->esp);
-    printk("ss=0x%04x\n\r", ctx->ss);
-  }
+  printk("eip=0x%08x,  cs=0x%04x, eflags=0x%08x\n\r", ctx->eip, ctx->cs, ctx->eflags);
+  if(ctx->cs & SEL_UPL)
+    printk("esp=0x%08x,  ss=0x%04x\n\r", ctx->esp, ctx->ss);
+  
   while(1);
 }
 
@@ -450,10 +413,6 @@ void syscall(struct context *ctx)
   }
 }
 
-/**
- *
- *
- */
 int putchar(int c)
 {
     unsigned char *SCREEN_BASE = (char *)(KERNBASE+0xB8000);
@@ -557,33 +516,17 @@ static uint32_t init_paging(uint32_t physfree)
     return physfree;
 }
 
-/**
- *
- *
- *
- */
 static void init_mem(uint32_t physfree)
 {
     uint32_t i, n = 0;
-
-    struct SMAP_entry {
-  	  uint32_t BaseL;
-  	  uint32_t BaseH;
-  	  uint32_t LengthL; 
-  	  uint32_t LengthH;
-  	  uint32_t Type;
-      #define SMAP_TYPE_RAM		1 /**< Normal memory */
-      #define SMAP_TYPE_RESERVED	2 /**< Reserved and unavailable */
-      #define SMAP_TYPE_ACPI		3 /**< ACPI reclaim memory */
-      #define SMAP_TYPE_NVS		4 /**< ACPI NVS memory */
-    }__attribute__((packed)) *smap=(struct SMAP_entry *)0x804/*XXX*/;
+    struct SMAP *smap=(struct SMAP *)0x804/*XXX*/;
 
     for(i = 0; i < *((uint32_t*)0x800/*XXX*/); i++) {
-      if(smap[i].Type==SMAP_TYPE_RAM) {
-        g_mem_zone[n]=PAGE_TRUNCATE(smap[i].BaseL);
-        g_mem_zone[n+1]=PAGE_TRUNCATE(g_mem_zone[n]+smap[i].LengthL);
+      if(smap[i].Type == SMAP_TYPE_RAM) {
+        g_mem_zone[n  ] = PAGE_TRUNCATE(smap[i].BaseL);
+        g_mem_zone[n+1] = PAGE_TRUNCATE(g_mem_zone[n]+smap[i].LengthL);
 
-        if(g_mem_zone[n+1]<g_mem_zone[n]+256*PAGE_SIZE)
+        if(g_mem_zone[n+1] < g_mem_zone[n] + 256 * PAGE_SIZE)
           continue;
 
         if((physfree > g_mem_zone[n]) && 
@@ -592,7 +535,7 @@ static void init_mem(uint32_t physfree)
 
         if(g_mem_zone[n+1] >= g_mem_zone[n] + PAGE_SIZE) {
 //          printk("Memory: 0x%08x-0x%08x\n\r", g_mem_zone[n], g_mem_zone[n+1]);
-          n+=2;
+          n += 2;
           if(n + 2 >= MEM_ZONE_LEN)
             break;
         }

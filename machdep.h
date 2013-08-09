@@ -36,14 +36,17 @@ struct context {
   *((uint32_t *)(sp)) = (uint32_t)(value); \
 } while(0)
 
-#define INIT_TASK_CONTEXT(user_stack, kern_stack, handler) do { \
-  PUSH_TASK_STACK(kern_stack, (user_stack)?0x23:0x10); \
-  PUSH_TASK_STACK(kern_stack, user_stack); \
+/*XXX - remove the constants*/
+#define INIT_TASK_CONTEXT(user_stack, kern_stack, entry) do { \
+  if(user_stack) { \
+    PUSH_TASK_STACK(kern_stack, 0x23); \
+    PUSH_TASK_STACK(kern_stack, user_stack); \
+  } \
   PUSH_TASK_STACK(kern_stack, 0x202); \
   PUSH_TASK_STACK(kern_stack, (user_stack)?0x1b:0x8); \
-  PUSH_TASK_STACK(kern_stack, handler); \
-  PUSH_TASK_STACK(kern_stack, 0xdead); \
-  PUSH_TASK_STACK(kern_stack, 0xbeef); \
+  PUSH_TASK_STACK(kern_stack, entry); \
+  PUSH_TASK_STACK(kern_stack, 0xdeadbeef); \
+  PUSH_TASK_STACK(kern_stack, 0xbeefdead); \
   PUSH_TASK_STACK(kern_stack, 0x11111111); \
   PUSH_TASK_STACK(kern_stack, 0x22222222); \
   PUSH_TASK_STACK(kern_stack, 0x33333333); \
@@ -57,7 +60,6 @@ struct context {
   PUSH_TASK_STACK(kern_stack, (user_stack)?0x23:0x10); \
   PUSH_TASK_STACK(kern_stack, &ret_from_syscall); \
 } while(0)
-
 
 void disable_irq(uint32_t irq);
 void enable_irq(uint32_t irq);

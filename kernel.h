@@ -23,6 +23,18 @@ extern uint32_t *PT;
 extern uint32_t *PTD;
 #define vtopte(va) (PT+((va)>>PAGE_SHIFT))
 
+struct SMAP {
+  uint32_t BaseL;
+  uint32_t BaseH;
+  uint32_t LengthL; 
+  uint32_t LengthH;
+  uint32_t Type;
+  #define SMAP_TYPE_RAM		1 /**< Normal memory */
+  #define SMAP_TYPE_RESERVED	2 /**< Reserved and unavailable */
+  #define SMAP_TYPE_ACPI		3 /**< ACPI reclaim memory */
+  #define SMAP_TYPE_NVS		4 /**< ACPI NVS memory */
+}__attribute__((packed));
+
 struct callout {
 	int32_t  expire;
 	void 	 (*fun)(void *pv);

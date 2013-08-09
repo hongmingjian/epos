@@ -50,14 +50,13 @@ static void foo(void *pv)
 
 void main(void *pv)
 {
-  printf("%d: Hello, world!\n\r", task_getid());
+  printf("%d: Hello, I'm the first user task!\n\r", task_getid());
   printf("%d: pv=0x%08x\n\r", task_getid(), pv);
 
   printf("%d: task #%d created\n\r", task_getid(), task_create(0x10000000, foo, 0x19760206));
 
   while(1) {
-    int i;
-    task_sleep(500000);
+    task_sleep(5000000);
     printf("%d: %d\n\r", task_getid(), fib(30));
   }
 }
@@ -65,6 +64,4 @@ void main(void *pv)
 void __main()
 {
 }
-
-
 

@@ -155,8 +155,6 @@ void task_exit(int val)
 	g_task_running->exit_code = val;
 	g_task_running->state = TASK_STATE_ZOMBIE;
 
-//  g_task_running = NULL;
-
 	schedule();
 }
 
@@ -165,43 +163,48 @@ int task_wait(int32_t tid, int32_t *exit_code)
 	uint32_t flags;
 	struct tcb *tsk;
 
-    if(g_task_running == NULL)
-        return -1;
+  if(g_task_running == NULL)
+    return -1;
 
-    save_flags_cli(flags);
+  save_flags_cli(flags);
 
 	if((tsk = find_task(tid)) == NULL) {
-	    restore_flags(flags);
+	  restore_flags(flags);
 		return -1;
-    }
+  }
 
 	if(tsk->state != TASK_STATE_ZOMBIE) {
-        struct tcb *p;
+    struct tcb *p;
 
-	    tsk->wait_cnt++;
+	  tsk->wait_cnt++;
 
-        p = tsk->wait_head;
-        tsk->wait_head = g_task_running;
-        g_task_running->wait_next = p;
+    p = tsk->wait_head;
+    tsk->wait_head = g_task_running;
+    g_task_running->wait_next = p;
 
-	    g_task_running->state = TASK_STATE_BLOCKED;
-	    schedule();
+	  g_task_running->state = TASK_STATE_BLOCKED;
+	  schedule();
 
-	    tsk->wait_cnt--;
+	  tsk->wait_cnt--;
 	}
 
-    if(exit_code != NULL)
-		*exit_code = tsk->exit_code;
+  if(exit_code != NULL)
+	  *exit_code = tsk->exit_code;
 			
 	if(tsk->wait_cnt == 0) {
-	    remove_task(tsk);
-//        printk("%d: Task %d reaped\n\r", g_task_running->tid, tsk->tid);
-        restore_flags(flags);
-	    kfree(tsk);
-        return 0;
+    char *p;
+	  remove_task(tsk);
+//    printk("%d: Task %d reaped\n\r", g_task_running->tid, tsk->tid);
+    restore_flags(flags);
+
+    p = (char *)tsk;
+    p += sizeof(struct tcb);
+    p -= (PAGE_SIZE + PAGE_SIZE);
+    kfree(p);
+    return 0;
 	}
 		
-    restore_flags(flags);
+  restore_flags(flags);
 	return 0;
 }
 
@@ -278,10 +281,10 @@ void init_task()
   task0->sem_next = NULL;
   task0->all_next = NULL;
 
-  INIT_TASK_CONTEXT(0, task0->kern_stack, 0/*XXX - to be filled*/);
+  INIT_TASK_CONTEXT(0, task0->kern_stack, 0/*to be filled*/);
 #else
   //XXX - calling task_create doesn't work, why?
-  printk("init_task: %d\n\r", task_create(0, 0/*XXX - to be filled*/, NULL));
+  printk("init_task: %d\n\r", task_create(0, 0/*to be filled*/, NULL));
   task0 = task_get(0);
   printk("init_task: 0x%08x\n\r", task0);
 #endif

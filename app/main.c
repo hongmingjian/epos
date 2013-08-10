@@ -40,9 +40,9 @@ static void foo(void *pv)
     int i;
     printf("%d: pv=0x%08x\n\r", task_getid(), pv);
 
-    for(i = 0; i < 5; i++) {
-        printf("%d: %u\n\r", task_getid(), fib(31));
-    }
+    for(i = 38; i < 48; i++)
+        printf("%d: fib(%d)=%u\n\r", task_getid(), i, fib(i));
+    
     printf("%d: Exiting\n\r", task_getid());
 
     task_exit((int)pv);
@@ -56,8 +56,8 @@ void main(void *pv)
   printf("%d: task #%d created\n\r", task_getid(), task_create(0x10000000, foo, 0x19760206));
 
   while(1) {
-    task_sleep(5000000);
-    printf("%d: %d\n\r", task_getid(), fib(30));
+    task_sleep(500000);
+    printf("%d: fib(%d)=%u\n\r", task_getid(), 37, fib(37));
   }
 }
 

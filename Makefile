@@ -16,10 +16,15 @@ PROG=		eposkrnl
 
 all: $(PROG).bin
 
-CFLAGS=		-O -fomit-frame-pointer -fno-builtin -ffreestanding -mno-stack-arg-probe -fno-stack-check -fno-stack-protector #-Wall
+CFLAGS=		-O -fomit-frame-pointer -fno-builtin \
+					-ffreestanding -mno-stack-arg-probe \
+					-fno-stack-check -fno-stack-protector #-Wall
 LDFLAGS=	-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
-OBJS=		entry.o machdep.o printk.o vsprintf.o utils.o task.o timer.o sem.o callout.o kmalloc.o startup.o floppy.o fat.o pe.o tlsf/tlsf.o
+OBJS=		entry.o machdep.o printk.o vsprintf.o \
+				utils.o task.o timer.o sem.o callout.o \
+				kmalloc.o startup.o floppy.o fat.o pe.o \
+				tlsf/tlsf.o
 
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
@@ -30,7 +35,9 @@ debug:
 	-../Bochs-2.6.2/bochsdbg.exe -q -f bochsrc.txt
 
 run:
-	-../Bochs-2.6.2/bochs.exe -q -f bochsrc.txt
+	-../Qemu-1.5.1/qemu-system-i386w.exe -L ../Qemu-1.5.1/Bios -m 32 -boot a -fda image.flp
+#	-../Bochs-2.6.2/bochs.exe -q -f bochsrc.txt
 
 clean:
-	-$(RM)  *.o *.out *.bin *.*~ $(PROG).exe $(PROG).map
+	-$(RM)  *.o *.bin *.*~ $(PROG).out $(PROG).map
+

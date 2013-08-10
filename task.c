@@ -111,7 +111,7 @@ struct tcb* find_task(int tid)
 int task_create(uint32_t user_stack, 
 	  void (*handler)(void *), void *param)
 {
-  static int tid = 1;
+  static int tid = 0;
   struct tcb *new;
   char *p;
   uint32_t flags;
@@ -275,35 +275,5 @@ void init_task()
   g_task_running = NULL;
   g_task_all_head = NULL;
 
-#if 1
-  {
-    char *p;
-	  p = (char *)kmalloc(PAGE_SIZE+PAGE_SIZE);
-
-    p = p + PAGE_SIZE + PAGE_SIZE;
-    p -= sizeof(struct tcb);
-    task0 = (struct tcb *)p;
-  }
-
-	memset(task0, 0, sizeof(struct tcb));
-
-	task0->kern_stack = (uint32_t)task0;
-	task0->tid = 0;
-	task0->state = TASK_STATE_READY;
-	task0->quantum = DEFAULT_QUANTUM;
-  task0->wait_cnt = 0;
-  task0->wait_head = NULL;
-  task0->wait_next = NULL;
-  task0->sem_next = NULL;
-  task0->all_next = NULL;
-
-  INIT_TASK_CONTEXT(0, task0->kern_stack, 0/*to be filled*/);
-#else
-  //XXX - calling task_create doesn't work, why?
-  printk("init_task: %d\n\r", task_create(0, 0/*to be filled*/, NULL));
-  task0 = task_get(0);
-  printk("init_task: 0x%08x\n\r", task0);
-#endif
-
-  add_task(task0);
+  task0 = task_get(task_create(0, 0/*to be filled by move_to_task0*/, NULL));
 }

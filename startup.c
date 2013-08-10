@@ -72,12 +72,31 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
       paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
       *vtopte(vaddr)=paddr|PTE_V|PTE_RW|(code&PTE_U);
       invlpg(vaddr);
-//      printk("PF: 0x%08x(0x%08x) -> 0x%08x\n\r", vaddr, code, paddr);
+      printk("PF: 0x%08x(0x%08x) -> 0x%08x\n\r", vaddr, code, paddr);
       return 0;
     }
   }
   printk("PF: 0x%08x(0x%08x) ->   ????????\n\r", vaddr, code);
   return -1;
+}
+
+void start_user_task()
+{
+    char *filename="\\a.exe";
+    uint32_t entry;
+
+    init_floppy();
+    init_fat();
+
+    entry = load_pe(filename);
+
+    if(entry) {
+      int tid;
+      tid = task_create(USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
+      if(tid < 0)
+        printk("failed to create the first user task\n\r");
+    } else
+      printk("load_pe(%s) failed\n\r", filename);
 }
 
 void cstart(void)
@@ -93,7 +112,7 @@ void cstart(void)
    *
    *
    */
-  if(1){
+  if(1) {
     uint32_t i;
 
 
@@ -118,13 +137,13 @@ void cstart(void)
     invltlb();
   }
 
-  if(1){
+  if(1) {
     uint32_t i;
     for(i = 0; i < NR_IRQ; i++)
       intr_vector[i]=isr_default;
   }
 
-  if(1){
+  if(1) {
     uint32_t size;
     uint32_t i, vaddr, paddr;
 
@@ -150,7 +169,7 @@ void cstart(void)
 //    printk("g_frame_count=%d\n\r", g_frame_count);
   }
 
-  if(1){
+  if(1) {
     g_kern_heap_base = (uint8_t *)g_kern_cur_addr;
     g_kern_heap_size = 1024 * PAGE_SIZE;
     g_kern_cur_addr += g_kern_heap_size;
@@ -163,53 +182,10 @@ void cstart(void)
   init_task();
   init_callout();
 
-#if 1
-  if(1){
-    g_task_running = task0;
+  move_to_task0(task0);
+  start_user_task();
 
-    __asm__ __volatile__ (
-      "movl %0, %%eax\n\t"
-      "movl (%%eax), %%eax\n\t"
-      "pushl $1f\n\t"
-      "popl (52+4)(%%eax)\n\t"
-      "movl %%eax, %%esp\n\t"
-      "ret\n\t"
-      "1:\n\t"
-      :
-      :"m"(task0)
-      :"%eax"
-    );
-
-    printk("Now, I'm running in the context of task #%d\n\r", task_getid());
-  }
-#endif
-
-  init_floppy();
-  init_fat();
-
-#if 1  
-  if(1){
-    char *filename="\\a.exe";
-    uint32_t entry;
-
-    entry = load_pe(filename);
-
-    if(entry) {
-      int tid;
-      tid = task_create(USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
-      if(tid < 0)
-        printk("failed to create the first user task\n\r");
-    } else
-      printk("load_pe(%s) failed\n\r", filename);
-  }
-#endif
-
-
-  while(1) {
-//    int i;
-//    for(i = 0; i < 1000000; i++);
-//    putchar('K');
-    __asm__ __volatile__ ("hlt\n\t"::);
-  }
+  while(1)
+    hlt();
 }
 

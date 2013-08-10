@@ -13,7 +13,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * Authors: Yun Long<lane312@126.com>
+ * Authors: Yun Long<>
  *
  */
  

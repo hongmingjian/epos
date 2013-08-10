@@ -52,7 +52,7 @@ struct context {
   *((uint32_t *)(sp)) = (uint32_t)(value); \
 } while(0)
 
-/*XXX - remove the constants*/
+/*XXX - replace meaningful constants, please*/
 #define INIT_TASK_CONTEXT(user_stack, kern_stack, entry) do { \
   if(user_stack) { \
     PUSH_TASK_STACK(kern_stack, 0x23); \
@@ -75,6 +75,22 @@ struct context {
   PUSH_TASK_STACK(kern_stack, (user_stack)?0x23:0x10); \
   PUSH_TASK_STACK(kern_stack, (user_stack)?0x23:0x10); \
   PUSH_TASK_STACK(kern_stack, &ret_from_syscall); \
+} while(0)
+
+#define move_to_task0(tsk) do { \
+  g_task_running = (tsk); \
+  __asm__ __volatile__ ( \
+    "movl %0, %%eax\n\t" \
+    "movl (%%eax), %%eax\n\t" \
+    "pushl $1f\n\t" \
+    "popl (52+4)(%%eax)\n\t" \
+    "movl %%eax, %%esp\n\t" \
+    "ret\n\t" \
+    "1:\n\t" \
+    : \
+    :"m"(tsk) \
+    :"%eax" \
+  ); \
 } while(0)
 
 void disable_irq(uint32_t irq);

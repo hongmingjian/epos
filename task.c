@@ -49,7 +49,7 @@ void schedule()
        (select == g_task_running))
         return;
 
-//    printk("%d -> %d\n\r", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
+//    printk("0x%x -> 0x%x\n\r", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
 
     g_resched = 0;
     switch_to(select);
@@ -111,8 +111,8 @@ struct tcb* find_task(int tid)
 int task_create(uint32_t user_stack, 
 	  void (*handler)(void *), void *param)
 {
-	static int tid = 1;
-	struct tcb *new;
+  static int tid = 1;
+  struct tcb *new;
   char *p;
   uint32_t flags;
 

@@ -34,6 +34,12 @@ static __inline void sti()
 	__asm__ __volatile__("sti");
 }
 
+static __inline void
+hlt()
+{
+	__asm__ __volatile__("hlt");
+}
+
 #define save_flags_cli(flags)\
 	do {					 \
 		__asm__ __volatile__(\

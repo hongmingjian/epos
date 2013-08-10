@@ -22,7 +22,7 @@ unsigned volatile ticks = 0;
 void isr_timer(uint32_t irq, struct context *ctx)
 {
 	ticks++;
-//  putchar('.');
+//    putchar('.');
 
     if((g_task_running == NULL) || 
        (g_task_running->tid == 0)) {

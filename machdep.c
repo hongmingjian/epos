@@ -95,7 +95,7 @@ void switch_to(struct tcb *new)
 }
 
 #define	SEL_KPL	0		/* kernel priority level */
-#define	SEL_UPL	3		/* user priority level */
+#define	SEL_UPL	3		/*   user priority level */
 
 #define	GSEL_NULL   0	/* Null Descriptor */
 #define	GSEL_KCODE  1	/* Kernel Code Descriptor */

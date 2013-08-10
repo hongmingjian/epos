@@ -16,8 +16,7 @@ PROG=		eposkrnl
 
 all: $(PROG).bin
 
-#CFLAGS=		-O -fomit-frame-pointer -fno-builtin -ffreestanding -mno-stack-arg-probe -fno-stack-check -fno-stack-protector #-Wall
-CFLAGS=		-O -fno-builtin -ffreestanding -mno-stack-arg-probe -fno-stack-check -fno-stack-protector #-Wall
+CFLAGS=		-O -fomit-frame-pointer -fno-builtin -ffreestanding -mno-stack-arg-probe -fno-stack-check -fno-stack-protector #-Wall
 LDFLAGS=	-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
 OBJS=		entry.o machdep.o printk.o vsprintf.o utils.o task.o timer.o sem.o callout.o kmalloc.o startup.o floppy.o fat.o pe.o tlsf/tlsf.o

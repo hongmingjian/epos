@@ -101,7 +101,7 @@ void switch_to(struct tcb *new)
 #define	GSEL_KCODE  1	/* Kernel Code Descriptor */
 #define	GSEL_KDATA  2	/* Kernel Data Descriptor */
 #define	GSEL_UCODE  3	/* User Code Descriptor */
-#define	GSEL_UDATA	4	/* Kernel Data Descriptor */
+#define	GSEL_UDATA	4	/* User Data Descriptor */
 #define	GSEL_TSS    5	/* TSS Descriptor */
 #define NR_GDT      6
 

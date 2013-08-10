@@ -18,7 +18,9 @@ all: $(PROG).bin
 
 CFLAGS=		-O -fomit-frame-pointer -fno-builtin \
 					-ffreestanding -mno-stack-arg-probe \
+					-mno-ms-bitfields \
 					-fno-stack-check -fno-stack-protector #-Wall
+
 LDFLAGS=	-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
 OBJS=		entry.o machdep.o printk.o vsprintf.o \
@@ -39,5 +41,5 @@ run:
 #	-../Bochs-2.6.2/bochs.exe -q -f bochsrc.txt
 
 clean:
-	-$(RM)  *.o *.bin *.*~ $(PROG).out $(PROG).map
+	-$(RM)  *.o tlsf/*.o *.bin *.*~ $(PROG).out $(PROG).map
 

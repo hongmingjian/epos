@@ -25,7 +25,10 @@ uint32_t load_pe(char *file)
   fd=fat_fopen(file, O_RDONLY);
   if(fd >= 0) {
     int i, read;
-    char buffer[512];
+    char buffer[544];/*XXX - This is NOT enough for general use! 
+                             Please use 
+                                 kmalloc(pinh->OptionalHeader.SizeOfHeaders)
+                             instead*/
     PIMAGE_DOS_HEADER pidh;
     PIMAGE_NT_HEADERS pinh;
     PIMAGE_SECTION_HEADER pish;

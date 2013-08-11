@@ -256,7 +256,7 @@ _ret_from_syscall:
   popl %es
   popl %ds
 	popal
-  addl $8, %esp
+  addl $8, %esp # discard trapno and code
 	iret
 
 #define	ENABLE_ICU1 \

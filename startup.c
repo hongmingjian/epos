@@ -46,7 +46,7 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
     if(code&PTE_U) {
       if ((vaddr <  USER_MIN_ADDR) || 
           (vaddr >= USER_MAX_ADDR)) {
-        printk("PF: Invalid memory access: 0x%08x(0x%08x)\n\r", vaddr, code);
+        printk("PF: Invalid memory access: 0x%08x(0x%02x)\n\r", vaddr, code);
         return -1;
       }
     } else {
@@ -72,31 +72,33 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
       paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
       *vtopte(vaddr)=paddr|PTE_V|PTE_RW|(code&PTE_U);
       invlpg(vaddr);
-      printk("PF: 0x%08x(0x%08x) -> 0x%08x\n\r", vaddr, code, paddr);
+      printk("PF: 0x%08x(0x%02x) -> 0x%08x\n\r", vaddr, code, paddr);
       return 0;
     }
   }
-  printk("PF: 0x%08x(0x%08x) ->   ????????\n\r", vaddr, code);
+  printk("PF: 0x%08x(0x%02x) ->   ????????\n\r", vaddr, code);
   return -1;
 }
 
 void start_user_task()
 {
-    char *filename="\\a.exe";
-    uint32_t entry;
+  char *filename="\\a.exe";
+  uint32_t entry;
 
-    init_floppy();
-    init_fat();
+  printk("From now on, we're running as task #%d\n\r", task_getid());
 
-    entry = load_pe(filename);
+  init_floppy();
+  init_fat();
 
-    if(entry) {
-      int tid;
-      tid = task_create(USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
-      if(tid < 0)
-        printk("failed to create the first user task\n\r");
-    } else
-      printk("load_pe(%s) failed\n\r", filename);
+  entry = load_pe(filename);
+
+  if(entry) {
+    int tid;
+    tid = task_create(USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
+    if(tid < 0)
+      printk("failed to create the first user task\n\r");
+  } else
+    printk("load_pe(%s) failed\n\r", filename);
 }
 
 void cstart(void)

@@ -28,6 +28,13 @@ $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $^ $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $(PROG)
 	dd if=$(PROG) of=$@ bs=512 count=1
+	../../bin/fat_imgen.exe -m -s $@ -f ../image.flp
+
+run:
+	$(MAKE) -C .. run
+
+debug:
+	$(MAKE) -C .. debug 
 
 clean:
 	${RM} *.o $(PROG).out $(PROG) $(PROG).bin *.*~

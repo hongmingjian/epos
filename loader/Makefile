@@ -25,7 +25,8 @@ LIBS=
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
-	../../bin/winimage /h ../image.flp  /i $@
+	../../bin/fat_imgen.exe -m -g -i $@ -f ../image.flp
+#	../../bin/winimage /h ../image.flp  /i $@
 
 run:
 	$(MAKE) -C .. run

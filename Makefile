@@ -31,7 +31,8 @@ OBJS=		entry.o machdep.o printk.o vsprintf.o \
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
-	../bin/winimage.exe /h image.flp  /i $@
+	../bin/fat_imgen.exe -m -g -i $@ -f image.flp
+#	../bin/winimage.exe /h image.flp  /i $@
 
 debug:
 	-../Bochs-2.6.2/bochsdbg.exe -q -f bochsrc.txt

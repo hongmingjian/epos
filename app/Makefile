@@ -19,11 +19,12 @@ all: $(PROG).exe
 CFLAGS=		-fno-builtin -ffreestanding -O #-Wall
 LDFLAGS=	-nostdlib -nostartfiles #-Wl,-Map,$(PROG).map
 
-OBJS=		crt0.o utils.o vsprintf.o main.o
+OBJS=		crt0.o syscall.o utils.o vsprintf.o main.o
 
 $(PROG).exe: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
-	../../bin/winimage.exe /h ../image.flp  /i $@
+	../../bin/fat_imgen.exe -m -g -i $@ -f ../image.flp
+#	../../bin/winimage.exe /h ../image.flp  /i $@
 
 run:
 	$(MAKE) -C .. run

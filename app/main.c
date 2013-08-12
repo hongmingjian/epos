@@ -9,6 +9,7 @@ void task_yield();
 int task_sleep(unsigned msec);
 int task_create(unsigned stack, void *func, unsigned pv);
 int task_exit(int val);
+int task_wait(int tid, int *exit_code);
 
 int printf(const char *fmt,...)
 {
@@ -28,37 +29,76 @@ int printf(const char *fmt,...)
 
 static unsigned fib(unsigned n)
 {
-     if (n == 0)
-        return 0;
-     if (n == 1)
-        return 1;
-     return fib(n - 1) + fib(n - 2);
+  if (n == 0)
+    return 0;
+  if (n == 1)
+    return 1;
+  return fib(n - 1) + fib(n - 2);
+}
+
+static void hanoi(int d, char from, char to, char aux)
+{
+  if(d == 1) {
+    printf("task #%d: %3d, %c->%c\n\r", task_getid(), d, from, to);
+    return;
+  }
+
+  hanoi(d - 1, from, aux, to);
+  printf("task #%d: %3d, %c->%c\n\r", task_getid(), d, from, to);
+  task_sleep(8000);
+  hanoi(d - 1, aux, to, from);
 }
 
 static void foo(void *pv)
 {
-    int i;
-    printf("%d: pv=0x%08x\n\r", task_getid(), pv);
+  int i, code;
+  printf("task #%d: pv=0x%08x\n\r", task_getid(), pv);
 
-    for(i = 38; i < 48; i++)
-        printf("%d: fib(%d)=%u\n\r", task_getid(), i, fib(i));
+  printf("task #%d: waiting task #%d\n\r", task_getid(), 3);
+  task_wait(3, &code);
+  printf("task #%d: task #%d exit with code %d\n\r", task_getid(), 3, code);
+
+  for(i = 38; i < 48; i++)
+    printf("task #%d: fib(%d)=%u\n\r", task_getid(), i, fib(i));
     
-    printf("%d: Exiting\n\r", task_getid());
+  printf("task #%d: Exiting\n\r", task_getid());
 
-    task_exit((int)pv);
+  task_exit((int)pv);
+}
+
+static bar(void *pv)
+{
+  int n = (int)(pv);
+  printf("task #%d: pv=0x%08x\n\r", task_getid(), pv);
+  if(n <= 0) {
+    printf("task #%d: Illegal number of plates %d\n\r", n);
+    task_exit(-1);
+  }
+  
+  hanoi(n, 'A', 'B', 'C');
+
+  printf("task #%d: Exiting\n\r", task_getid());
+  task_exit(0);
 }
 
 void main(void *pv)
 {
-  printf("%d: Hello, I'm the first user task!\n\r", task_getid());
-  printf("%d: pv=0x%08x\n\r", task_getid(), pv);
+  int code;
+  printf("task #%d: Hello, I'm the first user task!\n\r", task_getid());
+  printf("task #%d: pv=0x%08x\n\r", task_getid(), pv);
 
-  printf("%d: task #%d created\n\r", task_getid(), task_create(0x10000000, foo, 0x19760206));
+  printf("task #%d: task #%d created\n\r", task_getid(), task_create(0xa0000000, bar, 6));
+  printf("task #%d: task #%d created\n\r", task_getid(), task_create(0xb0000000, foo, 0x19760206));
+
+  printf("task #%d: waiting task #%d\n\r", task_getid(), 3);
+  task_wait(3, &code);
+  printf("task #%d: task #%d exit with code %d\n\r", task_getid(), 3, code);
 
   while(1) {
     task_sleep(500000);
-    printf("%d: fib(%d)=%u\n\r", task_getid(), 37, fib(37));
+    printf("task #%d: fib(%d)=%u\n\r", task_getid(), 37, fib(37));
   }
+  task_exit(0);
 }
 
 void __main()

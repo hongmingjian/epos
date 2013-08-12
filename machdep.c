@@ -188,10 +188,10 @@ struct segment_descriptor	{
 
 static
 struct tss {
-   uint32_t prev;       // UNUSED
-   uint32_t esp0;       // loaded when CPU changed from user to kernel mode.
-   uint32_t ss0;        // ditto
-   uint32_t esp1;       // everything below is UNUSUED 
+   uint32_t prev; // UNUSED
+   uint32_t esp0; // loaded when CPU changed from user to kernel mode.
+   uint32_t ss0;  // ditto
+   uint32_t esp1; // everything below is UNUSUED 
    uint32_t ss1;
    uint32_t esp2;
    uint32_t ss2;
@@ -422,6 +422,20 @@ void syscall(struct context *ctx)
     break;
   case 5:
     task_exit(*((uint32_t *)ctx->esp));
+    break;
+  case 6:
+    {
+      uint32_t tid = *((uint32_t *)(ctx->esp+0));
+       int32_t *code = ( int32_t *)(ctx->esp+4);
+      if((code != NULL) && 
+         (((uint32_t)code <  USER_MIN_ADDR) || 
+          ((uint32_t)code >= USER_MAX_ADDR))) {
+        ctx->eax = -ctx->eax;
+        break;
+      }
+ 
+      ctx->eax = task_wait(tid, code);
+    }
     break;
   default:
     printk("syscall #%d not implemented.\n\r", ctx->eax);

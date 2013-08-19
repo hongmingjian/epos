@@ -101,9 +101,9 @@ void start_user_task()
     printk("load_pe(%s) failed\n\r", filename);
 }
 
-void cstart(void)
+void cstart(uint32_t magic, uint32_t addr)
 {
-  init_machdep( PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
+  init_machdep( addr, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
 
   g_kern_cur_addr=KERNBASE+PAGE_ROUNDUP( R((uint32_t)(&end)) );
   g_kern_end_addr=KERNBASE+NR_KERN_PAGETABLE*PAGE_SIZE*1024;

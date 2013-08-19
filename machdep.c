@@ -16,6 +16,7 @@
  */
 #include "machdep.h"
 #include "kernel.h"
+#include "multiboot.h"
 
 #define	IO_ICU1		0x20		/* 8259A Interrupt Controller #1 */
 #define	IO_ICU2		0xA0		/* 8259A Interrupt Controller #2 */
@@ -97,12 +98,12 @@ void switch_to(struct tcb *new)
 #define	SEL_KPL	0		/* kernel priority level */
 #define	SEL_UPL	3		/*   user priority level */
 
-#define	GSEL_NULL   0	/* Null Descriptor */
+#define	GSEL_NULL   0	/*        Null Descriptor */
 #define	GSEL_KCODE  1	/* Kernel Code Descriptor */
 #define	GSEL_KDATA  2	/* Kernel Data Descriptor */
-#define	GSEL_UCODE  3	/* User Code Descriptor */
-#define	GSEL_UDATA	4	/* User Data Descriptor */
-#define	GSEL_TSS    5	/* TSS Descriptor */
+#define	GSEL_UCODE  3	/*   User Code Descriptor */
+#define	GSEL_UDATA	4	/*   User Data Descriptor */
+#define	GSEL_TSS    5	/*  Common TSS Descriptor */
 #define NR_GDT      6
 
 static
@@ -392,7 +393,7 @@ void exception(struct context *ctx)
  */
 void syscall(struct context *ctx)
 {
-//    printk("task #%d syscalling #%d.\n\r", task_getid(), ctx->eax);
+//  printk("task #%d syscalling #%d.\n\r", task_getid(), ctx->eax);
   switch(ctx->eax) {
   case 0:
     ctx->eax = putchar((*((uint32_t *)ctx->esp))&0xff);
@@ -526,9 +527,8 @@ static uint32_t init_paging(uint32_t physfree)
     pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|PTE_V|PTE_RW;
 
     pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
-    for(i = 0; i < (uint32_t)(pgdir); i+=PAGE_SIZE) {
+    for(i = 0; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
       pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_RW;
-    }
 
     __asm__ __volatile__ (
   	  "movl	%0, %%eax\n\t"
@@ -547,25 +547,33 @@ static uint32_t init_paging(uint32_t physfree)
     return physfree;
 }
 
-static void init_mem(uint32_t physfree)
+static void init_mem(multiboot_memory_map_t *mmap, uint32_t size, uint32_t physfree)
 {
     uint32_t i, n = 0;
-    struct SMAP *smap=(struct SMAP *)0x804/*XXX*/;
 
-    for(i = 0; i < *((uint32_t*)0x800/*XXX*/); i++) {
-      if(smap[i].Type == SMAP_TYPE_RAM) {
-        g_mem_zone[n  ] = PAGE_TRUNCATE(smap[i].BaseL);
-        g_mem_zone[n+1] = PAGE_TRUNCATE(g_mem_zone[n]+smap[i].LengthL);
+//    printk("mmap=0x%08x, size=%d\n\r", mmap, size);
+    for (; size;
+      size -= (mmap->size+sizeof(mmap->size)),
+      mmap = (multiboot_memory_map_t *) ((uint32_t)mmap + 
+                                         mmap->size + 
+                                         sizeof (mmap->size))) {
+
+//      printk("size=%d\n\r", mmap->size);
+      if(mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
+        g_mem_zone[n  ] = PAGE_TRUNCATE(mmap->addr&0xffffffff);
+        g_mem_zone[n+1] = PAGE_TRUNCATE(g_mem_zone[n]+(mmap->len&0xffffffff));
+
+//        printk("Memory: 0x%08x-0x%08x\n\r", g_mem_zone[n], g_mem_zone[n+1]);
 
         if(g_mem_zone[n+1] < g_mem_zone[n] + 256 * PAGE_SIZE)
           continue;
 
-        if((physfree > g_mem_zone[n]) && 
+        if((physfree >  g_mem_zone[n  ]) && 
            (physfree <= g_mem_zone[n+1]))
           g_mem_zone[n]=physfree;
 
         if(g_mem_zone[n+1] >= g_mem_zone[n] + PAGE_SIZE) {
-//          printk("Memory: 0x%08x-0x%08x\n\r", g_mem_zone[n], g_mem_zone[n+1]);
+          printk("Memory: 0x%08x-0x%08x\n\r", g_mem_zone[n], g_mem_zone[n+1]);
           n += 2;
           if(n + 2 >= MEM_ZONE_LEN)
             break;
@@ -573,18 +581,20 @@ static void init_mem(uint32_t physfree)
       }
     }
 
+//    printk("Done\n\r");
+
     g_mem_zone[n] = 0;
     g_mem_zone[n+1] = 0;
 }
 
-void init_machdep(uint32_t physfree)
+void init_machdep(uint32_t mbi, uint32_t physfree)
 {
   physfree=init_paging(physfree);
 
   init_gdt();
   init_idt();
 
-  init_mem(physfree);
+  init_mem((void *)(((multiboot_info_t *)mbi)->mmap_addr), ((multiboot_info_t *)mbi)->mmap_length, physfree);
 
   init_i8259(ICU_IDT_OFFSET);
   init_i8253(HZ);

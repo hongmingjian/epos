@@ -23,8 +23,7 @@ OBJS=		crt0.o syscall.o utils.o vsprintf.o main.o
 
 $(PROG).exe: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
-	../../bin/fat_imgen.exe -m -g -i $@ -f ../image.flp
-#	../../bin/winimage.exe /h ../image.flp  /i $@
+	../../bin/fat_imgen.exe -m -g -i $@ -f ../floppy.img
 
 run:
 	$(MAKE) -C .. run

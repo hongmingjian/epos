@@ -97,5 +97,5 @@ void disable_irq(uint32_t irq);
 void enable_irq(uint32_t irq);
 
 int  putchar(int c);
-void init_machdep(uint32_t physfree);
+void init_machdep(uint32_t mbi, uint32_t physfree);
 #endif

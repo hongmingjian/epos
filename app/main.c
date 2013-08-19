@@ -39,20 +39,21 @@ static unsigned fib(unsigned n)
 static void hanoi(int d, char from, char to, char aux)
 {
   if(d == 1) {
-    printf("task #%d: %3d, %c->%c\n\r", task_getid(), d, from, to);
+    task_sleep(8000);
+    printf("%c%d%c ", from, d, to);
     return;
   }
 
   hanoi(d - 1, from, aux, to);
-  printf("task #%d: %3d, %c->%c\n\r", task_getid(), d, from, to);
   task_sleep(8000);
+  printf("%c%d%c ", from, d, to);
   hanoi(d - 1, aux, to, from);
 }
 
-static void foo(void *pv)
+static void tsk_fib(void *pv)
 {
   int i, code;
-  printf("task #%d: pv=0x%08x\n\r", task_getid(), pv);
+//  printf("task #%d: pv=0x%08x\n\r", task_getid(), pv);
 
   printf("task #%d: waiting task #%d\n\r", task_getid(), 3);
   task_wait(3, &code);
@@ -66,10 +67,10 @@ static void foo(void *pv)
   task_exit((int)pv);
 }
 
-static bar(void *pv)
+static tsk_hanoi(void *pv)
 {
   int n = (int)(pv);
-  printf("task #%d: pv=0x%08x\n\r", task_getid(), pv);
+  printf("task #%d: Hanoi tower with %d plates\n\r", task_getid(), pv);
   if(n <= 0) {
     printf("task #%d: Illegal number of plates %d\n\r", n);
     task_exit(-1);
@@ -84,11 +85,10 @@ static bar(void *pv)
 void main(void *pv)
 {
   int code;
-  printf("task #%d: Hello, I'm the first user task!\n\r", task_getid());
-  printf("task #%d: pv=0x%08x\n\r", task_getid(), pv);
+  printf("task #%d: Hello, I'm the first user task(pv=0x%08x)!\n\r", task_getid(), pv);
 
-  printf("task #%d: task #%d created\n\r", task_getid(), task_create(0xa0000000, bar, 6));
-  printf("task #%d: task #%d created\n\r", task_getid(), task_create(0xb0000000, foo, 0x19760206));
+  printf("task #%d: task #%d created\n\r", task_getid(), task_create(0xa0000000, tsk_hanoi, 6));
+  printf("task #%d: task #%d created\n\r", task_getid(), task_create(0xb0000000, tsk_fib, 0x19760206));
 
   printf("task #%d: waiting task #%d\n\r", task_getid(), 3);
   task_wait(3, &code);

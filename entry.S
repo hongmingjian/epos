@@ -30,32 +30,56 @@
 
 #define R(foo) ((foo)-KERNBASE)
 
+#define __ASSEMBLY__ 1
+#include "multiboot.h"
+     
+/* The flags for the Multiboot header. */
+#ifdef __ELF__
+# define MULTIBOOT_HEADER_FLAGS         0x00000003
+#else
+# define MULTIBOOT_HEADER_FLAGS         0x00010003
+#endif
+     
+  .text
   .code32
   .globl _entry
 _entry:
-  pushl %ebp
-  movl %esp, %ebp
-
+  jmp     multiboot_entry
+     
+  /* Align 32 bits boundary. */
+  .align  4
+     
+multiboot_header:
+.long   MULTIBOOT_HEADER_MAGIC /* magic */
+.long   MULTIBOOT_HEADER_FLAGS /* flags */
+.long   -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS) /* checksum */
+#ifndef __ELF__
+.long   R(multiboot_header) /* header_addr */
+.long   R(_entry) /* load_addr */
+.long   R(_edata) /* load_end_addr */
+.long   R(_end) /* bss_end_addr */
+.long   R(multiboot_entry) /* entry_addr */
+#endif /* ! __ELF__ */
+     
+multiboot_entry:
+  /* Initialize the stack pointer. */
+  movl $R(_kern_stack), %esp
+     
+  /* Reset EFLAGS. */
 	pushl	$0x2
 	popfl
-
-	movw	%ds, %ax
-	movw	%ax, %fs
-	movw	%ax, %gs
-  movl $R(_kern_stack), %esp
-
-#
-# Zero BSS
-#
-  xorl %eax, %eax
-  movl $R(__bss_start), %edi
-  movl $R(_end), %ecx
-  subl %edi, %ecx
-  repnz stosb
-
+     
+  /* Push the pointer to the Multiboot information structure. */
+  pushl   %ebx
+  /* Push the magic value. */
+  pushl   %eax
+     
+  /* Now enter the C main function... */
   call _cstart
-
+     
+loop:
   hlt
+  jmp     loop
 
   .global	_inportb
 _inportb:

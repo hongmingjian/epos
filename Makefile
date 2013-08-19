@@ -31,14 +31,13 @@ OBJS=		entry.o machdep.o printk.o vsprintf.o \
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
-	../bin/fat_imgen.exe -m -g -i $@ -f image.flp
-#	../bin/winimage.exe /h image.flp  /i $@
+	../bin/fat_imgen.exe -m -g -i $@ -f floppy.img
 
 debug:
 	-../Bochs-2.6.2/bochsdbg.exe -q -f bochsrc.txt
 
 run:
-	-../Qemu-1.5.1/qemu-system-i386w.exe -L ../Qemu-1.5.1/Bios -m 32 -boot a -fda image.flp
+	-../Qemu-1.5.1/qemu-system-i386w.exe -L ../Qemu-1.5.1/Bios -m 32 -boot a -fda floppy.img
 #	-../Bochs-2.6.2/bochs.exe -q -f bochsrc.txt
 
 clean:

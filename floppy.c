@@ -45,7 +45,7 @@ static void _dma_xfer(unsigned char DMA_channel, unsigned char page, unsigned in
     outportb(MaskReg[DMA_channel], 0x04 | DMA_channel);
 
     /* Clear any data transfers that are currently executing. */
-//    outportb(ClearReg[DMA_channel], 0x00);
+    outportb(ClearReg[DMA_channel], 0x00);
     outportb (0xd8,0xff);	//reset master flip-flop
 
     /* Send the specified mode to the DMA. */
@@ -59,7 +59,7 @@ static void _dma_xfer(unsigned char DMA_channel, unsigned char page, unsigned in
     outportb (0xd8,0xff);	//reset master flip-flop
 
     /* Send the physical page that the data lies on. */
-//    outportb(PagePort[DMA_channel], page);
+    outportb(PagePort[DMA_channel], page);
 
     /* Send the length of the data.  Again, low byte first. */
     outportb(CountPort[DMA_channel], LO_BYTE(length));
@@ -212,6 +212,8 @@ static void fdc_check_int (uint8_t *st0, uint8_t *cyl)
 	fdc_sendbyte (FDC_CMD_CHECK_INT);
 	*st0 = fdc_getbyte ();
 	*cyl = fdc_getbyte ();
+//	printk("st0=0x%02x\n\r", *st0);
+//	printk("cyl=0x%02x\n\r", *cyl);
 }
 
 static void fdc_motoron()
@@ -353,15 +355,17 @@ uint8_t *floppy_read_sector (size_t lba)
 
 	floppy_lba2chs (lba, &head, &track, &sector);
 
-//    printk("head=%d, track=%d, sector=%d\n\r", head, track, sector);
+//  printk("head=%d, track=%d, sector=%d\n\r", head, track, sector);
  
 	fdc_motoron();
 
 	if (fdc_seek (track) < 0) {
+//    printk("failed to seek\n\r");
 		return 0;
   }
  
 	fdc_read_sector_imp (head, track, sector);
+
 	fdc_motoroff ();
  
 	return g_buf_dma;

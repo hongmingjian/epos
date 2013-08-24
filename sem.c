@@ -19,7 +19,7 @@
 
 struct sem {
     int32_t value;
-    struct tcb *sem_head;
+    struct wait_queue *wait_head;
 };
 
 void *sem_create(int32_t value)
@@ -32,7 +32,7 @@ void *sem_create(int32_t value)
     }
 
     sem->value = value;
-    sem->sem_head = NULL;
+    sem->wait_head = NULL;
 
     return sem;
 }
@@ -44,7 +44,7 @@ int sem_destroy(void *s)
 
     save_flags_cli(flags);
 
-    if(sem->sem_head != NULL) {
+    if(sem->wait_head != NULL) {
         restore_flags(flags);
         return -1;
     }
@@ -63,22 +63,8 @@ int sem_wait(void *s)
     save_flags_cli(flags);
 
     sem->value--;
-    if(sem->value < 0) {
-        if(sem->sem_head == NULL)
-            sem->sem_head = g_task_running;
-        else {
-            struct tcb *p, *q;
-            p = sem->sem_head;
-            do {
-                q = p;
-                p = p->sem_next;
-            } while(p != NULL);
-            q->sem_next = g_task_running;
-        }
-        g_task_running->sem_next = NULL;
-        g_task_running->state = TASK_STATE_BLOCKED;
-        schedule();
-    }
+    if(sem->value < 0)
+      sleep_on(&sem->wait_head);
 
     restore_flags(flags);
     return 0;
@@ -92,14 +78,8 @@ int sem_signal(void *s)
     save_flags_cli(flags);
 
     sem->value++;
-    if(sem->value <= 0) {
-        struct tcb *tsk = sem->sem_head;
-        if(tsk != NULL)
-            sem->sem_head = tsk->sem_next;
-
-        tsk->sem_next = NULL;
-        tsk->state = TASK_STATE_READY;
-    }
+    if(sem->value <= 0)
+      wake_up(&sem->wait_head, 1);
 
     restore_flags(flags);
     return 0;

@@ -55,6 +55,41 @@ void schedule()
     switch_to(select);
 }
 
+void sleep_on(struct wait_queue **head)
+{
+  struct wait_queue wait;
+
+  wait.tsk = g_task_running;
+  wait.next = *head;
+  *head = &wait;
+
+  g_task_running->state = TASK_STATE_BLOCKED;
+  schedule();
+
+  if(*head == &wait)
+    *head = wait.next;
+  else {
+    struct wait_queue *p, *q;
+    p = *head;
+    do {
+      q = p;
+      p = p->next;
+      if(p == &wait) {
+        q->next = p->next;
+        break;
+      }
+    } while(p != NULL);
+  }
+}
+
+void wake_up(struct wait_queue **head, int n)
+{
+  struct wait_queue *p;
+
+  for(p = *head; (p!=NULL) && n; p = p->next, n--)
+    p->tsk->state = TASK_STATE_READY;
+}
+
 static
 void add_task(struct tcb *tsk)
 {
@@ -133,10 +168,7 @@ int task_create(uint32_t user_stack,
 	new->tid = tid++;
 	new->state = TASK_STATE_READY;
 	new->quantum = DEFAULT_QUANTUM;
-  new->wait_cnt = 0;
   new->wait_head = NULL;
-  new->wait_next = NULL;
-  new->sem_next = NULL;
   new->all_next = NULL;
 
   if(user_stack != 0) {
@@ -155,18 +187,11 @@ int task_create(uint32_t user_stack,
 
 void task_exit(int val)
 {	
-    uint32_t flags;
+  uint32_t flags;
 
-    save_flags_cli(flags);
+  save_flags_cli(flags);
 
-//    if(g_task_running->wait_cnt > 0)
-    {
-        struct tcb *tsk = g_task_running->wait_head;
-        while(tsk != NULL) {
-            tsk->state = TASK_STATE_READY;
-            tsk = tsk->wait_next;
-        }
-    }
+  wake_up(&g_task_running->wait_head, -1);
 
 	g_task_running->exit_code = val;
 	g_task_running->state = TASK_STATE_ZOMBIE;
@@ -189,28 +214,16 @@ int task_wait(int32_t tid, int32_t *exit_code)
 		return -1;
   }
 
-	if(tsk->state != TASK_STATE_ZOMBIE) {
-    struct tcb *p;
-
-	  tsk->wait_cnt++;
-
-    p = tsk->wait_head;
-    tsk->wait_head = g_task_running;
-    g_task_running->wait_next = p;
-
-	  g_task_running->state = TASK_STATE_BLOCKED;
-	  schedule();
-
-	  tsk->wait_cnt--;
-	}
+	if(tsk->state != TASK_STATE_ZOMBIE)
+    sleep_on(&tsk->wait_head);
 
   if(exit_code != NULL)
 	  *exit_code = tsk->exit_code;
 			
-	if(tsk->wait_cnt == 0) {
+	if(tsk->wait_head == NULL) {
     char *p;
 	  remove_task(tsk);
-//    printk("%d: Task %d reaped\n\r", g_task_running->tid, tsk->tid);
+//    printk("%d: Task %d reaped\n\r", task_getid(), tsk->tid);
     restore_flags(flags);
 
     p = (char *)tsk;

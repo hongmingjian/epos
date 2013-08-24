@@ -72,7 +72,7 @@ int do_page_fault(uint32_t vaddr, uint32_t code)
       paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
       *vtopte(vaddr)=paddr|PTE_V|PTE_RW|(code&PTE_U);
       invlpg(vaddr);
-      printk("PF: 0x%08x(0x%02x) -> 0x%08x\n\r", vaddr, code, paddr);
+//      printk("PF: 0x%08x(0x%02x) -> 0x%08x\n\r", vaddr, code, paddr);
       return 0;
     }
   }
@@ -104,6 +104,12 @@ void start_user_task()
 void cstart(uint32_t magic, uint32_t addr)
 {
   init_machdep( addr, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
+
+  printk("Welcome to EPOS\n\r");
+  printk("Copyright (C) 2005-2013 MingJian Hong<hmj@cqu.edu.cn>\n\r");
+  printk("All rights reserved.\n\r\n\r");
+  printk("Partial financial support from the School of Software Engineering,\n\r");
+  printk("ChongQing University is gratefully acknowledged.\n\r\n\r");
 
   g_kern_cur_addr=KERNBASE+PAGE_ROUNDUP( R((uint32_t)(&end)) );
   g_kern_end_addr=KERNBASE+NR_KERN_PAGETABLE*PAGE_SIZE*1024;

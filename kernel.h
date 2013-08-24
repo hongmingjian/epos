@@ -88,14 +88,18 @@ struct tcb {
 
   int32_t         exit_code;
 
-  int32_t         wait_cnt;
-  struct tcb     *wait_head;
-  struct tcb     *wait_next;
-
-  struct tcb     *sem_next;
+  struct wait_queue *wait_head;
 
   struct tcb     *all_next;
 };
+
+struct wait_queue {
+  struct tcb *tsk;
+  struct wait_queue *next;
+};
+
+void sleep_on(struct wait_queue **wq);
+void wake_up(struct wait_queue **wq, int n);
 
 extern struct tcb *g_task_running;
 extern struct tcb *g_task_all_head;

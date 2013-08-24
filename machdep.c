@@ -95,15 +95,15 @@ void switch_to(struct tcb *new)
     );
 }
 
-#define	SEL_KPL	0		/* kernel priority level */
-#define	SEL_UPL	3		/*   user priority level */
+#define	SEL_KPL 0 /* kernel priority level */
+#define	SEL_UPL 3 /*   user priority level */
 
-#define	GSEL_NULL   0	/*        Null Descriptor */
-#define	GSEL_KCODE  1	/* Kernel Code Descriptor */
-#define	GSEL_KDATA  2	/* Kernel Data Descriptor */
-#define	GSEL_UCODE  3	/*   User Code Descriptor */
-#define	GSEL_UDATA	4	/*   User Data Descriptor */
-#define	GSEL_TSS    5	/*  Common TSS Descriptor */
+#define	GSEL_NULL   0 /*        Null Descriptor */
+#define	GSEL_KCODE  1 /* Kernel Code Descriptor */
+#define	GSEL_KDATA  2 /* Kernel Data Descriptor */
+#define	GSEL_UCODE  3 /*   User Code Descriptor */
+#define	GSEL_UDATA  4 /*   User Data Descriptor */
+#define	GSEL_TSS    5 /*  Common TSS Descriptor */
 #define NR_GDT      6
 
 static
@@ -573,7 +573,7 @@ static void init_mem(multiboot_memory_map_t *mmap, uint32_t size, uint32_t physf
           g_mem_zone[n]=physfree;
 
         if(g_mem_zone[n+1] >= g_mem_zone[n] + PAGE_SIZE) {
-          printk("Memory: 0x%08x-0x%08x\n\r", g_mem_zone[n], g_mem_zone[n+1]);
+//          printk("Memory: 0x%08x-0x%08x\n\r", g_mem_zone[n], g_mem_zone[n+1]);
           n += 2;
           if(n + 2 >= MEM_ZONE_LEN)
             break;
@@ -583,7 +583,7 @@ static void init_mem(multiboot_memory_map_t *mmap, uint32_t size, uint32_t physf
 
 //    printk("Done\n\r");
 
-    g_mem_zone[n] = 0;
+    g_mem_zone[n  ] = 0;
     g_mem_zone[n+1] = 0;
 }
 

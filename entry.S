@@ -58,11 +58,11 @@ multiboot_header:
 .long   R(_entry) /* load_addr */
 .long   R(_edata) /* load_end_addr */
 .long   R(_end) /* bss_end_addr */
-.long   R(multiboot_entry) /* entry_addr */
+.long   R(_entry) /* entry_addr */
 #endif /* ! __ELF__ */
      
 multiboot_entry:
-  /* Initialize the stack pointer. */
+  /* Switch to the kernel stack */
   movl $R(_kern_stack), %esp
      
   /* Reset EFLAGS. */
@@ -252,6 +252,7 @@ _int0x80_syscall:
   pushl %ds
   pushl %es
   pushl %fs
+
   movl $KDSEL, %eax
   movw %ax, %ds
   movw %ax, %es

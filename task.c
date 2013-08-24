@@ -174,6 +174,9 @@ int task_create(uint32_t user_stack,
   if(user_stack != 0) {
     PUSH_TASK_STACK(user_stack, param);
     PUSH_TASK_STACK(user_stack, 0);
+  } else {
+    PUSH_TASK_STACK(new->kern_stack, param);
+    PUSH_TASK_STACK(new->kern_stack, 0);
   }
 
   INIT_TASK_CONTEXT(user_stack, new->kern_stack, handler);

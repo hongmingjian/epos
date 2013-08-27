@@ -3,17 +3,17 @@
 
 int printk(const char *fmt,...)
 {
-	char buf[1024];
-	va_list args;
-	int i, j;
+  char buf[1024];
+  va_list args;
+  int i, j;
 
-	va_start(args, fmt);
-	i=vsprintf(buf,fmt,args);
-	va_end(args);
+  va_start(args, fmt);
+  i=vsprintf(buf,fmt,args);
+  va_end(args);
 
-	for(j = 0; j < i; j++)
-		putchar(buf[j]);
+  for(j = 0; j < i; j++)
+    sys_putchar(buf[j]);
 
-	return i;
+  return i;
 }
 

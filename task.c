@@ -24,35 +24,28 @@ struct tcb *task0;
 
 void schedule()
 {
-	struct tcb *select = NULL;
-
-    if(g_task_running != NULL) {
-	    struct tcb *tsk = g_task_running->all_next;
-        do {
-            if(tsk == NULL)
-                tsk = g_task_all_head;
-            if(tsk == g_task_running)
-                break;
-            if((tsk->tid != 0) && 
-               (tsk->state == TASK_STATE_READY)) {
-                select = tsk;
-                break;
-            }
-            tsk = tsk->all_next;
-        } while(1);
-    }
-
+  struct tcb *select = g_task_running;
+  do {
+    select = select->all_next;
     if(select == NULL)
-        select = g_task_all_head;
+      select = g_task_all_head;
+    if(select == g_task_running)
+      break;
+    if((select->tid != 0) && 
+       (select->state == TASK_STATE_READY))
+      break;
+  } while(1);
 
-    if((select == NULL) || 
-       (select == g_task_running))
-        return;
+  if(select == g_task_running) {
+    if(select->state == TASK_STATE_READY)
+      return;
+    select = g_task_all_head;
+  }
 
-//    printk("0x%x -> 0x%x\n\r", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
+//  printk("0x%x -> 0x%x\n\r", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
 
-    g_resched = 0;
-    switch_to(select);
+  g_resched = 0;
+  switch_to(select);
 }
 
 void sleep_on(struct wait_queue **head)
@@ -93,39 +86,39 @@ void wake_up(struct wait_queue **head, int n)
 static
 void add_task(struct tcb *tsk)
 {
-    if(g_task_all_head == NULL)
-        g_task_all_head = tsk;
-    else {
-        struct tcb *p, *q;
-        p = g_task_all_head;
-        do {
-            q = p;
-            p = p->all_next;
-        } while(p != NULL);
-        q->all_next = tsk;
-    }
+  if(g_task_all_head == NULL)
+    g_task_all_head = tsk;
+  else {
+    struct tcb *p, *q;
+    p = g_task_all_head;
+    do {
+      q = p;
+      p = p->all_next;
+    } while(p != NULL);
+    q->all_next = tsk;
+  }
 }
 
 static
 void remove_task(struct tcb *tsk)
 {
-    if(g_task_all_head != NULL) {
-        if(tsk == g_task_all_head) {
-            g_task_all_head = g_task_all_head->all_next;
-        } else {
-            struct tcb *p, *q;
-            p = g_task_all_head;
-            do {
-                q = p;
-                p = p->all_next;
-                if(p == tsk)
-                    break;
-            } while(p != NULL);
+  if(g_task_all_head != NULL) {
+    if(tsk == g_task_all_head) {
+      g_task_all_head = g_task_all_head->all_next;
+    } else {
+      struct tcb *p, *q;
+      p = g_task_all_head;
+      do {
+        q = p;
+        p = p->all_next;
+        if(p == tsk)
+          break;
+      } while(p != NULL);
 
-            if(p == tsk)
-                q->all_next = p->all_next;
-        }
+      if(p == tsk)
+        q->all_next = p->all_next;
     }
+  }
 }
 
 static
@@ -133,17 +126,28 @@ struct tcb* find_task(int tid)
 {
 	struct tcb *tsk;
 	
-    tsk = g_task_all_head;
-    while(tsk != NULL) {
-        if(tsk->tid == tid)
-            break;
-        tsk = tsk->all_next;
-    }
+  tsk = g_task_all_head;
+  while(tsk != NULL) {
+    if(tsk->tid == tid)
+      break;
+    tsk = tsk->all_next;
+  }
  
 	return tsk;
 }
 
-int task_create(uint32_t user_stack, 
+static
+struct tcb *task_get(int tid)
+{
+  uint32_t flags;
+  struct tcb *p;
+  save_flags_cli(flags);
+  p = find_task(tid);
+  restore_flags(flags);
+  return p;
+}
+
+int sys_task_create(uint32_t user_stack, 
 	  void (*handler)(void *), void *param)
 {
   static int tid = 0;
@@ -188,7 +192,7 @@ int task_create(uint32_t user_stack,
 	return new->tid;
 }
 
-void task_exit(int val)
+void sys_task_exit(int val)
 {	
   uint32_t flags;
 
@@ -202,7 +206,7 @@ void task_exit(int val)
 	schedule();
 }
 
-int task_wait(int32_t tid, int32_t *exit_code)
+int sys_task_wait(int32_t tid, int32_t *exit_code)
 {
 	uint32_t flags;
 	struct tcb *tsk;
@@ -226,8 +230,9 @@ int task_wait(int32_t tid, int32_t *exit_code)
 	if(tsk->wait_head == NULL) {
     char *p;
 	  remove_task(tsk);
-//    printk("%d: Task %d reaped\n\r", task_getid(), tsk->tid);
     restore_flags(flags);
+
+//    printk("%d: Task %d reaped\n\r", sys_task_getid(), tsk->tid);
 
     p = (char *)tsk;
     p += sizeof(struct tcb);
@@ -240,49 +245,39 @@ int task_wait(int32_t tid, int32_t *exit_code)
 	return 0;
 }
 
-int32_t task_getid()
+int32_t sys_task_getid()
 {
-    return (g_task_running==NULL)?-1:g_task_running->tid;
+  return (g_task_running==NULL)?-1:g_task_running->tid;
 }
 
-struct tcb *task_get(int tid)
+void sys_task_yield()
 {
   uint32_t flags;
-  struct tcb *p;
   save_flags_cli(flags);
-  p = find_task(tid);
+  schedule();
   restore_flags(flags);
-  return p;
-}
-
-void task_yield()
-{
-    uint32_t flags;
-    save_flags_cli(flags);
-    schedule();
-    restore_flags(flags);
 }
 
 static void task_sleep_callout(void *pv)
 {
-    struct tcb *tsk = (struct tcb *)pv;
-    tsk->state = TASK_STATE_READY;
-//    printk("%d: ticks=%d, wakeup %d\n\r", task_getid(), ticks, tsk->tid);
+  struct tcb *tsk = (struct tcb *)pv;
+  tsk->state = TASK_STATE_READY;
+//  printk("%d: ticks=%d, wakeup %d\n\r", sys_task_getid(), ticks, tsk->tid);
 }
 
-int task_sleep(uint32_t msec)
+int sys_task_sleep(uint32_t msec)
 {
-    if(NULL != set_callout(1+(HZ*msec)/1000, task_sleep_callout, g_task_running)) {
-        uint32_t flags;
-//        printk("%d: sleep %d ticks, ticks=%d\n\r", task_getid(), 1+(HZ*msec)/1000, ticks);
-        save_flags_cli(flags);
-        g_task_running->state = TASK_STATE_BLOCKED;
-        schedule();
-        restore_flags(flags);
-        return 0;
-    }
+  if(NULL != set_callout(1+(HZ*msec)/1000, task_sleep_callout, g_task_running)) {
+    uint32_t flags;
+//    printk("%d: sleep %d ticks, ticks=%d\n\r", sys_task_getid(), 1+(HZ*msec)/1000, ticks);
+    save_flags_cli(flags);
+    g_task_running->state = TASK_STATE_BLOCKED;
+    schedule();
+    restore_flags(flags);
+    return 0;
+  }
 
-    return -1;
+  return -1;
 }
 
 void init_task()
@@ -291,5 +286,5 @@ void init_task()
   g_task_running = NULL;
   g_task_all_head = NULL;
 
-  task0 = task_get(task_create(0, 0/*to be filled by move_to_task0*/, NULL));
+  task0 = task_get(sys_task_create(0, 0/*to be filled by run_as_task0*/, NULL));
 }

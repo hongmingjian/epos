@@ -21,8 +21,8 @@ void (*intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
 
 uint32_t g_mem_zone[MEM_ZONE_LEN];
 
-uint32_t  *PT  = (uint32_t *)USER_MAX_ADDR,
-          *PTD = (uint32_t *)KERN_MIN_ADDR;
+uint32_t *PT  = (uint32_t *)USER_MAX_ADDR,
+         *PTD = (uint32_t *)KERN_MIN_ADDR;
 
 uint32_t g_kern_cur_addr;
 uint32_t g_kern_end_addr;
@@ -35,7 +35,7 @@ uint32_t g_kern_heap_size = 0;
 
 void isr_default(uint32_t irq, struct context *ctx)
 {
-  //printk("IRQ=0x%02x\n\r", irq);
+//  printk("IRQ=0x%02x\n\r", irq);
 }
 
 int do_page_fault(uint32_t vaddr, uint32_t code)
@@ -85,7 +85,7 @@ void start_user_task()
   char *filename="\\a.exe";
   uint32_t entry;
 
-  printk("From now on, we're running as task #%d\n\r", task_getid());
+  printk("From now on, we're running as task #%d\n\r", sys_task_getid());
 
   init_floppy();
   init_fat();
@@ -94,7 +94,7 @@ void start_user_task()
 
   if(entry) {
     int tid;
-    tid = task_create(USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
+    tid = sys_task_create(USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
     if(tid < 0)
       printk("failed to create the first user task\n\r");
   } else
@@ -116,16 +116,12 @@ void cstart(uint32_t magic, uint32_t addr)
 
 //  printk("g_kern_cur_addr=0x%08x, g_kern_end_addr=0x%08x\n\r", g_kern_cur_addr, g_kern_end_addr);
 
-  /**
-   *
-   *
-   */
   if(1) {
     uint32_t i;
 
 
     /**
-     * XXX - should be elsewhere
+     * XXX - machine-dependent should be elsewhere
      *
      */
     __asm__ __volatile__ (
@@ -165,9 +161,9 @@ void cstart(uint32_t magic, uint32_t addr)
     vaddr = (uint32_t)g_frame_freemap;
     paddr = g_mem_zone[1];
     for(i =0 ;i < (size>>PAGE_SHIFT); i++) {
-        *vtopte(vaddr)=paddr|PTE_V|PTE_RW;
-        vaddr += PAGE_SIZE;
-        paddr += PAGE_SIZE;
+      *vtopte(vaddr)=paddr|PTE_V|PTE_RW;
+      vaddr += PAGE_SIZE;
+      paddr += PAGE_SIZE;
     }
     memset(g_frame_freemap, 0, size);
 
@@ -190,10 +186,9 @@ void cstart(uint32_t magic, uint32_t addr)
   init_task();
   init_callout();
 
-  move_to_task0(task0);
+  run_as_task0();
   start_user_task();
-
   while(1)
-    hlt();
+    cpu_idle();
 }
 

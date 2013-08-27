@@ -18,69 +18,69 @@
 #include "utils.h"
 
 struct sem {
-    int32_t value;
-    struct wait_queue *wait_head;
+  int32_t value;
+  struct wait_queue *wait_head;
 };
 
 void *sem_create(int32_t value)
 {
-    struct sem *sem;
+  struct sem *sem;
 
-    sem = (struct sem *)kmalloc(sizeof(struct sem));
-    if(sem == NULL) {
-        return NULL;
-    }
+  sem = (struct sem *)kmalloc(sizeof(struct sem));
+  if(sem == NULL) {
+    return NULL;
+  }
 
-    sem->value = value;
-    sem->wait_head = NULL;
+  sem->value = value;
+  sem->wait_head = NULL;
 
-    return sem;
+  return sem;
 }
 
 int sem_destroy(void *s)
 {
-    uint32_t flags;
-    struct sem *sem = (struct sem *)s;
+  uint32_t flags;
+  struct sem *sem = (struct sem *)s;
 
-    save_flags_cli(flags);
+  save_flags_cli(flags);
 
-    if(sem->wait_head != NULL) {
-        restore_flags(flags);
-        return -1;
-    }
-
+  if(sem->wait_head != NULL) {
     restore_flags(flags);
+    return -1;
+  }
 
-    kfree(sem);
-    return 0;
+  restore_flags(flags);
+
+  kfree(sem);
+  return 0;
 }
 
 int sem_wait(void *s)
 {
-    uint32_t flags;
-    struct sem *sem = (struct sem *)s;
+  uint32_t flags;
+  struct sem *sem = (struct sem *)s;
 
-    save_flags_cli(flags);
+  save_flags_cli(flags);
 
-    sem->value--;
-    if(sem->value < 0)
-      sleep_on(&sem->wait_head);
+  sem->value--;
+  if(sem->value < 0)
+    sleep_on(&sem->wait_head);
 
-    restore_flags(flags);
-    return 0;
+  restore_flags(flags);
+  return 0;
 }
 
 int sem_signal(void *s)
 {
-    uint32_t flags;
-    struct sem *sem = (struct sem *)s;
+  uint32_t flags;
+  struct sem *sem = (struct sem *)s;
 
-    save_flags_cli(flags);
+  save_flags_cli(flags);
 
-    sem->value++;
-    if(sem->value <= 0)
-      wake_up(&sem->wait_head, 1);
+  sem->value++;
+  if(sem->value <= 0)
+    wake_up(&sem->wait_head, 1);
 
-    restore_flags(flags);
-    return 0;
+  restore_flags(flags);
+  return 0;
 }

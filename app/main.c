@@ -1,16 +1,15 @@
-
 #include <stdarg.h>
+
+int task_exit(int val);
+int task_create(unsigned stack, void *func, unsigned pv);
+int task_getid();
+void task_yield();
+int task_wait(int tid, int *exit_code);
+int task_sleep(unsigned msec);
+int putchar(int c);
 
 int sprintf(char *buf, const char *fmt, ...);
 int vsprintf(char *buf, const char *fmt, va_list args);
-int putchar(int c);
-int task_getid();
-void task_yield();
-int task_sleep(unsigned msec);
-int task_create(unsigned stack, void *func, unsigned pv);
-int task_exit(int val);
-int task_wait(int tid, int *exit_code);
-
 int printf(const char *fmt,...)
 {
 	char buf[1024];
@@ -101,6 +100,10 @@ void main(void *pv)
   task_exit(0);
 }
 
+/**
+ * GCC insists on __main
+ *    http://gcc.gnu.org/onlinedocs/gccint/Collect2.html
+ */
 void __main()
 {
 }

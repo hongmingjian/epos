@@ -35,7 +35,7 @@ static __inline void sti()
 }
 
 static __inline void
-hlt()
+cpu_idle()
 {
 	__asm__ __volatile__("hlt");
 }

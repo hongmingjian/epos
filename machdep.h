@@ -19,32 +19,56 @@
 
 #include "cpu.h"
 
+
+#define	SEL_KPL	0		/* kernel priority level */
+#define	SEL_UPL	3		/*   user priority level */
+
+#define	GSEL_NULL   0	/*        Null Descriptor */
+#define	GSEL_KCODE  1	/* Kernel Code Descriptor */
+#define	GSEL_KDATA  2	/* Kernel Data Descriptor */
+#define	GSEL_UCODE  3	/*   User Code Descriptor */
+#define	GSEL_UDATA  4 /*   User Data Descriptor */
+#define	GSEL_TSS    5	/*  Common TSS Descriptor */
+#define NR_GDT      6
+struct segment_descriptor	{
+  unsigned lolimit:16 ;
+  unsigned lobase:24 __attribute__ ((packed));
+  unsigned type:5 ;
+  unsigned dpl:2 ;
+  unsigned p:1 ;
+  unsigned hilimit:4 ;
+  unsigned xx:2 ;
+  unsigned def32:1 ;
+  unsigned gran:1 ;
+  unsigned hibase:8 ;
+};
+
 #define IRQ_TIMER     0
 #define IRQ_KEYBOARD  1
 #define IRQ_FDC       6
 #define NR_IRQ        16
 
 struct context {
-  uint32_t   fs;/*0*/
-  uint32_t   es;/*4*/
-  uint32_t   ds;/*8*/
-  uint32_t	edi;/*12*/
-  uint32_t	esi;/*16*/
-  uint32_t	ebp;/*20*/
-  uint32_t	isp;/*24*/
-  uint32_t	ebx;/*28*/
-  uint32_t	edx;/*32*/
-  uint32_t	ecx;/*36*/
-  uint32_t	eax;/*40*/
-  uint32_t  trapno;/*44*/
-  uint32_t  code;/*48*/
-  /* below portion defined in 386 hardware */
-  uint32_t	eip;/*52*/
-  uint32_t	 cs;/*56*/
-  uint32_t	eflags;/*60*/
-  /* below only when crossing rings (e.g. user to kernel) */
-  uint32_t	esp;/*64*/
-  uint32_t	 ss;/*68*/
+  uint32_t   fs;    /* 0*/
+  uint32_t   es;    /* 4*/
+  uint32_t   ds;    /* 8*/
+  uint32_t	edi;    /*12*/
+  uint32_t	esi;    /*16*/
+  uint32_t	ebp;    /*20*/
+  uint32_t	isp;    /*24*/
+  uint32_t	ebx;    /*28*/
+  uint32_t	edx;    /*32*/
+  uint32_t	ecx;    /*36*/
+  uint32_t	eax;    /*40*/
+  uint32_t  trapno; /*44*/
+  uint32_t  code;   /*48*/
+  /* below defined in x86 hardware */
+  uint32_t	eip;    /*52*/
+  uint32_t	 cs;    /*56*/
+  uint32_t	eflags; /*60*/
+  /* below only when crossing rings */
+  uint32_t	esp;    /*64*/
+  uint32_t	 ss;    /*68*/
 };
 
 #define PUSH_TASK_STACK(sp, value) do { \
@@ -52,14 +76,13 @@ struct context {
   *((uint32_t *)(sp)) = (uint32_t)(value); \
 } while(0)
 
-/*XXX - replace meaningful constants, please*/
 #define INIT_TASK_CONTEXT(user_stack, kern_stack, entry) do { \
   if(user_stack) { \
-    PUSH_TASK_STACK(kern_stack, 0x23); \
+    PUSH_TASK_STACK(kern_stack, (GSEL_UDATA*sizeof(struct segment_descriptor))|SEL_UPL); \
     PUSH_TASK_STACK(kern_stack, user_stack); \
   } \
   PUSH_TASK_STACK(kern_stack, 0x202); \
-  PUSH_TASK_STACK(kern_stack, (user_stack)?0x1b:0x8); \
+  PUSH_TASK_STACK(kern_stack, (user_stack)?((GSEL_UCODE*sizeof(struct segment_descriptor))|SEL_UPL):((GSEL_KCODE*sizeof(struct segment_descriptor))|SEL_KPL)); \
   PUSH_TASK_STACK(kern_stack, entry); \
   PUSH_TASK_STACK(kern_stack, 0xdeadbeef); \
   PUSH_TASK_STACK(kern_stack, 0xbeefdead); \
@@ -71,14 +94,14 @@ struct context {
   PUSH_TASK_STACK(kern_stack, 0x66666666); \
   PUSH_TASK_STACK(kern_stack, 0x77777777); \
   PUSH_TASK_STACK(kern_stack, 0x88888888); \
-  PUSH_TASK_STACK(kern_stack, (user_stack)?0x23:0x10); \
-  PUSH_TASK_STACK(kern_stack, (user_stack)?0x23:0x10); \
-  PUSH_TASK_STACK(kern_stack, (user_stack)?0x23:0x10); \
+  PUSH_TASK_STACK(kern_stack, (user_stack)?((GSEL_UDATA*sizeof(struct segment_descriptor))|SEL_UPL):((GSEL_KDATA*sizeof(struct segment_descriptor))|SEL_KPL)); \
+  PUSH_TASK_STACK(kern_stack, (user_stack)?((GSEL_UDATA*sizeof(struct segment_descriptor))|SEL_UPL):((GSEL_KDATA*sizeof(struct segment_descriptor))|SEL_KPL)); \
+  PUSH_TASK_STACK(kern_stack, (user_stack)?((GSEL_UDATA*sizeof(struct segment_descriptor))|SEL_UPL):((GSEL_KDATA*sizeof(struct segment_descriptor))|SEL_KPL)); \
   PUSH_TASK_STACK(kern_stack, &ret_from_syscall); \
 } while(0)
 
-#define move_to_task0(tsk) do { \
-  g_task_running = (tsk); \
+#define run_as_task0() do { \
+  g_task_running = task0; \
   __asm__ __volatile__ ( \
     "movl %0, %%eax\n\t" \
     "movl (%%eax), %%eax\n\t" \
@@ -88,7 +111,7 @@ struct context {
     "ret\n\t" \
     "1:\n\t" \
     : \
-    :"m"(tsk) \
+    :"m"(g_task_running) \
     :"%eax" \
   ); \
 } while(0)
@@ -96,6 +119,6 @@ struct context {
 void disable_irq(uint32_t irq);
 void enable_irq(uint32_t irq);
 
-int  putchar(int c);
+int  sys_putchar(int c);
 void init_machdep(uint32_t mbi, uint32_t physfree);
 #endif

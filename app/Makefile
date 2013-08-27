@@ -26,10 +26,13 @@ $(PROG).exe: $(OBJS)
 	../../bin/fat_imgen.exe -m -g -i $@ -f ../floppy.img
 
 run:
-	$(MAKE) -C .. run
+	$(MAKE) -C .. $@
 
 debug:
-	$(MAKE) -C .. debug 
+	$(MAKE) -C .. $@
+
+bochs:
+	$(MAKE) -C .. $@
 
 vsprintf.o: ../vsprintf.c
 	$(CC) -c $(CFLAGS) $^

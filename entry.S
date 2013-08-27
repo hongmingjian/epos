@@ -245,8 +245,8 @@ exception:
   addl $8, %esp # discard trapno and code
   iret
 	
-  .globl _int0x80_syscall
-_int0x80_syscall:
+  .globl _int0x77_syscall
+_int0x77_syscall:
   subl $8, %esp # fake trapno and code
   pushal 
   pushl %ds

@@ -38,7 +38,9 @@ debug:
 
 run:
 	-../Qemu-1.5.1/qemu-system-i386w.exe -L ../Qemu-1.5.1/Bios -m 32 -boot a -fda floppy.img
-#	-../Bochs-2.6.2/bochs.exe -q -f bochsrc.txt
+
+bochs:
+	-../Bochs-2.6.2/bochs.exe -q -f bochsrc.txt
 
 clean:
 	-$(RM)  *.o tlsf/*.o *.bin *.*~ $(PROG).out $(PROG).map

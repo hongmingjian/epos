@@ -16,6 +16,7 @@
  */
 #include "machdep.h"
 #include "kernel.h"
+#include "syscall.h"
 #include "multiboot.h"
 
 #define	IO_ICU1		0x20		/* 8259A Interrupt Controller #1 */
@@ -95,30 +96,8 @@ void switch_to(struct tcb *new)
     );
 }
 
-#define	SEL_KPL 0 /* kernel priority level */
-#define	SEL_UPL 3 /*   user priority level */
-
-#define	GSEL_NULL   0 /*        Null Descriptor */
-#define	GSEL_KCODE  1 /* Kernel Code Descriptor */
-#define	GSEL_KDATA  2 /* Kernel Data Descriptor */
-#define	GSEL_UCODE  3 /*   User Code Descriptor */
-#define	GSEL_UDATA  4 /*   User Data Descriptor */
-#define	GSEL_TSS    5 /*  Common TSS Descriptor */
-#define NR_GDT      6
-
 static
-struct segment_descriptor	{
-	unsigned lolimit:16 ;
-	unsigned lobase:24 __attribute__ ((packed));
-	unsigned type:5 ;
-	unsigned dpl:2 ;
-	unsigned p:1 ;
-	unsigned hilimit:4 ;
-	unsigned xx:2 ;
-	unsigned def32:1 ;
-	unsigned gran:1 ;
-	unsigned hibase:8 ;
-} gdt[NR_GDT] = {
+struct segment_descriptor gdt[NR_GDT] = {
   {// GSEL_NULL
     0x0,
     0x0,
@@ -189,33 +168,33 @@ struct segment_descriptor	{
 
 static
 struct tss {
-   uint32_t prev; // UNUSED
-   uint32_t esp0; // loaded when CPU changed from user to kernel mode.
-   uint32_t ss0;  // ditto
-   uint32_t esp1; // everything below is UNUSUED 
-   uint32_t ss1;
-   uint32_t esp2;
-   uint32_t ss2;
-   uint32_t cr3;
-   uint32_t eip;
-   uint32_t eflags;
-   uint32_t eax;
-   uint32_t ecx;
-   uint32_t edx;
-   uint32_t ebx;
-   uint32_t esp;
-   uint32_t ebp;
-   uint32_t esi;
-   uint32_t edi;
-   uint32_t es;         
-   uint32_t cs;        
-   uint32_t ss;        
-   uint32_t ds;        
-   uint32_t fs;       
-   uint32_t gs;         
-   uint32_t ldt;      
-   uint16_t trap;
-   uint16_t iomap_base;
+  uint32_t prev; // UNUSED
+  uint32_t esp0; // loaded when CPU changed from user to kernel mode.
+  uint32_t ss0;  // ditto
+  uint32_t esp1; // everything below is UNUSUED 
+  uint32_t ss1;
+  uint32_t esp2;
+  uint32_t ss2;
+  uint32_t cr3;
+  uint32_t eip;
+  uint32_t eflags;
+  uint32_t eax;
+  uint32_t ecx;
+  uint32_t edx;
+  uint32_t ebx;
+  uint32_t esp;
+  uint32_t ebp;
+  uint32_t esi;
+  uint32_t edi;
+  uint32_t es;         
+  uint32_t cs;        
+  uint32_t ss;        
+  uint32_t ds;        
+  uint32_t fs;       
+  uint32_t gs;         
+  uint32_t ldt;      
+  uint16_t trap;
+  uint16_t iomap_base;
 } __attribute__ ((packed)) tss;
 
 struct region_descriptor {
@@ -228,35 +207,35 @@ extern char kern_stack;
 void lgdt(struct region_descriptor *rdp);
 static void init_gdt(void)
 {
-    struct region_descriptor rd;
-    uint32_t base = (uint32_t)&tss, limit = sizeof(struct tss);
+  struct region_descriptor rd;
+  uint32_t base = (uint32_t)&tss, limit = sizeof(struct tss);
 
-    gdt[GSEL_TSS].lolimit = limit & 0xffff;
-    gdt[GSEL_TSS].lobase = base & 0xffffff;
-    gdt[GSEL_TSS].type = 9;
-    gdt[GSEL_TSS].dpl = SEL_UPL;
-    gdt[GSEL_TSS].p = 1;
-    gdt[GSEL_TSS].hilimit = (limit&0xf0000)>>16;
-    gdt[GSEL_TSS].xx = 0;
-    gdt[GSEL_TSS].def32 = 0;
-    gdt[GSEL_TSS].gran = 0;
-    gdt[GSEL_TSS].hibase = (base&0xff000000)>>24;
+  gdt[GSEL_TSS].lolimit = limit & 0xffff;
+  gdt[GSEL_TSS].lobase = base & 0xffffff;
+  gdt[GSEL_TSS].type = 9;
+  gdt[GSEL_TSS].dpl = SEL_UPL;
+  gdt[GSEL_TSS].p = 1;
+  gdt[GSEL_TSS].hilimit = (limit&0xf0000)>>16;
+  gdt[GSEL_TSS].xx = 0;
+  gdt[GSEL_TSS].def32 = 0;
+  gdt[GSEL_TSS].gran = 0;
+  gdt[GSEL_TSS].hibase = (base&0xff000000)>>24;
 
-    rd.limit = NR_GDT*sizeof(gdt[0]) - 1;
-    rd.base =  (uint32_t) gdt;
-    lgdt(&rd);
+  rd.limit = NR_GDT*sizeof(gdt[0]) - 1;
+  rd.base =  (uint32_t) gdt;
+  lgdt(&rd);
 
-    memset(&tss, 0, sizeof(struct tss));
-    tss.ss0  = GSEL_KDATA*sizeof(gdt[0]);
-    tss.esp0 = (uint32_t)&kern_stack;
+  memset(&tss, 0, sizeof(struct tss));
+  tss.ss0  = GSEL_KDATA*sizeof(gdt[0]);
+  tss.esp0 = (uint32_t)&kern_stack;
 
-    __asm__ __volatile__(
-        "movw %0, %%ax\n\t"
-        "ltr %%ax\n\t"
-        :
-        :"i"((GSEL_TSS * sizeof(gdt[0])) | SEL_UPL)
-        :"%ax"
-        );
+  __asm__ __volatile__(
+    "movw %0, %%ax\n\t"
+    "ltr %%ax\n\t"
+    :
+    :"i"((GSEL_TSS * sizeof(gdt[0])) | SEL_UPL)
+    :"%ax"
+  );
 }
 
 typedef void (*idt_handler_t)(uint32_t eip, uint32_t cs, uint32_t eflags, uint32_t esp, uint32_t ss);
@@ -268,7 +247,7 @@ extern idt_handler_t
   IDT_EXCEPTION(copr_seg_overrun),IDT_EXCEPTION(inval_tss),         IDT_EXCEPTION(segment_not_present), 
   IDT_EXCEPTION(stack_exception), IDT_EXCEPTION(general_protection),IDT_EXCEPTION(page_fault),   
   IDT_EXCEPTION(intel_reserved),  IDT_EXCEPTION(copr_error),        IDT_EXCEPTION(alignment_check),   
-  IDT_EXCEPTION(machine_check),   IDT_EXCEPTION(simd_fp_exception), int0x80_syscall; 
+  IDT_EXCEPTION(machine_check),   IDT_EXCEPTION(simd_fp_exception), int0x77_syscall; 
 
 #define	IDT_INTERRUPT(name)	__CONCAT(hwint,name)
 extern idt_handler_t
@@ -278,7 +257,7 @@ extern idt_handler_t
   IDT_INTERRUPT(12),IDT_INTERRUPT(13), IDT_INTERRUPT(14), IDT_INTERRUPT(15);
 
 #define ICU_IDT_OFFSET 32
-#define NR_IDT 129
+#define NR_IDT 120
 static
 struct gate_descriptor	{
 	unsigned looffset:16 ;
@@ -313,55 +292,55 @@ void lidt(struct region_descriptor *rdp);
 
 static void init_idt()
 {  
-    int i;
-    struct region_descriptor rd;
+  int i;
+  struct region_descriptor rd;
 
-    for (i = 0; i < NR_IDT; i++)
-      setidt(i, &IDT_EXCEPTION(intel_reserved), GT_386TRAP, SEL_KPL);
+  for (i = 0; i < NR_IDT; i++)
+    setidt(i, &IDT_EXCEPTION(intel_reserved), GT_386TRAP, SEL_KPL);
 
-  	setidt(0,  &IDT_EXCEPTION(divide_error),         GT_386TRAP, SEL_KPL);
-  	setidt(1,  &IDT_EXCEPTION(debug),                GT_386TRAP, SEL_KPL);
-  	setidt(2,  &IDT_EXCEPTION(nmi),                  GT_386TRAP, SEL_KPL);
-    setidt(3,  &IDT_EXCEPTION(breakpoint),           GT_386TRAP, SEL_KPL);
-    setidt(4,  &IDT_EXCEPTION(overflow),             GT_386TRAP, SEL_KPL);
-    setidt(5,  &IDT_EXCEPTION(bounds_check),         GT_386TRAP, SEL_KPL);
-    setidt(6,  &IDT_EXCEPTION(inval_opcode),         GT_386TRAP, SEL_KPL);
-    setidt(7,  &IDT_EXCEPTION(copr_not_avail),       GT_386TRAP, SEL_KPL);
-    setidt(8,  &IDT_EXCEPTION(double_fault),         GT_386TRAP, SEL_KPL);
-    setidt(9,  &IDT_EXCEPTION(copr_seg_overrun),     GT_386TRAP, SEL_KPL);
-    setidt(10, &IDT_EXCEPTION(inval_tss),            GT_386TRAP, SEL_KPL);
-    setidt(11, &IDT_EXCEPTION(segment_not_present),  GT_386TRAP, SEL_KPL);
-    setidt(12, &IDT_EXCEPTION(stack_exception),      GT_386TRAP, SEL_KPL);
-    setidt(13, &IDT_EXCEPTION(general_protection),   GT_386TRAP, SEL_KPL);
-    setidt(14, &IDT_EXCEPTION(page_fault),           GT_386INTR/*!*/, SEL_KPL);
-    setidt(15, &IDT_EXCEPTION(intel_reserved),       GT_386TRAP, SEL_KPL);
-    setidt(16, &IDT_EXCEPTION(copr_error),           GT_386TRAP, SEL_KPL);
-    setidt(17, &IDT_EXCEPTION(alignment_check),      GT_386TRAP, SEL_KPL);
-    setidt(18, &IDT_EXCEPTION(machine_check),        GT_386TRAP, SEL_KPL);
-    setidt(19, &IDT_EXCEPTION(simd_fp_exception),    GT_386TRAP, SEL_KPL);
+  setidt(0,  &IDT_EXCEPTION(divide_error),         GT_386TRAP, SEL_KPL);
+  setidt(1,  &IDT_EXCEPTION(debug),                GT_386TRAP, SEL_KPL);
+  setidt(2,  &IDT_EXCEPTION(nmi),                  GT_386TRAP, SEL_KPL);
+  setidt(3,  &IDT_EXCEPTION(breakpoint),           GT_386TRAP, SEL_KPL);
+  setidt(4,  &IDT_EXCEPTION(overflow),             GT_386TRAP, SEL_KPL);
+  setidt(5,  &IDT_EXCEPTION(bounds_check),         GT_386TRAP, SEL_KPL);
+  setidt(6,  &IDT_EXCEPTION(inval_opcode),         GT_386TRAP, SEL_KPL);
+  setidt(7,  &IDT_EXCEPTION(copr_not_avail),       GT_386TRAP, SEL_KPL);
+  setidt(8,  &IDT_EXCEPTION(double_fault),         GT_386TRAP, SEL_KPL);
+  setidt(9,  &IDT_EXCEPTION(copr_seg_overrun),     GT_386TRAP, SEL_KPL);
+  setidt(10, &IDT_EXCEPTION(inval_tss),            GT_386TRAP, SEL_KPL);
+  setidt(11, &IDT_EXCEPTION(segment_not_present),  GT_386TRAP, SEL_KPL);
+  setidt(12, &IDT_EXCEPTION(stack_exception),      GT_386TRAP, SEL_KPL);
+  setidt(13, &IDT_EXCEPTION(general_protection),   GT_386TRAP, SEL_KPL);
+  setidt(14, &IDT_EXCEPTION(page_fault),           GT_386INTR/*!*/, SEL_KPL);
+  setidt(15, &IDT_EXCEPTION(intel_reserved),       GT_386TRAP, SEL_KPL);
+  setidt(16, &IDT_EXCEPTION(copr_error),           GT_386TRAP, SEL_KPL);
+  setidt(17, &IDT_EXCEPTION(alignment_check),      GT_386TRAP, SEL_KPL);
+  setidt(18, &IDT_EXCEPTION(machine_check),        GT_386TRAP, SEL_KPL);
+  setidt(19, &IDT_EXCEPTION(simd_fp_exception),    GT_386TRAP, SEL_KPL);
     
-    setidt(ICU_IDT_OFFSET+0, &IDT_INTERRUPT(00), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+1, &IDT_INTERRUPT(01), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+2, &IDT_INTERRUPT(02), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+3, &IDT_INTERRUPT(03), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+4, &IDT_INTERRUPT(04), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+5, &IDT_INTERRUPT(05), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+6, &IDT_INTERRUPT(06), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+7, &IDT_INTERRUPT(07), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+8, &IDT_INTERRUPT(08), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+9, &IDT_INTERRUPT(09), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+10,&IDT_INTERRUPT(10), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+11,&IDT_INTERRUPT(11), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+12,&IDT_INTERRUPT(12), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+13,&IDT_INTERRUPT(13), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+14,&IDT_INTERRUPT(14), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+15,&IDT_INTERRUPT(15), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+0, &IDT_INTERRUPT(00), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+1, &IDT_INTERRUPT(01), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+2, &IDT_INTERRUPT(02), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+3, &IDT_INTERRUPT(03), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+4, &IDT_INTERRUPT(04), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+5, &IDT_INTERRUPT(05), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+6, &IDT_INTERRUPT(06), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+7, &IDT_INTERRUPT(07), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+8, &IDT_INTERRUPT(08), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+9, &IDT_INTERRUPT(09), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+10,&IDT_INTERRUPT(10), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+11,&IDT_INTERRUPT(11), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+12,&IDT_INTERRUPT(12), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+13,&IDT_INTERRUPT(13), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+14,&IDT_INTERRUPT(14), GT_386INTR, SEL_KPL);
+  setidt(ICU_IDT_OFFSET+15,&IDT_INTERRUPT(15), GT_386INTR, SEL_KPL);
 
-    setidt(0x80, &int0x80_syscall, GT_386INTR/*!*/, SEL_UPL/*!*/);
+  setidt(0x77, &int0x77_syscall, GT_386INTR/*!*/, SEL_UPL/*!*/);
 
-    rd.limit = NR_IDT*sizeof(idt[0]) - 1;
-    rd.base = (uint32_t) idt;
-    lidt(&rd);
+  rd.limit = NR_IDT*sizeof(idt[0]) - 1;
+  rd.base = (uint32_t) idt;
+  lidt(&rd);
 }
 
 void exception(struct context *ctx)
@@ -387,27 +366,14 @@ void exception(struct context *ctx)
   while(1);
 }
 
-/**
- *
- *
- */
 void syscall(struct context *ctx)
 {
-//  printk("task #%d syscalling #%d.\n\r", task_getid(), ctx->eax);
+//  printk("task #%d syscalling #%d.\n\r", sys_task_getid(), ctx->eax);
   switch(ctx->eax) {
-  case 0:
-    ctx->eax = putchar((*((uint32_t *)ctx->esp))&0xff);
+  case SYSCALL_TASK_EXIT:
+    sys_task_exit(*((uint32_t *)ctx->esp));
     break;
-  case 1:
-    ctx->eax=task_getid();
-    break;
-  case 2:
-    task_yield();
-    break;
-  case 3:
-    ctx->eax = task_sleep(*((uint32_t *)ctx->esp));
-    break;
-  case 4:
+  case SYSCALL_TASK_CREATE:
     {
       uint32_t user_stack = *((uint32_t *)(ctx->esp+0));
       uint32_t user_entry = *((uint32_t *)(ctx->esp+4));
@@ -418,13 +384,16 @@ void syscall(struct context *ctx)
         ctx->eax = -ctx->eax;
         break;
       }
-      ctx->eax = task_create(user_stack, (void *)user_entry, (void *)user_pvoid);
+      ctx->eax = sys_task_create(user_stack, (void *)user_entry, (void *)user_pvoid);
     }
     break;
-  case 5:
-    task_exit(*((uint32_t *)ctx->esp));
+  case SYSCALL_TASK_GETID:
+    ctx->eax=sys_task_getid();
     break;
-  case 6:
+  case SYSCALL_TASK_YIELD:
+    sys_task_yield();
+    break;
+  case SYSCALL_TASK_WAIT:
     {
       uint32_t tid = *((uint32_t *)(ctx->esp+0));
        int32_t *code = ( int32_t *)(ctx->esp+4);
@@ -435,8 +404,14 @@ void syscall(struct context *ctx)
         break;
       }
  
-      ctx->eax = task_wait(tid, code);
+      ctx->eax = sys_task_wait(tid, code);
     }
+    break;
+  case SYSCALL_TASK_SLEEP:
+    ctx->eax = sys_task_sleep(*((uint32_t *)ctx->esp));
+    break;
+  case SYSCALL_PUTCHAR:
+    ctx->eax = sys_putchar((*((uint32_t *)ctx->esp))&0xff);
     break;
   default:
     printk("syscall #%d not implemented.\n\r", ctx->eax);
@@ -445,146 +420,140 @@ void syscall(struct context *ctx)
   }
 }
 
-int putchar(int c)
+int sys_putchar(int c)
 {
-    unsigned char *SCREEN_BASE = (char *)(KERNBASE+0xB8000);
-    unsigned int curpos, i;
+  unsigned char *SCREEN_BASE = (char *)(KERNBASE+0xB8000);
+  unsigned int curpos, i;
 
-    uint32_t flags;
+  uint32_t flags;
 
-    save_flags_cli(flags);
+  save_flags_cli(flags);
 
-    outportb(0x3d4, 0x0e);
-    curpos = inportb(0x3d5);
-    curpos <<= 8;
-    outportb(0x3d4, 0x0f);
-    curpos += inportb(0x3d5);
-    curpos <<= 1;
+  outportb(0x3d4, 0x0e);
+  curpos = inportb(0x3d5);
+  curpos <<= 8;
+  outportb(0x3d4, 0x0f);
+  curpos += inportb(0x3d5);
+  curpos <<= 1;
 
-    switch(c) {
-    case '\n':
-        curpos = (curpos/160)*160 + 160;
-        break;
-    case '\r':
-        curpos = (curpos/160)*160;
-        break;
-    case '\t':
-	    curpos += 8;
-    	break;
-    case '\b':
-    	curpos -= 2;
-    	SCREEN_BASE[curpos] = 0x20;
-    	break;
-    default:
-        SCREEN_BASE[curpos++] = c;
-        SCREEN_BASE[curpos++] = 0x07;
-        break;
+  switch(c) {
+  case '\n':
+    curpos = (curpos/160)*160 + 160;
+    break;
+  case '\r':
+    curpos = (curpos/160)*160;
+    break;
+  case '\t':
+	  curpos += 8;
+    break;
+  case '\b':
+    curpos -= 2;
+    SCREEN_BASE[curpos] = 0x20;
+    break;
+  default:
+    SCREEN_BASE[curpos++] = c;
+    SCREEN_BASE[curpos++] = 0x07;
+    break;
+  }
+
+  if(curpos >= 160*25) {
+    for(i = 0; i < 160*24; i++) {
+      SCREEN_BASE[i] = SCREEN_BASE[i+160];
     }
-
-    if(curpos >= 160*25) {
-        for(i = 0; i < 160*24; i++) {
-           SCREEN_BASE[i] = SCREEN_BASE[i+160];
-        }
-        for(i = 0; i < 80; i++) {
-           SCREEN_BASE[(160*24)+(i*2)  ] = 0x20;
-           SCREEN_BASE[(160*24)+(i*2)+1] = 0x07;
-        }
-        curpos -= 160;
+    for(i = 0; i < 80; i++) {
+      SCREEN_BASE[(160*24)+(i*2)  ] = 0x20;
+      SCREEN_BASE[(160*24)+(i*2)+1] = 0x07;
     }
+    curpos -= 160;
+  }
 
-    curpos >>= 1;
-    outportb(0x3d4, 0x0f);
-    outportb(0x3d5, curpos & 0x0ff);
-    outportb(0x3d4, 0x0e);
-    outportb(0x3d5, curpos >> 8);
+  curpos >>= 1;
+  outportb(0x3d4, 0x0f);
+  outportb(0x3d5, curpos & 0x0ff);
+  outportb(0x3d4, 0x0e);
+  outportb(0x3d5, curpos >> 8);
 
-    restore_flags(flags);
+  restore_flags(flags);
     
-    return c;
+  return c;
 }
 
-/**
- *
- *
- *
- */
 static uint32_t init_paging(uint32_t physfree)
 {
-    uint32_t i;
-    uint32_t *pgdir, *pte;
+  uint32_t i;
+  uint32_t *pgdir, *pte;
 
-    pgdir=(uint32_t *)physfree;
-    physfree += PAGE_SIZE;
-    memset(pgdir, 0, PAGE_SIZE);
+  pgdir=(uint32_t *)physfree;
+  physfree += PAGE_SIZE;
+  memset(pgdir, 0, PAGE_SIZE);
 
-    for(i = 0; i < NR_KERN_PAGETABLE; i++) {
-      pgdir[i]=
-      pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_RW;
-      memset((void *)physfree, 0, PAGE_SIZE);
-      physfree+=PAGE_SIZE;
-    }
+  for(i = 0; i < NR_KERN_PAGETABLE; i++) {
+    pgdir[i]=
+    pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_RW;
+    memset((void *)physfree, 0, PAGE_SIZE);
+    physfree+=PAGE_SIZE;
+  }
 
-    pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|PTE_V|PTE_RW;
+  pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|PTE_V|PTE_RW;
 
-    pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
-    for(i = 0; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
-      pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_RW;
+  pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
+  for(i = 0; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
+    pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_RW;
 
-    __asm__ __volatile__ (
-  	  "movl	%0, %%eax\n\t"
-  	  "movl	%%eax, %%cr3\n\t"
-  	  "movl	%%cr0, %%eax\n\t"
-  	  "orl	$0x80000000, %%eax\n\t"
-  	  "movl	%%eax, %%cr0\n\t"
-//      "pushl $1f\n\t"
-//      "ret\n\t"
-//      "1:\n\t"
-      :
-      :"m"(pgdir)
-      :"%eax"
-    );
+  __asm__ __volatile__ (
+    "movl %0, %%eax\n\t"
+    "movl %%eax, %%cr3\n\t"
+    "movl %%cr0, %%eax\n\t"
+    "orl  $0x80000000, %%eax\n\t"
+    "movl %%eax, %%cr0\n\t"
+//    "pushl $1f\n\t"
+//    "ret\n\t"
+//    "1:\n\t"
+    :
+    :"m"(pgdir)
+    :"%eax"
+  );
 
-    return physfree;
+  return physfree;
 }
 
 static void init_mem(multiboot_memory_map_t *mmap, uint32_t size, uint32_t physfree)
 {
-    uint32_t i, n = 0;
+  uint32_t i, n = 0;
 
-//    printk("mmap=0x%08x, size=%d\n\r", mmap, size);
-    for (; size;
-      size -= (mmap->size+sizeof(mmap->size)),
-      mmap = (multiboot_memory_map_t *) ((uint32_t)mmap + 
-                                         mmap->size + 
-                                         sizeof (mmap->size))) {
+//  printk("mmap=0x%08x, size=%d\n\r", mmap, size);
+  for (; size;
+       size -= (mmap->size+sizeof(mmap->size)),
+       mmap = (multiboot_memory_map_t *) ((uint32_t)mmap + 
+                                          mmap->size + 
+                                          sizeof (mmap->size))) {
+//    printk("size=%d\n\r", mmap->size);
+    if(mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
+      g_mem_zone[n  ] = PAGE_TRUNCATE(mmap->addr&0xffffffff);
+      g_mem_zone[n+1] = PAGE_TRUNCATE(g_mem_zone[n]+(mmap->len&0xffffffff));
 
-//      printk("size=%d\n\r", mmap->size);
-      if(mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
-        g_mem_zone[n  ] = PAGE_TRUNCATE(mmap->addr&0xffffffff);
-        g_mem_zone[n+1] = PAGE_TRUNCATE(g_mem_zone[n]+(mmap->len&0xffffffff));
+//      printk("Memory: 0x%08x-0x%08x\n\r", g_mem_zone[n], g_mem_zone[n+1]);
 
+      if(g_mem_zone[n+1] < g_mem_zone[n] + 256 * PAGE_SIZE)
+        continue;
+
+      if((physfree >  g_mem_zone[n  ]) && 
+         (physfree <= g_mem_zone[n+1]))
+        g_mem_zone[n]=physfree;
+
+      if(g_mem_zone[n+1] >= g_mem_zone[n] + PAGE_SIZE) {
 //        printk("Memory: 0x%08x-0x%08x\n\r", g_mem_zone[n], g_mem_zone[n+1]);
-
-        if(g_mem_zone[n+1] < g_mem_zone[n] + 256 * PAGE_SIZE)
-          continue;
-
-        if((physfree >  g_mem_zone[n  ]) && 
-           (physfree <= g_mem_zone[n+1]))
-          g_mem_zone[n]=physfree;
-
-        if(g_mem_zone[n+1] >= g_mem_zone[n] + PAGE_SIZE) {
-//          printk("Memory: 0x%08x-0x%08x\n\r", g_mem_zone[n], g_mem_zone[n+1]);
-          n += 2;
-          if(n + 2 >= MEM_ZONE_LEN)
-            break;
-        }
+        n += 2;
+        if(n + 2 >= MEM_ZONE_LEN)
+          break;
       }
     }
+  }
 
-//    printk("Done\n\r");
+//  printk("Done\n\r");
 
-    g_mem_zone[n  ] = 0;
-    g_mem_zone[n+1] = 0;
+  g_mem_zone[n  ] = 0;
+  g_mem_zone[n+1] = 0;
 }
 
 void init_machdep(uint32_t mbi, uint32_t physfree)
@@ -594,7 +563,9 @@ void init_machdep(uint32_t mbi, uint32_t physfree)
   init_gdt();
   init_idt();
 
-  init_mem((void *)(((multiboot_info_t *)mbi)->mmap_addr), ((multiboot_info_t *)mbi)->mmap_length, physfree);
+  init_mem((void *)(((multiboot_info_t *)mbi)->mmap_addr), 
+           ((multiboot_info_t *)mbi)->mmap_length, 
+           physfree);
 
   init_i8259(ICU_IDT_OFFSET);
   init_i8253(HZ);

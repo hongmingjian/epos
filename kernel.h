@@ -110,13 +110,12 @@ void schedule();
 void switch_to(struct tcb *new);
 
 void init_task(void);
-int  task_create(uint32_t user_stack, void (*handler)(void *), void *param);
-void task_exit(int val);
-int  task_wait(int32_t tid, int32_t *exit_code);
-int32_t task_getid();
-struct tcb *task_get(int tid);
-void task_yield();
-int task_sleep(uint32_t msec);
+int  sys_task_create(uint32_t user_stack, void (*handler)(void *), void *param);
+void sys_task_exit(int val);
+int  sys_task_wait(int32_t tid, int32_t *exit_code);
+int32_t sys_task_getid();
+void sys_task_yield();
+int sys_task_sleep(uint32_t msec);
 extern void *ret_from_syscall;
 
 #define HZ   100

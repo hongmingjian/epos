@@ -1,7 +1,9 @@
 /**
  *
- * Copyright (C) 2013 Hong MingJian
+ * Copyright (C) 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
+ *
+ * This file is part of the EPOS.
  *
  * Redistribution and use in source and binary forms are freely
  * permitted provided that the above copyright notice and this
@@ -16,11 +18,14 @@
  */
 #include "utils.h"
 #include "kernel.h"
+#include "dosfs.h"
 
+/*The interrupt vector*/
 void (*intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
 
 uint32_t g_mem_zone[MEM_ZONE_LEN];
 
+/*The pointers to the page tables and page directory*/
 uint32_t *PT  = (uint32_t *)USER_MAX_ADDR,
          *PTD = (uint32_t *)KERN_MIN_ADDR;
 
@@ -33,96 +38,158 @@ uint32_t g_frame_count = 0;
 uint8_t *g_kern_heap_base;
 uint32_t g_kern_heap_size = 0;
 
+VOLINFO g_volinfo;
+
+/*The default interrupt service routine*/
 void isr_default(uint32_t irq, struct context *ctx)
 {
-//  printk("IRQ=0x%02x\n\r", irq);
+//  printk("IRQ=0x%02x\r\n", irq);
 }
 
-int do_page_fault(uint32_t vaddr, uint32_t code)
+/*
+ * These are the interfaces required by the dosfs
+ */
+uint32_t DFS_ReadSector(uint8_t unit, uint8_t *buffer,
+                        uint32_t sector, uint32_t count)
 {
-  if((code&PTE_V) == 0) {
-    int i, found = 0;
-    
-    if(code&PTE_U) {
-      if ((vaddr <  USER_MIN_ADDR) || 
-          (vaddr >= USER_MAX_ADDR)) {
-        printk("PF: Invalid memory access: 0x%08x(0x%02x)\n\r", vaddr, code);
-        return -1;
-      }
-    } else {
-      if((vaddr >= (uint32_t)vtopte(USER_MIN_ADDR)) && 
-         (vaddr <  (uint32_t)vtopte(USER_MAX_ADDR)))
-        code |= PTE_U;
+  unsigned long i;
 
-      if ((vaddr >= USER_MIN_ADDR) && 
-          (vaddr <  USER_MAX_ADDR))
-        code |= PTE_U;
+  for (i=0;i<count;i++) {
+#if USE_FLOPPY
+    unsigned char *p;
+    if((p=floppy_read_sector(sector)) == NULL) {
+      printk("floppy_read_sector failed\r\n");
+      return -1;
     }
+    memcpy(buffer, p, SECTOR_SIZE);
+#else
+    ide_read_sector(0x1f0, 0, sector, buffer);
+#endif
 
-    for(i = 0; i < g_frame_count; i++) {
-      if(g_frame_freemap[i] == 0) {
-        found = 1;
-        break;
-      }
-    }
-
-    if(found) {
-      uint32_t paddr;
-      g_frame_freemap[i] = 1;
-      paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
-      *vtopte(vaddr)=paddr|PTE_V|PTE_RW|(code&PTE_U);
-      invlpg(vaddr);
-//      printk("PF: 0x%08x(0x%02x) -> 0x%08x\n\r", vaddr, code, paddr);
-      return 0;
-    }
+    sector++;
+    buffer += SECTOR_SIZE;
   }
-  printk("PF: 0x%08x(0x%02x) ->   ????????\n\r", vaddr, code);
-  return -1;
+
+  return 0;
 }
 
+uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
+                         uint32_t sector, uint32_t count)
+{
+  unsigned long i;
+
+  for (i=0;i<count;i++) {
+#if USE_FLOPPY
+    if(floppy_write_sector(sector, buffer) < 0) {
+      printk("floppy_write_sector failed\r\n");
+      return -1;
+    }
+#else
+    ide_write_sector(0x1f0, 0, sector, buffer);
+#endif
+    sector++;
+    buffer += SECTOR_SIZE;
+  }
+
+  return 0;
+}
+
+/*
+ * This function is executed in the context of task0 to load the user program
+ * a.out from the file system and to create the first user task to execute the
+ * user program.
+ */
 void start_user_task()
 {
-  char *filename="\\a.exe";
+  char *filename="a.out";
   uint32_t entry;
 
-  printk("From now on, we're running as task #%d\n\r", sys_task_getid());
-
+#if USE_FLOPPY
+  printk("task #%d: Initializing floppy disk controller...", sys_task_getid());
   init_floppy();
-  init_fat();
+  printk("Done\r\n");
+#else
+  printk("task #%d: Initializing IDE controller...", sys_task_getid());
+  ide_init(0x1f0);
+  printk("Done\r\n");
+#endif
 
-  entry = load_pe(filename);
+  {
+    uint32_t pstart;
+    uint8_t scratch[SECTOR_SIZE];
+
+    printk("task #%d: Initializing FAT file system...", sys_task_getid());
+
+#if USE_FLOPPY
+    pstart = 0;
+#else
+    pstart = DFS_GetPtnStart(0, scratch, 0, NULL, NULL, NULL);
+    if (pstart == 0xffffffff) {
+      printk("Failed\r\n");
+      return;
+    }
+#endif
+
+    if(DFS_GetVolInfo(0, scratch, pstart, &g_volinfo)) {
+      printk("Failed\r\n");
+      return;
+    }
+    printk("Done\r\n");
+  }
+
+  printk("task #%d: Loading %s...", sys_task_getid(), filename);
+  entry = load_pe(&g_volinfo, filename);
 
   if(entry) {
     int tid;
-    tid = sys_task_create(USER_MAX_ADDR, (void *)entry, (void *)0x19770802);
+
+    printk("Done\r\n");
+
+    {
+      int i;
+      for(i = 1; i < 5/*XXX*/; i++)
+        *vtopte(PAGE_TRUNCATE(entry)+i*PAGE_SIZE*1024) = 0;
+    }
+
+    printk("task #%d: Creating first user task...", sys_task_getid());
+    tid = sys_task_create(USER_MAX_ADDR, (void *)entry, (void *)0x12345678);
     if(tid < 0)
-      printk("failed to create the first user task\n\r");
+      printk("Failed\r\n");
+    else {
+      printk("Done\r\n");
+    }
+
   } else
-    printk("load_pe(%s) failed\n\r", filename);
+    printk("Failed\r\n");
 }
 
+/*
+ * This function is the C entry point of the kernel.
+ * It just does some machine-dependent initialization and then set the ball
+ * rolling.
+ */
 void cstart(uint32_t magic, uint32_t addr)
 {
   init_machdep( addr, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
 
-  printk("Welcome to EPOS\n\r");
-  printk("Copyright (C) 2005-2013 MingJian Hong<hmj@cqu.edu.cn>\n\r");
-  printk("All rights reserved.\n\r\n\r");
-  printk("Partial financial support from the School of Software Engineering,\n\r");
-  printk("ChongQing University is gratefully acknowledged.\n\r\n\r");
+  printk("Welcome to EPOS\r\n");
+  printk("Copyright (C) 2005-2013 MingJian Hong<hmj@cqu.edu.cn>\r\n");
+  printk("All rights reserved.\r\n\r\n");
+  printk("Partial financial support from School of Software Engineering,\r\n");
+  printk("ChongQing University is gratefully acknowledged.\r\n\r\n");
 
   g_kern_cur_addr=KERNBASE+PAGE_ROUNDUP( R((uint32_t)(&end)) );
   g_kern_end_addr=KERNBASE+NR_KERN_PAGETABLE*PAGE_SIZE*1024;
 
-//  printk("g_kern_cur_addr=0x%08x, g_kern_end_addr=0x%08x\n\r", g_kern_cur_addr, g_kern_end_addr);
+//  printk("g_kern_cur_addr=0x%08x, g_kern_end_addr=0x%08x\r\n",
+//         g_kern_cur_addr, g_kern_end_addr);
 
-  if(1) {
+  if(77) {
     uint32_t i;
 
 
     /**
      * XXX - machine-dependent should be elsewhere
-     *
      */
     __asm__ __volatile__ (
       "addl %0,%%esp\n\t"
@@ -135,19 +202,24 @@ void cstart(uint32_t magic, uint32_t addr)
       :
       );
 
+    /*
+     * The kernel has been relocated to the linked address. The identity
+     * mapping is unmapped.
+     */
     for(i = 0; i < NR_KERN_PAGETABLE; i++)
       PTD[i] = 0;
 
+    /*Flush TLB*/
     invltlb();
   }
 
-  if(1) {
-    uint32_t i;
-    for(i = 0; i < NR_IRQ; i++)
-      intr_vector[i]=isr_default;
-  }
-
-  if(1) {
+  /*
+   * Reserve the address space for the freemap, which is used
+   * to manage the free physical memory.
+   *
+   * The freemap is then mapped to the top of the physical memory.
+   */
+  if(78) {
     uint32_t size;
     uint32_t i, vaddr, paddr;
 
@@ -169,23 +241,47 @@ void cstart(uint32_t magic, uint32_t addr)
 
     g_frame_count = (g_mem_zone[1]-g_mem_zone[0])>>PAGE_SHIFT;
 
-//    printk("g_frame_freemap=0x%08x\n\r", g_frame_freemap);
-//    printk("g_frame_count=%d\n\r", g_frame_count);
+    printk("Available memory: 0x%08x - 0x%08x (%d pages)\r\n\r\n",
+           g_mem_zone[0], g_mem_zone[1], g_frame_count);
+
+//    printk("g_frame_freemap=0x%08x\r\n", g_frame_freemap);
+//    printk("g_frame_count=%d\r\n", g_frame_count);
   }
 
-  if(1) {
+  /*
+   * The kernel heap is initialised for kmalloc/kfree.
+   */
+  if(79) {
     g_kern_heap_base = (uint8_t *)g_kern_cur_addr;
     g_kern_heap_size = 1024 * PAGE_SIZE;
     g_kern_cur_addr += g_kern_heap_size;
     init_kmalloc(g_kern_heap_base, g_kern_heap_size);
   }
 
-  intr_vector[IRQ_TIMER] = isr_timer;
-  enable_irq(IRQ_TIMER);
+  /*
+   * Initialise the interrupt vector
+   */
+  if(80) {
+    uint32_t i;
+    for(i = 0; i < NR_IRQ; i++)
+      intr_vector[i]=isr_default;
 
+    intr_vector[IRQ_TIMER] = isr_timer;
+    enable_irq(IRQ_TIMER);
+
+//    intr_vector[IRQ_KEYBOARD] = isr_keyboard;
+//    enable_irq(IRQ_KEYBOARD);
+  }
+
+  /*
+   * Initialise the multi-task subsystem
+   */
   init_task();
-  init_callout();
 
+  /*
+   * Switch to the task0. It is the task0 who initialises other subsystems and
+   * starts the first user task.
+   */
   run_as_task0();
   start_user_task();
   while(1)

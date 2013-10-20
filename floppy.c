@@ -1,23 +1,6 @@
+#if USE_FLOPPY
+
 #include "kernel.h"
-
-/*
-GazOS Operating System
-Copyright (C) 1999  Gareth Owen <gaz@athene.co.uk>
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-*/
 
 /* Defines for accessing the upper and lower byte of an integer. */
 #define LO_BYTE(x)           ((x) & 0xFF)
@@ -34,18 +17,12 @@ static unsigned char CountPort[8] = { 0x01, 0x03, 0x05, 0x07, 0xC2, 0xC6, 0xCA, 
 
 static void _dma_xfer(unsigned char DMA_channel, unsigned char page, unsigned int offset, unsigned int length, unsigned char mode)
 {
-    /* Don't let anyone else mess up what we're doing. */
-    uint32_t flags;
-
-    save_flags_cli(flags);
-//    cli();
-
     /* Set up the DMA channel so we can use it.  This tells the DMA */
     /* that we're going to be using this channel.  (It's masked) */
     outportb(MaskReg[DMA_channel], 0x04 | DMA_channel);
 
     /* Clear any data transfers that are currently executing. */
-    outportb(ClearReg[DMA_channel], 0x00);
+//    outportb(ClearReg[DMA_channel], 0x00);
     outportb (0xd8,0xff);	//reset master flip-flop
 
     /* Send the specified mode to the DMA. */
@@ -65,14 +42,8 @@ static void _dma_xfer(unsigned char DMA_channel, unsigned char page, unsigned in
     outportb(CountPort[DMA_channel], LO_BYTE(length));
     outportb(CountPort[DMA_channel], HI_BYTE(length));
 
-    outportb (0x80,0);
-
     /* Ok, we're done.  Enable the DMA channel (clear the mask). */
     outportb(MaskReg[DMA_channel], DMA_channel);
-
-    /* Re-enable interrupts before we leave. */
-//    sti();
-    restore_flags(flags);
 }
 
 static void dma_xfer(uint8_t channel, uint32_t address, size_t length, int read)
@@ -91,18 +62,6 @@ static void dma_xfer(uint8_t channel, uint32_t address, size_t length, int read)
 	
 	_dma_xfer(channel, page, offset, length, mode);	
 }	
-
-/*
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
 	
 #define FDC_DOR  (0x3f2)   /* Digital Output Register */
 #define FDC_MSR  (0x3f4)   /* Main Status Register (input) */
@@ -209,21 +168,21 @@ static uint8_t fdc_getbyte()
 
 static void fdc_check_int (uint8_t *st0, uint8_t *cyl)
 {
-	fdc_sendbyte (FDC_CMD_CHECK_INT);
-	*st0 = fdc_getbyte ();
-	*cyl = fdc_getbyte ();
-//	printk("st0=0x%02x\n\r", *st0);
-//	printk("cyl=0x%02x\n\r", *cyl);
+  fdc_sendbyte (FDC_CMD_CHECK_INT);
+  *st0 = fdc_getbyte ();
+  *cyl = fdc_getbyte ();
+//printk("st0=0x%02x\r\n", *st0);
+//printk("cyl=0x%02x\r\n", *cyl);
 }
 
 static void fdc_motoron()
 {
-    outportb(FDC_DOR,FDC_DOR_RESET|FDC_DOR_DMA|FDC_DOR_DRIVE0_MOTOR); 
+  outportb(FDC_DOR,FDC_DOR_RESET|FDC_DOR_DMA|FDC_DOR_DRIVE0_MOTOR); 
 }
 
 static void fdc_motoroff()
 {
-    outportb(FDC_DOR,FDC_DOR_RESET|FDC_DOR_DMA); 
+  outportb(FDC_DOR,FDC_DOR_RESET|FDC_DOR_DMA); 
 }
 
 static int calibrate()
@@ -275,11 +234,13 @@ static void reset(void)
 
 static void fdc_read_sector_imp (uint8_t head, uint8_t track, uint8_t sector)
 {
+  uint32_t flags;
   int i;
 	uint8_t st0, cyl;
 
+  save_flags_cli(flags);
+
   dma_xfer(2, (uint32_t)g_buf_dma, FLOPPY_BYTES_PER_SECTOR, 1); 
- 
 	fdc_sendbyte (
     FDC_CMD_READ | FDC_CMD_EXT_MULTITRACK |
     FDC_CMD_EXT_SKIP | FDC_CMD_EXT_DENSITY);
@@ -291,16 +252,52 @@ static void fdc_read_sector_imp (uint8_t head, uint8_t track, uint8_t sector)
 	fdc_sendbyte ( FLOPPY_SECTORS_PER_TRACK );
 	fdc_sendbyte ( FLOPPY_GAP3_LENGTH_3_5 );
 	fdc_sendbyte ( 0xff );
+
+  restore_flags(flags);
  
 	fdc_wait_irq ();
  
 	for (i=0; i<7; i++) {
     fdc_getbyte();
-//		printk("[%d]=0x%02x\n\r", i, fdc_getbyte ());
+//		printk("[%d]=0x%02x\r\n", i, fdc_getbyte ());
   }
  
 	fdc_check_int (&st0,&cyl);
 }
+
+static void fdc_write_sector_imp (uint8_t head, uint8_t track, uint8_t sector)
+{
+  uint32_t flags;
+  int i;
+	uint8_t st0, cyl;
+
+  save_flags_cli(flags);
+
+  dma_xfer(2, (uint32_t)g_buf_dma, FLOPPY_BYTES_PER_SECTOR, 0); 
+	fdc_sendbyte (
+    FDC_CMD_WRITE | FDC_CMD_EXT_MULTITRACK |
+    FDC_CMD_EXT_DENSITY);
+	fdc_sendbyte ( head << 2 | 0 );
+	fdc_sendbyte ( track);
+	fdc_sendbyte ( head);
+	fdc_sendbyte ( sector);
+	fdc_sendbyte ( FDC_SECTOR_DTL_512 );
+	fdc_sendbyte ( FLOPPY_SECTORS_PER_TRACK );
+	fdc_sendbyte ( FLOPPY_GAP3_LENGTH_3_5 );
+	fdc_sendbyte ( 0xff );
+
+  restore_flags(flags);
+ 
+	fdc_wait_irq ();
+ 
+	for (i=0; i<7; i++) {
+    fdc_getbyte();
+//    printk("[%d]=0x%02x\r\n", i, fdc_getbyte ());
+  }
+ 
+	fdc_check_int (&st0,&cyl);
+}
+
 
 static int fdc_seek ( uint8_t cyl )
 {
@@ -355,15 +352,16 @@ uint8_t *floppy_read_sector (size_t lba)
 
 	floppy_lba2chs (lba, &head, &track, &sector);
 
-//  printk("head=%d, track=%d, sector=%d\n\r", head, track, sector);
+//  printk("head=%d, track=%d, sector=%d\r\n", head, track, sector);
  
 	fdc_motoron();
 
 	if (fdc_seek (track) < 0) {
-//    printk("failed to seek\n\r");
+    printk("failed to seek\r\n");
 		return 0;
   }
  
+//  printk("R%d ", lba);
 	fdc_read_sector_imp (head, track, sector);
 
 	fdc_motoroff ();
@@ -371,3 +369,31 @@ uint8_t *floppy_read_sector (size_t lba)
 	return g_buf_dma;
 }
 
+int floppy_write_sector (size_t lba, uint8_t *buffer)
+{
+	uint8_t head, track, sector;
+
+  if(lba >= FLOPPY_SECTORS_PER_TRACK*FLOPPY_HEADS*FLOPPY_TRACKS)
+    return -1;
+
+	floppy_lba2chs (lba, &head, &track, &sector);
+
+//  printk("head=%d, track=%d, sector=%d\r\n", head, track, sector);
+ 
+	fdc_motoron();
+
+	if (fdc_seek (track) < 0) {
+    printk("failed to seek\r\n");
+		return -2;
+  }
+ 
+//  printk("W%d ", lba);
+  memcpy(g_buf_dma, buffer, FLOPPY_BYTES_PER_SECTOR); 
+	fdc_write_sector_imp (head, track, sector);
+
+	fdc_motoroff ();
+
+  return 0;
+}
+
+#endif /*USE_FLOPPY*/

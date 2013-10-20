@@ -1,0 +1,71 @@
+\documentclass[CJKutf8,xcolor=pdftex,dvipsnames,table]{report}
+\usepackage{hyperref}
+\hypersetup{
+  pdftitle={Operating System Concepts},
+  pdfauthor={Hong MingJian},
+  pdfsubject={The EPOS Source code},
+%  pdfpagemode={FullScreen},
+  colorlinks={true},
+  linkcolor={blue},
+}
+\usepackage{CJKutf8}
+\usepackage{epic} % for \dashline
+\usepackage{listings}
+\usepackage{courier}
+\usepackage{pgffor} % for \foreach
+
+\lstset{
+  basicstyle=\small\ttfamily,
+  tabsize=2,
+  breaklines=false,
+%  keywordstyle=\color{blue},
+%  identifierstyle=,
+%  commentstyle=\color{green},
+%  stringstyle=,
+%  showstringspaces=false,
+%  extendedchars=false
+%  numberstyle=\tiny,
+  numbers=left,
+  stepnumber=1,
+  firstnumber=1,
+  numberfirstline=true,
+  frame=tb
+}
+
+%\renewcommand\lstlistingname{File}
+%\renewcommand\lstlistlistingname{The EPOS source code}
+
+\title{THE EPOS SOURCE CODE}
+\author{洪明坚\ 重庆大学软件学院}
+\date{2013年10月}
+
+\begin{document}
+\begin{CJK*}{UTF8}{songti}
+
+\maketitle
+
+\lstlistoflistings
+
+
+\newpage
+\lstinputlisting[label=entry.S,caption=entry.S]{entry.S}
+
+\foreach \n in {machdep.c,startup.c,task.c,timer.c,page.c,pe.c,global.h,cpu.h,kernel.h,machdep.h,syscall.h}{\newpage \lstinputlisting[language=C,label=\n,caption=\n]{\n}}
+
+\newpage
+\lstinputlisting[label=ldscript,caption=ldscript]{ldscript}
+
+\newpage
+\lstinputlisting[language={[gnu]make},label=Makefile,caption=Makefile]{Makefile}
+
+\newpage
+\lstinputlisting[label=app/crt0.S,caption=app/crt0.S]{app/crt0.S}
+\newpage
+\lstinputlisting[label=app/syscall.S,caption=app/syscall.S]{app/syscall.S}
+\newpage
+\lstinputlisting[language=C,label=app/main.c,caption=app/main.c]{app/main.c}
+\newpage
+\lstinputlisting[language={[gnu]make},label=app/Makefile,caption=app/Makefile]{app/Makefile}
+
+\end{CJK*}
+\end{document}

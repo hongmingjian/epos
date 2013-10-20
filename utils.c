@@ -184,25 +184,17 @@ strlen(const char *str)
 	return(s - str);
 }
 
-unsigned long 
-strlcpy(char *dest, const char *src, unsigned long len) 
-{ 
-	unsigned long src_len = strlen(src); 
-	unsigned long new_len; 
+char *
+strncpy(char *dest, const char *src, unsigned n)
+{
+    unsigned i;
 
-	if (len == 0) {
-		return (src_len);
-	}
+   for (i = 0; i < n && src[i] != '\0'; i++)
+        dest[i] = src[i];
+    for ( ; i < n; i++)
+        dest[i] = '\0';
 
-	if (src_len >= len) {
-		new_len = len - 1;
-	} else {
-		new_len = src_len;
-	}
-
-	memcpy(dest, src, new_len); 
-	dest[new_len] = '\0'; 
-	return (src_len); 
+   return dest;
 }
 
 #define	ISDIGIT(_c) \

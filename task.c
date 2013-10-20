@@ -1,7 +1,9 @@
 /**
  *
- * Copyright (C) 2008, 2013 Hong MingJian
+ * Copyright (C) 2008, 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
+ *
+ * This file is part of the EPOS.
  *
  * Redistribution and use in source and binary forms are freely
  * permitted provided that the above copyright notice and this
@@ -31,7 +33,7 @@ void schedule()
       select = g_task_all_head;
     if(select == g_task_running)
       break;
-    if((select->tid != 0) && 
+    if((select->tid != 0) &&
        (select->state == TASK_STATE_READY))
       break;
   } while(1);
@@ -39,10 +41,12 @@ void schedule()
   if(select == g_task_running) {
     if(select->state == TASK_STATE_READY)
       return;
-    select = g_task_all_head;
+    select = task0;
   }
 
-//  printk("0x%x -> 0x%x\n\r", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
+//  printk("0x%x -> 0x%x\r\n",
+//         (g_task_running == NULL) ? -1 : g_task_running->tid,
+//         select->tid);
 
   g_resched = 0;
   switch_to(select);
@@ -124,16 +128,16 @@ void remove_task(struct tcb *tsk)
 static
 struct tcb* find_task(int tid)
 {
-	struct tcb *tsk;
-	
+  struct tcb *tsk;
+
   tsk = g_task_all_head;
   while(tsk != NULL) {
     if(tsk->tid == tid)
       break;
     tsk = tsk->all_next;
   }
- 
-	return tsk;
+
+  return tsk;
 }
 
 static
@@ -147,18 +151,18 @@ struct tcb *task_get(int tid)
   return p;
 }
 
-int sys_task_create(uint32_t user_stack, 
-	  void (*handler)(void *), void *param)
+int sys_task_create(uint32_t ustack,
+                    void (*handler)(void *), void *param)
 {
   static int tid = 0;
   struct tcb *new;
   char *p;
   uint32_t flags;
 
-  if(user_stack & 3)
+  if(ustack & 3)
     return -1;
-    
-	p = (char *)kmalloc(PAGE_SIZE+PAGE_SIZE);
+
+  p = (char *)kmalloc(PAGE_SIZE+PAGE_SIZE);
   if(p == NULL)
     return -2;
 
@@ -166,83 +170,82 @@ int sys_task_create(uint32_t user_stack,
   p -= sizeof(struct tcb);
   new = (struct tcb *)p;
 
-	memset(new, 0, sizeof(struct tcb));
+  memset(new, 0, sizeof(struct tcb));
 
-	new->kern_stack = (uint32_t)new;
-	new->tid = tid++;
-	new->state = TASK_STATE_READY;
-	new->quantum = DEFAULT_QUANTUM;
+  new->kstack = (uint32_t)new;
+  new->tid = tid++;
+  new->state = TASK_STATE_READY;
+  new->quantum = DEFAULT_QUANTUM;
   new->wait_head = NULL;
   new->all_next = NULL;
 
-  if(user_stack != 0) {
-    PUSH_TASK_STACK(user_stack, param);
-    PUSH_TASK_STACK(user_stack, 0);
+  if(ustack != 0) {
+    STACK_PUSH(ustack, param);
+    STACK_PUSH(ustack, 0);
   } else {
-    PUSH_TASK_STACK(new->kern_stack, param);
-    PUSH_TASK_STACK(new->kern_stack, 0);
+    STACK_PUSH(new->kstack, param);
+    STACK_PUSH(new->kstack, 0);
   }
 
-  INIT_TASK_CONTEXT(user_stack, new->kern_stack, handler);
+  INIT_TASK_CONTEXT(ustack, new->kstack, handler);
 
-	save_flags_cli(flags);
+  save_flags_cli(flags);
   add_task(new);
-	restore_flags(flags);	
+  restore_flags(flags);
 
-	return new->tid;
+  return new->tid;
 }
 
 void sys_task_exit(int val)
-{	
+{
   uint32_t flags;
 
   save_flags_cli(flags);
 
   wake_up(&g_task_running->wait_head, -1);
 
-	g_task_running->exit_code = val;
-	g_task_running->state = TASK_STATE_ZOMBIE;
+  g_task_running->exit_code = val;
+  g_task_running->state = TASK_STATE_ZOMBIE;
 
-	schedule();
+  schedule();
 }
 
 int sys_task_wait(int32_t tid, int32_t *exit_code)
 {
-	uint32_t flags;
-	struct tcb *tsk;
+  uint32_t flags;
+  struct tcb *tsk;
 
   if(g_task_running == NULL)
     return -1;
 
   save_flags_cli(flags);
 
-	if((tsk = find_task(tid)) == NULL) {
-	  restore_flags(flags);
-		return -1;
+  if((tsk = find_task(tid)) == NULL) {
+    restore_flags(flags);
+  return -1;
   }
 
-	if(tsk->state != TASK_STATE_ZOMBIE)
+  if(tsk->state != TASK_STATE_ZOMBIE)
     sleep_on(&tsk->wait_head);
 
   if(exit_code != NULL)
-	  *exit_code = tsk->exit_code;
-			
-	if(tsk->wait_head == NULL) {
-    char *p;
-	  remove_task(tsk);
-    restore_flags(flags);
+    *exit_code = tsk->exit_code;
 
-//    printk("%d: Task %d reaped\n\r", sys_task_getid(), tsk->tid);
+  if(tsk->wait_head == NULL) {
+    char *p;
+    remove_task(tsk);
+//    printk("%d: Task %d reaped\r\n", sys_task_getid(), tsk->tid);
+    restore_flags(flags);
 
     p = (char *)tsk;
     p += sizeof(struct tcb);
     p -= (PAGE_SIZE + PAGE_SIZE);
     kfree(p);
     return 0;
-	}
-		
+  }
+
   restore_flags(flags);
-	return 0;
+  return 0;
 }
 
 int32_t sys_task_getid()
@@ -258,33 +261,11 @@ void sys_task_yield()
   restore_flags(flags);
 }
 
-static void task_sleep_callout(void *pv)
-{
-  struct tcb *tsk = (struct tcb *)pv;
-  tsk->state = TASK_STATE_READY;
-//  printk("%d: ticks=%d, wakeup %d\n\r", sys_task_getid(), ticks, tsk->tid);
-}
-
-int sys_task_sleep(uint32_t msec)
-{
-  if(NULL != set_callout(1+(HZ*msec)/1000, task_sleep_callout, g_task_running)) {
-    uint32_t flags;
-//    printk("%d: sleep %d ticks, ticks=%d\n\r", sys_task_getid(), 1+(HZ*msec)/1000, ticks);
-    save_flags_cli(flags);
-    g_task_running->state = TASK_STATE_BLOCKED;
-    schedule();
-    restore_flags(flags);
-    return 0;
-  }
-
-  return -1;
-}
-
 void init_task()
 {
   g_resched = 0;
   g_task_running = NULL;
   g_task_all_head = NULL;
 
-  task0 = task_get(sys_task_create(0, 0/*to be filled by run_as_task0*/, NULL));
+  task0 = task_get(sys_task_create(0, 0/*filled by run_as_task0*/, NULL));
 }

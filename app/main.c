@@ -1,13 +1,28 @@
-#include <stdarg.h>
+#include "../global.h"
 
+/////////////////SYSTEM CALLS/////////////////////
 int task_exit(int val);
 int task_create(unsigned stack, void *func, unsigned pv);
 int task_getid();
 void task_yield();
 int task_wait(int tid, int *exit_code);
-int task_sleep(unsigned msec);
+void beep(unsigned freq);
 int putchar(int c);
 
+///////////////////HELPERS///////////////////////
+void srand(uint32_t x);
+uint32_t random();
+
+#include "../tlsf/tlsf.h"
+extern char end[];
+void *malloc(size_t bytes)
+{ return malloc_ex(bytes, end); }
+void *realloc(void *oldptr, size_t bytes)
+{ return realloc_ex(oldptr, bytes, end); }
+void free(void *ptr)
+{ free_ex(ptr, end); }
+
+#include <stdarg.h>
 int sprintf(char *buf, const char *fmt, ...);
 int vsprintf(char *buf, const char *fmt, va_list args);
 int printf(const char *fmt,...)
@@ -26,6 +41,44 @@ int printf(const char *fmt,...)
 	return i;
 }
 
+//////////////////////////////////////////////////
+#define DELAY(n) do { \
+  unsigned __n=(n); \
+  while(__n--); \
+} while(0);
+
+static void hanoi(int d, char from, char to, char aux)
+{
+  unsigned n;
+
+  if(d == 1) {
+    DELAY(1000000);
+    printf("%c%d%c ", from, d, to);
+    return;
+  }
+
+  hanoi(d - 1, from, aux, to);
+  DELAY(1000000);
+  printf("%c%d%c ", from, d, to);
+  hanoi(d - 1, aux, to, from);
+}
+
+static tsk_hanoi(void *pv)
+{
+  int n = (int)pv;
+  printf("task #%d: Playing Hanoi tower with %d plates\r\n",
+         task_getid(), pv);
+  if(n <= 0) {
+    printf("task #%d: Illegal number of plates %d\r\n", n);
+    task_exit(-1);
+  }
+
+  hanoi(n, 'A', 'B', 'C');
+
+  printf("task #%d: Exiting\r\n", task_getid());
+  task_exit(n);
+}
+
 static unsigned fib(unsigned n)
 {
   if (n == 0)
@@ -35,68 +88,52 @@ static unsigned fib(unsigned n)
   return fib(n - 1) + fib(n - 2);
 }
 
-static void hanoi(int d, char from, char to, char aux)
-{
-  if(d == 1) {
-    task_sleep(8000);
-    printf("%c%d%c ", from, d, to);
-    return;
-  }
-
-  hanoi(d - 1, from, aux, to);
-  task_sleep(8000);
-  printf("%c%d%c ", from, d, to);
-  hanoi(d - 1, aux, to, from);
-}
-
 static void tsk_fib(void *pv)
 {
   int i, code;
-//  printf("task #%d: pv=0x%08x\n\r", task_getid(), pv);
 
-  printf("task #%d: waiting task #%d\n\r", task_getid(), 3);
-  task_wait(3, &code);
-  printf("task #%d: task #%d exit with code %d\n\r", task_getid(), 3, code);
+  printf("task #%d: waiting task #%d to exit\r\n", task_getid(), (int)pv);
+  task_wait((int)pv, &code);
+  printf("task #%d: task #%d exited with code %d\r\n",
+         task_getid(), (int)pv, code);
 
-  for(i = 38; i < 48; i++)
-    printf("task #%d: fib(%d)=%u\n\r", task_getid(), i, fib(i));
-    
-  printf("task #%d: Exiting\n\r", task_getid());
+  for(i = 37; i < 48; i++)
+    printf("task #%d: fib(%d)=%u\r\n", task_getid(), i, fib(i));
 
-  task_exit((int)pv);
-}
+  printf("task #%d: Exiting\r\n", task_getid());
 
-static tsk_hanoi(void *pv)
-{
-  int n = (int)(pv);
-  printf("task #%d: Hanoi tower with %d plates\n\r", task_getid(), pv);
-  if(n <= 0) {
-    printf("task #%d: Illegal number of plates %d\n\r", n);
-    task_exit(-1);
-  }
-  
-  hanoi(n, 'A', 'B', 'C');
-
-  printf("task #%d: Exiting\n\r", task_getid());
   task_exit(0);
 }
 
 void main(void *pv)
 {
-  int code;
-  printf("task #%d: Hello, I'm the first user task(pv=0x%08x)!\n\r", task_getid(), pv);
+  printf("task #%d: Hello world! I'm the first user task(pv=0x%08x)!\r\n",
+         task_getid(), pv);
 
-  printf("task #%d: task #%d created\n\r", task_getid(), task_create(0xa0000000, tsk_hanoi, 6));
-  printf("task #%d: task #%d created\n\r", task_getid(), task_create(0xb0000000, tsk_fib, 0x19760206));
+  if(1){
+    int code;
+    int tid_hanoi, tid_fib;
+    char *stack_hanoi, *stack_fib;
 
-  printf("task #%d: waiting task #%d\n\r", task_getid(), 3);
-  task_wait(3, &code);
-  printf("task #%d: task #%d exit with code %d\n\r", task_getid(), 3, code);
+    stack_hanoi = malloc(1024*1024);
+    tid_hanoi = task_create(stack_hanoi+1024*1024, tsk_hanoi, (void *)6);
+    printf("task #%d: task #%d created(stack=0x%08x, size=%d)\r\n",
+           task_getid(), tid_hanoi, stack_hanoi, 1024*1024);
 
-  while(1) {
-    task_sleep(500000);
-    printf("task #%d: fib(%d)=%u\n\r", task_getid(), 37, fib(37));
+    stack_fib = malloc(1024*1024);
+    tid_fib = task_create(stack_fib+1024*1024, tsk_fib, (void *)tid_hanoi);
+    printf("task #%d: task #%d created(stack=0x%08x, size=%d)\r\n",
+           task_getid(), tid_fib,   stack_fib,   1024*1024);
+
+    printf("task #%d: waiting task #%d to exit\r\n", task_getid(), tid_hanoi);
+    task_wait(tid_hanoi, &code);
+    free(stack_hanoi);
+    printf("task #%d: task #%d exited with code %d\r\n",
+           task_getid(), tid_hanoi, code);
   }
+
+  while(1)
+    ;
   task_exit(0);
 }
 
@@ -106,5 +143,6 @@ void main(void *pv)
  */
 void __main()
 {
+  init_memory_pool(64*1024*1024, end);
 }
 

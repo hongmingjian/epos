@@ -1,7 +1,9 @@
 /**
  *
- * Copyright (C) 2013 Hong MingJian
+ * Copyright (C) 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
+ *
+ * This file is part of the EPOS.
  *
  * Redistribution and use in source and binary forms are freely
  * permitted provided that the above copyright notice and this
@@ -22,7 +24,8 @@
 #define SYSCALL_TASK_GETID    3
 #define SYSCALL_TASK_YIELD    4
 #define SYSCALL_TASK_WAIT     5
-#define SYSCALL_TASK_SLEEP    6
+#define SYSCALL_BEEP          6
+
 #define SYSCALL_PUTCHAR       1000
- 
+
 #endif

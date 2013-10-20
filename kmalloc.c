@@ -1,7 +1,9 @@
 /**
  *
- * Copyright (C) 2005, 2013 Hong MingJian
+ * Copyright (C) 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
+ *
+ * This file is part of the EPOS.
  *
  * Redistribution and use in source and binary forms are freely
  * permitted provided that the above copyright notice and this
@@ -15,6 +17,7 @@
  *
  */
 #include "cpu.h"
+#include "global.h"
 #include "tlsf/tlsf.h"
 
 static void *g_kern_mem_pool = NULL;

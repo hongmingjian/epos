@@ -14,25 +14,28 @@ NM=		$(CROSS)nm
 
 PROG=	a
 
-all: $(PROG).exe
+all: $(PROG).out
 
-CFLAGS=		-fno-builtin -ffreestanding -O #-Wall
-LDFLAGS=	-nostdlib -nostartfiles #-Wl,-Map,$(PROG).map
+CFLAGS=	-fno-builtin -ffreestanding -fno-stack-check \
+				-fno-stack-protector -mno-stack-arg-probe -O #-Wall
+LDFLAGS=	-nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
-OBJS=		crt0.o syscall.o utils.o vsprintf.o main.o
+OBJS=		crt0.o syscall.o utils.o vsprintf.o rand.o main.o tlsf.o
 
-$(PROG).exe: $(OBJS)
+$(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
-	../../bin/fat_imgen.exe -m -g -i $@ -f ../floppy.img
+	../../bin/imgcpy.exe $@ ../hd.img=C:\$@
+#	../../bin/winimage.exe ..\hd.img /q /h /i $@
+#	../../bin/fat_imgen.exe -m -g -i $@ -f ../floppy.img
 
 run:
 	$(MAKE) -C .. $@
 
 debug:
-	$(MAKE) -C .. $@
+	$(MAKE) -C .. $@ 
 
 bochs:
-	$(MAKE) -C .. $@
+	$(MAKE) -C .. $@ 
 
 vsprintf.o: ../vsprintf.c
 	$(CC) -c $(CFLAGS) $^
@@ -40,5 +43,8 @@ vsprintf.o: ../vsprintf.c
 utils.o: ../utils.c
 	$(CC) -c $(CFLAGS) $^
 
+tlsf.o: ../tlsf/tlsf.c
+	$(CC) -c $(CFLAGS) $^
+
 clean:
-	-$(RM)  *.o *.out *.bin *.*~ $(PROG).exe $(PROG).map
+	-$(RM)  *.o *.out *.bin *.*~ #$(PROG).map

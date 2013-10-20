@@ -21,7 +21,7 @@ char *strcat(char *s, const char *append);
 int   strcmp(const char *s1, const char *s2);
 char *strcpy(char *to, const char *from);
 unsigned strlen(const char *str);
-unsigned long strlcpy(char *dest, const char *src, unsigned long len); 
+char *strncpy(char *dest, const char *src, unsigned n);
 int   isdigit(char c);
 int   isxdigit(char c);
 int   islower(char c);

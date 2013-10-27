@@ -96,7 +96,7 @@ read_eflags(void)
 #define PAGE_ROUNDUP(x)   (((x)+PAGE_MASK)&(~PAGE_MASK))
 
 #define PTE_V   0x001 /* Valid */
-#define PTE_RW  0x002 /* Read/Write */
+#define PTE_W   0x002 /* Read/Write */
 #define PTE_U   0x004 /* User/Supervisor */
 #define PTE_A   0x020 /* Accessed */
 #define PTE_M   0x040 /* Dirty */

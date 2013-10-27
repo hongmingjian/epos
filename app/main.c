@@ -8,6 +8,7 @@ void task_yield();
 int task_wait(int tid, int *exit_code);
 void beep(unsigned freq);
 int putchar(int c);
+int bioscall();
 
 ///////////////////HELPERS///////////////////////
 void srand(uint32_t x);
@@ -110,7 +111,9 @@ void main(void *pv)
   printf("task #%d: Hello world! I'm the first user task(pv=0x%08x)!\r\n",
          task_getid(), pv);
 
-  if(1){
+  printf("bioscall() returns: %d\r\n", bioscall());
+
+  if(0){
     int code;
     int tid_hanoi, tid_fib;
     char *stack_hanoi, *stack_fib;

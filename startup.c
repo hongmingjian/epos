@@ -206,7 +206,7 @@ void cstart(uint32_t magic, uint32_t addr)
      * The kernel has been relocated to the linked address. The identity
      * mapping is unmapped.
      */
-    for(i = 0; i < NR_KERN_PAGETABLE; i++)
+    for(i = 1; i < NR_KERN_PAGETABLE; i++)
       PTD[i] = 0;
 
     /*Flush TLB*/
@@ -233,7 +233,7 @@ void cstart(uint32_t magic, uint32_t addr)
     vaddr = (uint32_t)g_frame_freemap;
     paddr = g_mem_zone[1];
     for(i =0 ;i < (size>>PAGE_SHIFT); i++) {
-      *vtopte(vaddr)=paddr|PTE_V|PTE_RW;
+      *vtopte(vaddr)=paddr|PTE_V|PTE_W;
       vaddr += PAGE_SIZE;
       paddr += PAGE_SIZE;
     }

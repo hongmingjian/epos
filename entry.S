@@ -444,6 +444,30 @@ _lidt:
   lidt (%eax)
   ret
 
+  .globl _bioscall
+_bioscall:
+#save %esp
+  pushl $0              # GS
+  pushl $0              # FS
+  pushl $0              # DS
+  pushl $0              # ES
+  pushl $0x1000         # SS
+  pushl $0              # SP
+  pushl $0x20000        # EFLAGS
+
+  movl 0x30, %eax
+
+  movzx %ax, %ebx
+  pushl %ebx         # CS
+
+  shrl $0x10, %eax
+  movzx %ax, %ebx
+  pushl %ebx           # IP
+
+  iret
+#restore %esp
+  ret
+
   .data
   .space 0x2000  # stack for the kernel
 _tmp_stack:

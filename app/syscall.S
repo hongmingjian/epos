@@ -36,6 +36,12 @@ _beep:
   int $0x82
   ret
 
+ .globl _bioscall
+_bioscall:
+  movl $SYSCALL_BIOSCALL, %eax
+  int $0x82
+  ret
+
   .globl _putchar
 _putchar:
   movl $SYSCALL_PUTCHAR, %eax

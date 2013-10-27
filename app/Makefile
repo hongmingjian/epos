@@ -1,4 +1,4 @@
-CROSS=
+CROSS=i486-mingw32-
 
 CC=		$(CROSS)gcc
 AS=		$(CROSS)as
@@ -27,10 +27,17 @@ $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 ../hd.img: a.out
-	../../bin/imgcpy.exe $^ $@=C:\$^
-#	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
-#	cp $^ /mnt
-#	sudo umount /mnt
+ifeq ($(OS),Windows_NT)
+	../bin/imgcpy.exe $^ $@=C:\$^
+else
+ifeq ($(shell uname -s),Linux)
+	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
+	-sudo cp $^ /mnt
+	sudo umount /mnt
+endif
+#	ifeq ($(shell uname -s),Darwin)
+#	endif
+endif
 
 .PHONY: run
 run: ../hd.img

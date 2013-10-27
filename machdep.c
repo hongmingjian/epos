@@ -377,6 +377,9 @@ void exception(struct context *ctx)
         return;
     }
     break;
+
+  case 13://general protection
+    break;
   }
   printk("Un-handled exception!\r\n");
   printk(" fs=0x%08x,  es=0x%08x,  ds=0x%08x\r\n",
@@ -441,6 +444,9 @@ void syscall(struct context *ctx)
     break;
   case SYSCALL_BEEP:
     sys_beep((*((uint32_t *)(ctx->esp+4))));
+    break;
+  case SYSCALL_BIOSCALL:
+    bioscall();
     break;
   case SYSCALL_PUTCHAR:
     ctx->eax = sys_putchar((*((uint32_t *)(ctx->esp+4)))&0xff);
@@ -536,16 +542,19 @@ static uint32_t init_paging(uint32_t physfree)
 
   for(i = 0; i < NR_KERN_PAGETABLE; i++) {
     pgdir[i]=
-    pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_RW;
+    pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_W;
     memset((void *)physfree, 0, PAGE_SIZE);
     physfree+=PAGE_SIZE;
   }
+  pgdir[0] |= PTE_U;
 
   pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
-  for(i = 0; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
-    pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_RW;
+  for(i = 0; i < 256*PAGE_SIZE; i+=PAGE_SIZE)
+    pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_W|PTE_U;
+  for(     ; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
+    pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_W;
 
-  pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|PTE_V|PTE_RW;
+  pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|PTE_V|PTE_W;
 
   __asm__ __volatile__ (
     "movl %0, %%eax\n\t"

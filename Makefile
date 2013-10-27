@@ -1,4 +1,4 @@
-CROSS=
+CROSS=i486-mingw32-
 
 CC=		$(CROSS)gcc
 AS=		$(CROSS)as
@@ -34,23 +34,52 @@ $(PROG).bin: $(OBJS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
 
 hd.img: $(PROG).bin
+ifeq ($(OS),Windows_NT)
 	../bin/imgcpy.exe $^ $@=C:\$^
-#	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
-#	cp $^ /mnt
-#	sudo umount /mnt
+else
+ifeq ($(shell uname -s),Linux)
+	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
+	-sudo cp $^ /mnt
+	sudo umount /mnt
+endif
+#ifeq ($(shell uname -s),Darwin)
+#endif
+endif
 
 .PHONY: debug
 debug: hd.img
+ifeq ($(OS),Windows_NT)
 	-../Bochs/bochsdbg.exe -q -f bochsrc.txt
+else
+ifeq ($(shell uname -s),Linux)
+endif
+#ifeq ($(shell uname -s),Darwin)
+#endif
+endif
 
 .PHONY: run
 run: hd.img
+ifeq ($(OS),Windows_NT)
 	-../Qemu/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 \
 		-boot order=c -hda $^
+else
+ifeq ($(shell uname -s),Linux)
+	-qemu-system-i386 -m 4 -boot order=c -hda $^
+endif
+#ifeq ($(shell uname -s),Darwin)
+#endif
+endif
 
 .PHONY: bochs
 bochs: hd.img
+ifeq ($(OS),Windows_NT)
 	-../Bochs/bochs.exe -q -f bochsrc.txt
+else
+ifeq ($(shell uname -s),Linux)
+endif
+#ifeq ($(shell uname -s),Darwin)
+#endif
+endif
 
 .PHONY: clean
 clean:

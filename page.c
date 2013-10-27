@@ -151,7 +151,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 
       /* Got one :), clear its data before returning */
       paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
-      *vtopte(vaddr)=paddr|PTE_V|PTE_RW|(code&PTE_U);
+      *vtopte(vaddr)=paddr|PTE_V|PTE_W|(code&PTE_U);
       memset(PAGE_TRUNCATE(vaddr), 0, PAGE_SIZE);
       invlpg(vaddr);
 
@@ -258,7 +258,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
       *pte = 0;
       invlpg(victim);
 
-      *vtopte(vaddr)=paddr|PTE_V|PTE_RW|(code&PTE_U);
+      *vtopte(vaddr)=paddr|PTE_V|PTE_W|(code&PTE_U);
       invlpg(vaddr);
 
       /* Does the fault page have a shadow in the swap file? */

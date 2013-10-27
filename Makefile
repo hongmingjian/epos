@@ -32,26 +32,31 @@ OBJS=		entry.o machdep.o printk.o vsprintf.o \
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
-	../bin/imgcpy.exe $@ hd.img=C:\$@
-#	../bin/winimage.exe hd.img /q /h /i $@
-#	../bin/fat_imgen.exe -m -g -i $@ -f floppy.img
 
-debug:
+hd.img: $(PROG).bin
+	../bin/imgcpy.exe $^ $@=C:\$^
+#	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
+#	cp $^ /mnt
+#	sudo umount /mnt
+
+.PHONY: debug
+debug: hd.img
 	-../Bochs/bochsdbg.exe -q -f bochsrc.txt
 
-run:
+.PHONY: run
+run: hd.img
 	-../Qemu/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 \
-		-boot order=c -hda hd.img
-#	-../Qemu-1.5.1/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 \
-#		-boot order=a -fda floppy.img
+		-boot order=c -hda $^
 
-bochs:
+.PHONY: bochs
+bochs: hd.img
 	-../Bochs/bochs.exe -q -f bochsrc.txt
 
+.PHONY: clean
 clean:
 	-$(RM)  *.o tlsf/*.o *.bin *.*~ $(PROG).out #$(PROG).map
+	-$(RM) *.aux *.log *.out *.nav *.snm *.toc *.vrb *.lol
 
 epos.pdf: epos.tex
 	pdflatex epos
 	pdflatex epos
-	-$(RM) *.aux *.log *.out *.nav *.snm *.toc *.vrb *.lol

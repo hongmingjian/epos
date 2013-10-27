@@ -17,24 +17,31 @@ PROG=	a
 all: $(PROG).out
 
 CFLAGS=	-fno-builtin -ffreestanding -fno-stack-check \
-				-fno-stack-protector -mno-stack-arg-probe -O #-Wall
+		-fleading-underscore \
+		-fno-stack-protector -mno-stack-arg-probe -O #-Wall
 LDFLAGS=	-nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
 OBJS=		crt0.o syscall.o utils.o vsprintf.o rand.o main.o tlsf.o
 
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
-	../../bin/imgcpy.exe $@ ../hd.img=C:\$@
-#	../../bin/winimage.exe ..\hd.img /q /h /i $@
-#	../../bin/fat_imgen.exe -m -g -i $@ -f ../floppy.img
 
-run:
+../hd.img: a.out
+	../../bin/imgcpy.exe $^ $@=C:\$^
+#	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
+#	cp $^ /mnt
+#	sudo umount /mnt
+
+.PHONY: run
+run: ../hd.img
 	$(MAKE) -C .. $@
 
-debug:
+.PHONY: debug
+debug: ../hd.img
 	$(MAKE) -C .. $@ 
 
-bochs:
+.PHONY: bochs
+bochs: ../hd.img
 	$(MAKE) -C .. $@ 
 
 vsprintf.o: ../vsprintf.c
@@ -46,5 +53,6 @@ utils.o: ../utils.c
 tlsf.o: ../tlsf/tlsf.c
 	$(CC) -c $(CFLAGS) $^
 
+.PHONY: clean
 clean:
 	-$(RM)  *.o *.out *.bin *.*~ #$(PROG).map

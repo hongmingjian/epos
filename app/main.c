@@ -8,7 +8,28 @@ void task_yield();
 int task_wait(int tid, int *exit_code);
 void beep(unsigned freq);
 int putchar(int c);
-int bioscall();
+
+struct vm86_context {
+  uint32_t  edi;       /* 0*/
+  uint32_t  esi;       /* 4*/
+  uint32_t  ebp;       /* 8*/
+  uint32_t  isp;       /*12*/
+  uint32_t  ebx;       /*16*/
+  uint32_t  edx;       /*20*/
+  uint32_t  ecx;       /*24*/
+  uint32_t  eax;       /*28*/
+  /* below defined in x86 hardware */
+  uint32_t  eip;       /*32*/
+  uint32_t   cs;       /*36*/
+  uint32_t  eflags;    /*40*/
+  uint32_t  esp;       /*44*/
+  uint32_t   ss;       /*48*/
+  uint32_t   es;       /*52*/
+  uint32_t   ds;       /*56*/
+  uint32_t   fs;       /*60*/
+  uint32_t   gs;       /*64*/
+};
+int vm86(struct vm86_context *v86c);
 
 ///////////////////HELPERS///////////////////////
 void srand(uint32_t x);
@@ -108,10 +129,24 @@ static void tsk_fib(void *pv)
 
 void main(void *pv)
 {
+
   printf("task #%d: Hello world! I'm the first user task(pv=0x%08x)!\r\n",
          task_getid(), pv);
 
-  printf("bioscall() returns: %d\r\n", bioscall());
+  if(1) {
+    uint16_t *p;
+    struct vm86_context v86c;
+    memset(&v86c, 0, sizeof(v86c));
+    p = (uint16_t *)(0x12*4+0);
+    v86c.eip = *p;
+    p = (uint16_t *)(0x12*4+2);
+    v86c.cs = *p;
+    v86c.eflags = 0;
+    v86c.esp = 0;
+    v86c.ss = 0x1000;
+
+    printf("vm86() returns: %d\r\n", vm86(&v86c));
+  }
 
   if(0){
     int code;

@@ -36,9 +36,9 @@ _beep:
   int $0x82
   ret
 
- .globl _bioscall
-_bioscall:
-  movl $SYSCALL_BIOSCALL, %eax
+ .globl _vm86
+_vm86:
+  movl $SYSCALL_VM86, %eax
   int $0x82
   ret
 

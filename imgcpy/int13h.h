@@ -2,8 +2,8 @@
 #define _INT_13H_H_
 
 #include <string.h>
-#include <dos.h>
-#include <mem.h>
+//#include <dos.h>
+//#include <mem.h>
 
 #include "ComTypes.h"
 #include "ComDefs.h"

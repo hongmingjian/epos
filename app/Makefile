@@ -1,4 +1,4 @@
-CROSS=i486-mingw32-
+CROSS=
 
 CC=		$(CROSS)gcc
 AS=		$(CROSS)as
@@ -28,7 +28,7 @@ $(PROG).out: $(OBJS)
 
 ../hd.img: a.out
 ifeq ($(OS),Windows_NT)
-	../bin/imgcpy.exe $^ $@=C:\$^
+	../../bin/imgcpy.exe $^ $@=C:\$^
 else
 ifeq ($(shell uname -s),Linux)
 	sudo mount -o loop,offset=32256 -t vfat $@ /mnt

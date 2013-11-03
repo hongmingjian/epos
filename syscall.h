@@ -25,7 +25,7 @@
 #define SYSCALL_TASK_YIELD    4
 #define SYSCALL_TASK_WAIT     5
 #define SYSCALL_BEEP          6
-#define SYSCALL_BIOSCALL      182
+#define SYSCALL_VM86      182
 
 #define SYSCALL_PUTCHAR       1000
 

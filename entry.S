@@ -444,28 +444,18 @@ _lidt:
   lidt (%eax)
   ret
 
-  .globl _bioscall
-_bioscall:
-#save %esp
-  pushl $0              # GS
-  pushl $0              # FS
-  pushl $0              # DS
-  pushl $0              # ES
-  pushl $0x1000         # SS
-  pushl $0              # SP
-  pushl $0x20000        # EFLAGS
-
-  movl 0x30, %eax
-
-  movzx %ax, %ebx
-  pushl %ebx         # CS
-
-  shrl $0x10, %eax
-  movzx %ax, %ebx
-  pushl %ebx           # IP
-
+  .globl _sys_vm86
+_sys_vm86:
+  movl 4(%esp), %esi
+  subl $(17*4), %esp
+  movl %esp, %edi
+  movl $17, %ecx
+  cld
+  rep movsd
+ 
+  popal
   iret
-#restore %esp
+
   ret
 
   .data

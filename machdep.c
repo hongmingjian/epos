@@ -445,8 +445,13 @@ void syscall(struct context *ctx)
   case SYSCALL_BEEP:
     sys_beep((*((uint32_t *)(ctx->esp+4))));
     break;
-  case SYSCALL_BIOSCALL:
-    bioscall();
+  case SYSCALL_VM86:
+    {
+      struct vm86_context **p = (struct vm86_context **)(ctx->esp+4);
+      (*p)->eflags &= 0x0ffff;
+      (*p)->eflags |= 0x20000;
+      sys_vm86(*p);
+    }
     break;
   case SYSCALL_PUTCHAR:
     ctx->eax = sys_putchar((*((uint32_t *)(ctx->esp+4)))&0xff);

@@ -1,4 +1,4 @@
-CROSS=i486-mingw32-
+CROSS=
 
 CC=		$(CROSS)gcc
 AS=		$(CROSS)as

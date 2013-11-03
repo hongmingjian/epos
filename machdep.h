@@ -132,6 +132,26 @@ int  sys_putchar(int c);
 void sys_beep(uint32_t freq);
 void init_machdep(uint32_t mbi, uint32_t physfree);
 
-void bioscall();
+struct vm86_context {
+  uint32_t  edi;       /* 0*/
+  uint32_t  esi;       /* 4*/
+  uint32_t  ebp;       /* 8*/
+  uint32_t  isp;       /*12*/
+  uint32_t  ebx;       /*16*/
+  uint32_t  edx;       /*20*/
+  uint32_t  ecx;       /*24*/
+  uint32_t  eax;       /*28*/
+  /* below defined in x86 hardware */
+  uint32_t  eip;       /*32*/
+  uint32_t   cs;       /*36*/
+  uint32_t  eflags;    /*40*/
+  uint32_t  esp;       /*44*/
+  uint32_t   ss;       /*48*/
+  uint32_t   es;       /*52*/
+  uint32_t   ds;       /*56*/
+  uint32_t   fs;       /*60*/
+  uint32_t   gs;       /*64*/
+};
+void sys_vm86(struct vm86_context *v86c);
 
 #endif

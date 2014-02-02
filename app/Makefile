@@ -48,11 +48,11 @@ ifeq ($(shell uname -s),Linux)
 	sudo cp $^ /mnt
 	sudo umount /mnt
 endif
-#ifeq ($(shell uname -s),Darwin)
+ifeq ($(shell uname -s),Darwin)
 	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
 	cp $^ /Volumes/EPOSDISK
 	hdiutil detach /Volumes/EPOSDISK
-#endif
+endif
 endif
 
 .PHONY: run

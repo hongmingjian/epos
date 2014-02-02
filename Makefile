@@ -1,4 +1,17 @@
+ifeq ($(OS),Windows_NT)
 CROSS=
+else
+ifeq ($(shell uname -s),Linux)
+# For Ubuntu
+#CROSS=i586-mingw32msvc-
+
+# For ArchLinux
+#CROSS=i486-mingw32-
+endif
+ifeq ($(shell uname -s),Darwin)
+CROSS=i386-mingw32-
+endif
+endif
 
 CC=		$(CROSS)gcc
 AS=		$(CROSS)as
@@ -16,18 +29,18 @@ PROG=		eposkrnl
 
 all: $(PROG).bin
 
-CFLAGS=		-DUSE_FLOPPY=0 -DVERBOSE=0 \
-          -O -fomit-frame-pointer -fno-builtin \
-					-ffreestanding -mno-stack-arg-probe \
-					-mno-ms-bitfields -fleading-underscore \
-					-fno-stack-check -fno-stack-protector #-Wall
+CFLAGS=	-DUSE_FLOPPY=0 -DVERBOSE=0 \
+	-O -fomit-frame-pointer -fno-builtin \
+	-ffreestanding -mno-stack-arg-probe \
+	-mno-ms-bitfields -fleading-underscore \
+	-fno-stack-check #-fno-stack-protector #-Wall
 
-LDFLAGS=	-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
+LDFLAGS=-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
-OBJS=		entry.o machdep.o printk.o vsprintf.o \
-				utils.o task.o keyboard.o timer.o  \
-				kmalloc.o dosfs.o page.o startup.o ide.o floppy.o \
-				pe.o tlsf/tlsf.o 
+OBJS=entry.o machdep.o printk.o vsprintf.o \
+	utils.o task.o keyboard.o timer.o  \
+	kmalloc.o dosfs.o page.o startup.o ide.o floppy.o \
+	pe.o tlsf/tlsf.o 
 
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
@@ -39,11 +52,14 @@ ifeq ($(OS),Windows_NT)
 else
 ifeq ($(shell uname -s),Linux)
 	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
-	-sudo cp $^ /mnt
+	sudo cp $^ /mnt
 	sudo umount /mnt
 endif
-#ifeq ($(shell uname -s),Darwin)
-#endif
+ifeq ($(shell uname -s),Darwin)
+	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
+	cp $^ /Volumes/EPOSDISK
+	hdiutil detach /Volumes/EPOSDISK
+endif
 endif
 
 .PHONY: debug
@@ -51,10 +67,6 @@ debug: hd.img
 ifeq ($(OS),Windows_NT)
 	-../Bochs/bochsdbg.exe -q -f bochsrc.txt
 else
-ifeq ($(shell uname -s),Linux)
-endif
-#ifeq ($(shell uname -s),Darwin)
-#endif
 endif
 
 .PHONY: run
@@ -63,11 +75,7 @@ ifeq ($(OS),Windows_NT)
 	-../Qemu/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 \
 		-boot order=c -hda $^
 else
-ifeq ($(shell uname -s),Linux)
 	-qemu-system-i386 -m 4 -boot order=c -hda $^
-endif
-#ifeq ($(shell uname -s),Darwin)
-#endif
 endif
 
 .PHONY: bochs
@@ -75,10 +83,7 @@ bochs: hd.img
 ifeq ($(OS),Windows_NT)
 	-../Bochs/bochs.exe -q -f bochsrc.txt
 else
-ifeq ($(shell uname -s),Linux)
-endif
-#ifeq ($(shell uname -s),Darwin)
-#endif
+	bochs -q -f bochsrc.txt
 endif
 
 .PHONY: clean

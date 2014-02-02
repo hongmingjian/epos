@@ -199,7 +199,6 @@ void cstart(uint32_t magic, uint32_t addr)
       "1:\n\t"
       :
       :"i"(KERNBASE)
-      :
       );
 
     /*

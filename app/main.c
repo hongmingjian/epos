@@ -133,7 +133,7 @@ void main(void *pv)
   printf("task #%d: Hello world! I'm the first user task(pv=0x%08x)!\r\n",
          task_getid(), pv);
 
-  if(1) {
+  if(0) {
     uint16_t *p;
     struct vm86_context v86c;
     memset(&v86c, 0, sizeof(v86c));
@@ -148,7 +148,7 @@ void main(void *pv)
     printf("vm86() returns: %d\r\n", vm86(&v86c));
   }
 
-  if(0){
+  if(1){
     int code;
     int tid_hanoi, tid_fib;
     char *stack_hanoi, *stack_fib;

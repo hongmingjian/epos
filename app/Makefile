@@ -1,4 +1,17 @@
+ifeq ($(OS),Windows_NT)
 CROSS=
+else
+ifeq ($(shell uname -s),Linux)
+# For Ubuntu
+#CROSS=i586-mingw32msvc-
+
+# For ArchLinux
+#CROSS=i486-mingw32-
+endif
+ifeq ($(shell uname -s),Darwin)
+CROSS=i386-mingw32-
+endif
+endif
 
 CC=		$(CROSS)gcc
 AS=		$(CROSS)as
@@ -17,11 +30,11 @@ PROG=	a
 all: $(PROG).out
 
 CFLAGS=	-fno-builtin -ffreestanding -fno-stack-check \
-		-fleading-underscore \
-		-fno-stack-protector -mno-stack-arg-probe -O #-Wall
-LDFLAGS=	-nostdlib -nostartfiles -Wl,-Map,$(PROG).map
+	-fleading-underscore \
+	-mno-stack-arg-probe -O #-fno-stack-protector #-Wall
+LDFLAGS=-nostdlib -nostartfiles -Wl,-Map,$(PROG).map 
 
-OBJS=		crt0.o syscall.o utils.o vsprintf.o rand.o main.o tlsf.o
+OBJS=	crt0.o syscall.o utils.o vsprintf.o rand.o main.o tlsf.o
 
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
@@ -32,11 +45,14 @@ ifeq ($(OS),Windows_NT)
 else
 ifeq ($(shell uname -s),Linux)
 	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
-	-sudo cp $^ /mnt
+	sudo cp $^ /mnt
 	sudo umount /mnt
 endif
-#	ifeq ($(shell uname -s),Darwin)
-#	endif
+#ifeq ($(shell uname -s),Darwin)
+	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
+	cp $^ /Volumes/EPOSDISK
+	hdiutil detach /Volumes/EPOSDISK
+#endif
 endif
 
 .PHONY: run

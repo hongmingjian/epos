@@ -222,7 +222,7 @@ int sys_task_wait(int32_t tid, int32_t *exit_code)
 
   if((tsk = find_task(tid)) == NULL) {
     restore_flags(flags);
-  return -1;
+    return -1;
   }
 
   if(tsk->state != TASK_STATE_ZOMBIE)

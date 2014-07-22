@@ -1,4 +1,5 @@
 /**
+ * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
  *
  * Copyright (C) 2005, 2008, 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
@@ -379,6 +380,11 @@ void exception(struct context *ctx)
     break;
 
   case 13://general protection
+    if(ctx->eflags & 0x20000) {
+      struct context *c=(struct context *)(((uint8_t *)g_task_running)-sizeof(struct context));
+      **((struct vm86_context **)(c->esp+4)) = *((struct vm86_context *)ctx);
+      return;
+    }
     break;
   }
   printk("Un-handled exception!\r\n");

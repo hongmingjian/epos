@@ -37,7 +37,7 @@ CFLAGS=	-DUSE_FLOPPY=0 -DVERBOSE=0 \
 
 LDFLAGS=-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
-OBJS=entry.o machdep.o printk.o vsprintf.o \
+OBJS=	entry.o machdep.o printk.o vsprintf.o \
 	utils.o task.o keyboard.o timer.o  \
 	kmalloc.o dosfs.o page.o startup.o ide.o floppy.o \
 	pe.o tlsf/tlsf.o 
@@ -67,6 +67,7 @@ debug: hd.img
 ifeq ($(OS),Windows_NT)
 	-../Bochs/bochsdbg.exe -q -f bochsrc.txt
 else
+	-bochsdbg -q -f bochsrc.txt
 endif
 
 .PHONY: run
@@ -75,7 +76,7 @@ ifeq ($(OS),Windows_NT)
 	-../Qemu/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 \
 		-boot order=c -hda $^
 else
-	-qemu-system-i386 -m 4 -boot order=c -hda $^
+	-qemu-system-i386 -m 4 -boot order=c -vga std -hda $^
 endif
 
 .PHONY: bochs
@@ -83,7 +84,7 @@ bochs: hd.img
 ifeq ($(OS),Windows_NT)
 	-../Bochs/bochs.exe -q -f bochsrc.txt
 else
-	bochs -q -f bochsrc.txt
+	-bochs -q -f bochsrc.txt
 endif
 
 .PHONY: clean

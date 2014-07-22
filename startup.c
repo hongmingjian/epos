@@ -95,9 +95,9 @@ uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
 }
 
 /*
- * This function is executed in the context of task0 to load the user program
- * a.out from the file system and to create the first user task to execute the
- * user program.
+ * This function is executed in the context of task0 to load the user
+ * program a.out from the file system and to create the first user task 
+ * to execute the user program.
  */
 void start_user_task()
 {
@@ -105,7 +105,8 @@ void start_user_task()
   uint32_t entry;
 
 #if USE_FLOPPY
-  printk("task #%d: Initializing floppy disk controller...", sys_task_getid());
+  printk("task #%d: Initializing floppy disk controller...", 
+         sys_task_getid());
   init_floppy();
   printk("Done\r\n");
 #else
@@ -173,10 +174,8 @@ void cstart(uint32_t magic, uint32_t addr)
   init_machdep( addr, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
 
   printk("Welcome to EPOS\r\n");
-  printk("Copyright (C) 2005-2013 MingJian Hong<hmj@cqu.edu.cn>\r\n");
+  printk("Copyright (C) 2005-2013 MingJian Hong<hongmingjian@gmail.com>\r\n");
   printk("All rights reserved.\r\n\r\n");
-  printk("Partial financial support from School of Software Engineering,\r\n");
-  printk("ChongQing University is gratefully acknowledged.\r\n\r\n");
 
   g_kern_cur_addr=KERNBASE+PAGE_ROUNDUP( R((uint32_t)(&end)) );
   g_kern_end_addr=KERNBASE+NR_KERN_PAGETABLE*PAGE_SIZE*1024;
@@ -278,8 +277,8 @@ void cstart(uint32_t magic, uint32_t addr)
   init_task();
 
   /*
-   * Switch to the task0. It is the task0 who initialises other subsystems and
-   * starts the first user task.
+   * Switch to the task0. It is the task0 who initialises other subsystems
+   * and starts the first user task.
    */
   run_as_task0();
   start_user_task();

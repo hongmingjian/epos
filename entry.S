@@ -1,4 +1,6 @@
 #
+# vim: filetype=asm:fenc=utf-8:ts=2:et:sw=2:sts=2
+#
 # Copyright (C) 2005, 2013 Hong MingJian<hongmingjian@gmail.com>
 # All rights reserved.
 #
@@ -238,25 +240,54 @@ exception_common:
 
   movl _g_task_running, %eax
   cmpl $0, %eax
-  je 1f
-  movl 56(%esp), %ebx
-  testl $3, %ebx
+  je 2f
+
+  movl 44(%esp), %ebx
+  cmpl $0xd, %ebx
+  jne 1f
+  movl 60(%esp), %ebx
+  testl $0x20000, %ebx
   jz 1f
 
   movl %esp, %esi
-  movl %eax, %edi
-  subl $(18*4), %edi
-  movl $18, %ecx
-  movl %edi, %edx
+  movl (%eax), %esp
+  subl $(22*4), %esp
+  movl %esp, %edi
+  movl $22, %ecx
   cld
   rep movsd
 
-  movl %edx, %esp
+  jmp 2f
+
 1:
+  movl 56(%esp), %ebx
+  testl $3, %ebx
+  jz 2f
+
+  movl %esp, %esi
+  movl %eax, %esp
+  subl $(18*4), %esp
+  movl %esp, %edi
+  movl $18, %ecx
+  cld
+  rep movsd
+
+2:
   pushl %esp
   call _exception
   addl $4, %esp
 
+  movl 44(%esp), %ebx
+  cmpl $0xd, %ebx
+  jne 3f
+  movl 60(%esp), %ebx
+  testl $0x20000, %ebx
+  jz 3f
+
+  addl $(22*4), %esp
+  ret
+
+3:
   jmp _ret_from_syscall
 
   .globl _int0x82_syscall
@@ -447,16 +478,19 @@ _lidt:
   .globl _sys_vm86
 _sys_vm86:
   movl 4(%esp), %esi
-  subl $(17*4), %esp
+  subl $(22*4), %esp
   movl %esp, %edi
-  movl $17, %ecx
+  movl $22, %ecx
   cld
   rep movsd
- 
-  popal
-  iret
 
-  ret
+  movl _g_task_running, %eax
+  movl %edi, (%eax)
+ 
+  addl $(3*4), %esp
+  popal
+  addl $(2*4), %esp
+  iret
 
   .data
   .space 0x2000  # stack for the kernel

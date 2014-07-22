@@ -133,24 +133,31 @@ void sys_beep(uint32_t freq);
 void init_machdep(uint32_t mbi, uint32_t physfree);
 
 struct vm86_context {
-  uint32_t  edi;       /* 0*/
-  uint32_t  esi;       /* 4*/
-  uint32_t  ebp;       /* 8*/
-  uint32_t  isp;       /*12*/
-  uint32_t  ebx;       /*16*/
-  uint32_t  edx;       /*20*/
-  uint32_t  ecx;       /*24*/
-  uint32_t  eax;       /*28*/
-  /* below defined in x86 hardware */
-  uint32_t  eip;       /*32*/
-  uint32_t   cs;       /*36*/
-  uint32_t  eflags;    /*40*/
-  uint32_t  esp;       /*44*/
-  uint32_t   ss;       /*48*/
-  uint32_t   es;       /*52*/
-  uint32_t   ds;       /*56*/
-  uint32_t   fs;       /*60*/
-  uint32_t   gs;       /*64*/
+  uint32_t  : 32;       
+  uint32_t  : 32;      
+  uint32_t  : 32; 
+
+  uint16_t  di; uint16_t  : 16;
+  uint16_t  si; uint16_t  : 16;
+  uint16_t  bp; uint16_t  : 16;
+  uint32_t  : 32; 
+  uint16_t  bx; uint16_t  : 16;
+  uint16_t  dx; uint16_t  : 16;
+  uint16_t  cx; uint16_t  : 16;
+  uint16_t  ax; uint16_t  : 16;
+
+  uint32_t  : 32; 
+  uint32_t  : 32; 
+
+  uint16_t  ip; uint16_t  : 16;
+  uint16_t  cs; uint16_t  : 16;
+  uint32_t  eflags; 
+  uint16_t  sp; uint16_t  : 16;
+  uint16_t  ss; uint16_t  : 16;
+  uint16_t  es; uint16_t  : 16;
+  uint16_t  ds; uint16_t  : 16;
+  uint16_t  fs; uint16_t  : 16;
+  uint16_t  gs; uint16_t  : 16;
 };
 void sys_vm86(struct vm86_context *v86c);
 

@@ -562,6 +562,8 @@ static uint32_t init_paging(uint32_t physfree)
   pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
   for(i = 0; i < 256*PAGE_SIZE; i+=PAGE_SIZE)
     pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_W|PTE_U;
+  for(     ; i < (256+16)*PAGE_SIZE; i+=PAGE_SIZE)
+    pte[i>>PAGE_SHIFT]=(i/*-256*PAGE_SIZE*/)|PTE_V|PTE_W|PTE_U;
   for(     ; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
     pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_W;
 

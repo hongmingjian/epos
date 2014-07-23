@@ -227,91 +227,63 @@ _exception_simd_fp:
   pushl $19
   jmp exception_common
 
+#define PRELUDE \
+  pushal; \
+  pushl %fs; \
+  pushl %ds; \
+  pushl %es; \
+  ; \
+  movl $KDSEL, %eax; \
+  movw %ax, %fs; \
+  movw %ax, %ds; \
+  movw %ax, %es; \
+  ; \
+  movl _g_task_running, %eax; \
+  cmpl $0, %eax; \
+  je 3f; \
+  movl 60(%esp), %ebx; \
+  testl $0x20000, %ebx; \
+  jz 1f; \
+  movl $22, %ecx; \
+  jmp 2f; \
+1:; \
+  movl 56(%esp), %ebx; \
+  testl $3, %ebx; \
+  jz 3f; \
+  movl $18, %ecx; \
+2:; \
+  movl %ecx, %edx; \
+  shll $2, %edx; \
+  movl %esp, %esi; \
+  movl (%eax), %esp; \
+  subl %edx, %esp; \
+  movl %esp, %edi; \
+  cld; \
+  rep movsd; \
+3:
+
 exception_common:
-  pushal
-  pushl %ds
-  pushl %es
-  pushl %fs
+  PRELUDE
 
-  movl $KDSEL, %eax
-  movw %ax, %ds
-  movw %ax, %es
-  movw %ax, %fs
-
-  movl _g_task_running, %eax
-  cmpl $0, %eax
-  je 2f
-
-  movl 44(%esp), %ebx
-  cmpl $0xd, %ebx
-  jne 1f
-  movl 60(%esp), %ebx
-  testl $0x20000, %ebx
-  jz 1f
-
-  movl %esp, %esi
-  movl (%eax), %esp
-  subl $(22*4), %esp
-  movl %esp, %edi
-  movl $22, %ecx
-  cld
-  rep movsd
-
-  jmp 2f
-
-1:
-  movl 56(%esp), %ebx
-  testl $3, %ebx
-  jz 2f
-
-  movl %esp, %esi
-  movl %eax, %esp
-  subl $(18*4), %esp
-  movl %esp, %edi
-  movl $18, %ecx
-  cld
-  rep movsd
-
-2:
   pushl %esp
   call _exception
   addl $4, %esp
 
-  movl 44(%esp), %ebx
-  cmpl $0xd, %ebx
-  jne 3f
   movl 60(%esp), %ebx
   testl $0x20000, %ebx
-  jz 3f
+  jz 4f
 
   addl $(22*4), %esp
   ret
 
-3:
+4:
   jmp _ret_from_syscall
 
   .globl _int0x82_syscall
 _int0x82_syscall:
   subl $8, %esp # fake exception and errorcode
-  pushal
-  pushl %ds
-  pushl %es
-  pushl %fs
 
-  movl $KDSEL, %eax
-  movw %ax, %ds
-  movw %ax, %es
-  movw %ax, %fs
-
-  movl _g_task_running, %eax
-  movl %esp, %esi
-  movl %eax, %edi
-  subl $(18*4), %edi
-  movl $18, %ecx
-  movl %edi, %edx
-  cld
-  rep movsd
-  movl %edx, %esp
+  PRELUDE
 
   pushl %esp
   sti
@@ -321,9 +293,29 @@ _int0x82_syscall:
 
   .globl _ret_from_syscall
 _ret_from_syscall:
-  popl %fs
+  movl _g_task_running, %eax
+  cmpl $0, %eax
+  je 3f
+
+  movl %esp, %ecx
+  addl $(16*4), %ecx
+  movl 60(%esp), %ebx
+  testl $0x20000, %ebx
+  jz 1f
+  addl $(6*4), %ecx
+  jmp 2f
+1:
+  movl 56(%esp), %ebx
+  testl $3, %ebx
+  jz 2f
+  addl $(2*4), %ecx
+2:
+  movl %ecx, (%eax)
+
+3:
   popl %es
   popl %ds
+  popl %fs
   popal
   addl $8, %esp # discard exception and errorcode
   iret
@@ -336,35 +328,11 @@ _ret_from_syscall:
   ENABLE_ICU1; \
   outb  %al, $0xa0
 
-#define hwint(irq, enable_icus) \
+#define HWINT(irq, enable_icus) \
   subl $8, %esp; \
-  pushal; \
-  pushl %ds; \
-  pushl %es; \
-  pushl %fs; \
   ; \
-  movl $KDSEL, %eax; \
-  movw %ax, %ds; \
-  movw %ax, %es; \
-  movw %ax, %fs; \
+  PRELUDE; \
   ; \
-  movl _g_task_running, %eax; \
-  cmpl $0, %eax; \
-  je 1f; \
-  movl 56(%esp), %ebx; \
-  testl $3, %ebx; \
-  jz 1f; \
-  ; \
-  movl %esp, %esi; \
-  movl %eax, %edi; \
-  subl $(18*4), %edi; \
-  movl $18, %ecx; \
-  movl %edi, %edx; \
-  cld; \
-  rep movsd; \
-  ; \
-  movl %edx, %esp; \
-1:; \
   pushl %esp; \
   pushl $irq; \
   movl (_intr_vector + 4 * irq), %eax; \
@@ -374,74 +342,74 @@ _ret_from_syscall:
   enable_icus; \
   ; \
   cmpl $0, _g_resched; \
-  je 2f; \
+  je 4f; \
   call _schedule; \
-2:; \
+4:; \
   jmp _ret_from_syscall
 
   .globl _hwint00
 _hwint00:
-  hwint(0, ENABLE_ICU1)
+  HWINT(0, ENABLE_ICU1)
 
   .globl _hwint01
 _hwint01:
-  hwint(1, ENABLE_ICU1)
+  HWINT(1, ENABLE_ICU1)
 
   .globl _hwint02
 _hwint02:
-  hwint(2, ENABLE_ICU1)
+  HWINT(2, ENABLE_ICU1)
 
   .globl _hwint03
 _hwint03:
-  hwint(3, ENABLE_ICU1)
+  HWINT(3, ENABLE_ICU1)
 
   .globl _hwint04
 _hwint04:
-  hwint(4, ENABLE_ICU1)
+  HWINT(4, ENABLE_ICU1)
 
   .globl _hwint05
 _hwint05:
-  hwint(5, ENABLE_ICU1)
+  HWINT(5, ENABLE_ICU1)
 
   .globl _hwint06
 _hwint06:
-  hwint(6, ENABLE_ICU1)
+  HWINT(6, ENABLE_ICU1)
 
   .globl _hwint07
 _hwint07:
-  hwint(7, ENABLE_ICU1)
+  HWINT(7, ENABLE_ICU1)
 
   .globl _hwint08
 _hwint08:
-  hwint(8, ENABLE_ICU1_AND_2)
+  HWINT(8, ENABLE_ICU1_AND_2)
 
   .globl _hwint09
 _hwint09:
-  hwint(9, ENABLE_ICU1_AND_2)
+  HWINT(9, ENABLE_ICU1_AND_2)
 
   .globl _hwint10
 _hwint10:
-  hwint(10, ENABLE_ICU1_AND_2)
+  HWINT(10, ENABLE_ICU1_AND_2)
 
   .globl _hwint11
 _hwint11:
-  hwint(11, ENABLE_ICU1_AND_2)
+  HWINT(11, ENABLE_ICU1_AND_2)
 
   .globl _hwint12
 _hwint12:
-  hwint(12, ENABLE_ICU1_AND_2)
+  HWINT(12, ENABLE_ICU1_AND_2)
 
   .globl _hwint13
 _hwint13:
-  hwint(13, ENABLE_ICU1_AND_2)
+  HWINT(13, ENABLE_ICU1_AND_2)
 
   .globl _hwint14
 _hwint14:
-  hwint(14, ENABLE_ICU1_AND_2)
+  HWINT(14, ENABLE_ICU1_AND_2)
 
   .globl _hwint15
 _hwint15:
-  hwint(15, ENABLE_ICU1_AND_2)
+  HWINT(15, ENABLE_ICU1_AND_2)
 
 #
 # `lgdt' comes from FreeBSD

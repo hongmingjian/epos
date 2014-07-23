@@ -48,25 +48,25 @@ void beep(unsigned freq);
 int putchar(int c);
 
 struct vm86_context {
-  uint32_t  : 32;       
-  uint32_t  : 32;      
-  uint32_t  : 32; 
+  uint32_t  : 32;
+  uint32_t  : 32;
+  uint32_t  : 32;
 
   uint16_t  di; uint16_t  : 16;
   uint16_t  si; uint16_t  : 16;
   uint16_t  bp; uint16_t  : 16;
-  uint32_t  : 32; 
+  uint32_t  : 32;
   uint16_t  bx; uint16_t  : 16;
   uint16_t  dx; uint16_t  : 16;
   uint16_t  cx; uint16_t  : 16;
   uint16_t  ax; uint16_t  : 16;
 
-  uint32_t  : 32; 
-  uint32_t  : 32; 
+  uint32_t  : 32;
+  uint32_t  : 32;
 
   uint16_t  ip; uint16_t  : 16;
   uint16_t  cs; uint16_t  : 16;
-  uint32_t  eflags; 
+  uint32_t  eflags;
   uint16_t  sp; uint16_t  : 16;
   uint16_t  ss; uint16_t  : 16;
   uint16_t  es; uint16_t  : 16;
@@ -80,86 +80,86 @@ int vm86(struct vm86_context *ctx);
 #define LINEAR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))
 #define EFLAGS_VM   0x20000
 #define EFLAGS_IF   0x00200
-int int86(int n, struct vm86_context *ctx)
+int vm86int(int n, struct vm86_context *vm86ctx)
 {
     int fStop = 0;
     uint16_t *ivt = (uint16_t *)0;
+    uint16_t iret_cs = 0, iret_ip = 0x500;/*XXX*/
 
-    ctx->ip = ivt[n*2+0];
-    ctx->cs = ivt[n*2+1];
+    *(uint8_t *)LINEAR(iret_cs, iret_ip) = 0xf4/*HLT*/;
+
+    vm86ctx->sp -= 2;
+    *(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp) = 0;
+
+    vm86ctx->sp -= 2;
+    *(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp) = iret_cs;
+
+    vm86ctx->sp -= 2;
+    *(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp) = iret_ip;
+
+    vm86ctx->ip = ivt[n * 2 + 0];
+    vm86ctx->cs = ivt[n * 2 + 1];
 
     do {
-    vm86(ctx);
+    vm86(vm86ctx);
 
-    switch(*(uint8_t *)LINEAR(ctx->cs, ctx->ip)) {
+    switch(*(uint8_t *)LINEAR(vm86ctx->cs, vm86ctx->ip)) {
     case 0xf4: /*HLT*/
       fStop = 1;
-      ctx->ip++;
-
-      printf("opcode=HLT\r\n");
+      vm86ctx->ip++;
       break;
     case 0xfa: /*CLI*/
-      ctx->eflags &= ~EFLAGS_IF;
-      ctx->ip++;
-
-//      printf("opcode=CLI\r\n");
+      vm86ctx->eflags &= ~EFLAGS_IF;
+      vm86ctx->ip++;
       break;
     case 0xfb: /*STI*/
-      ctx->eflags |= EFLAGS_IF;
-      ctx->ip++;
-
-//      printf("opcode=STI\r\n");
+      vm86ctx->eflags |= EFLAGS_IF;
+      vm86ctx->ip++;
       break;
     case 0x9c: /*PUSHF*/
-      ctx->sp -= 2;
-      *(uint16_t *)LINEAR(ctx->ss, ctx->sp) = (uint16_t)ctx->eflags;
-      ctx->ip++;
-
-//      printf("opcode=PUSHF\r\n");
+      vm86ctx->sp -= 2;
+      *(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp) = (uint16_t)vm86ctx->eflags;
+      vm86ctx->ip++;
       break;
     case 0x9d: /*POPF*/
-      ctx->eflags = EFLAGS_VM | (*(uint16_t *)LINEAR(ctx->ss, ctx->sp));
-      ctx->sp += 2;
-      ctx->ip++;
-
-//      printf("opcode=POPF\r\n");
+      vm86ctx->eflags = EFLAGS_VM | (*(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp));
+      vm86ctx->sp += 2;
+      vm86ctx->ip++;
       break;
     case 0xcd: /*INT*/
-      ctx->sp -= 2;
-      *(uint16_t *)LINEAR(ctx->ss, ctx->sp) = (uint16_t)ctx->eflags;
+      vm86ctx->sp -= 2;
+      *(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp) = (uint16_t)vm86ctx->eflags;
 
-      ctx->sp -= 2;
-      *(uint16_t *)LINEAR(ctx->ss, ctx->sp) = ctx->cs;
+      vm86ctx->sp -= 2;
+      *(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp) = vm86ctx->cs;
 
-      ctx->sp -= 2;
-      *(uint16_t *)LINEAR(ctx->ss, ctx->sp) = ctx->ip + 2;
+      vm86ctx->sp -= 2;
+      *(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp) = vm86ctx->ip + 2;
 
-      ctx->ip = ivt[(*(uint8_t *)LINEAR(ctx->cs, ctx->ip+1)) * 2];
-      ctx->cs = ivt[(*(uint8_t *)LINEAR(ctx->cs, ctx->ip+1)) * 2 + 1];
-
-//      printf("opcode=INT\r\n");
+      {
+        uint8_t x = *(uint8_t *)LINEAR(vm86ctx->cs, vm86ctx->ip + 1);
+        vm86ctx->ip = ivt[x * 2 + 0];
+        vm86ctx->cs = ivt[x * 2 + 1];
+      }
       break;
     case 0xcf: /*IRET*/
-      ctx->ip = *(uint16_t *)LINEAR(ctx->ss, ctx->sp);
-      ctx->sp += 2;
+      vm86ctx->ip = *(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp);
+      vm86ctx->sp += 2;
 
-      ctx->cs = *(uint16_t *)LINEAR(ctx->ss, ctx->sp);
-      ctx->sp += 2;
+      vm86ctx->cs = *(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp);
+      vm86ctx->sp += 2;
 
-      ctx->eflags = EFLAGS_VM | (*(uint16_t *)LINEAR(ctx->ss, ctx->sp));
-      ctx->sp += 2;
- 
-//      printf("opcode=IRET\r\n");
+      vm86ctx->eflags = EFLAGS_VM | (*(uint16_t *)LINEAR(vm86ctx->ss, vm86ctx->sp));
+      vm86ctx->sp += 2;
       break;
     default:
       fStop = 1;
 
-      printf("Unknown opcode=0x%02x\r\n", *(uint8_t *)LINEAR(ctx->cs, ctx->ip));
+      printf("Unknown opcode: 0x%02x at 0x%04x:0x%04x\r\n", *(uint8_t *)LINEAR(vm86ctx->cs, vm86ctx->ip), vm86ctx->cs, vm86ctx->ip);
       break;
     } 
     } while(!fStop);
 
-//    printf("AX=0x%04x\r\n", ctx->ax);
     return 0;
 }
 
@@ -221,38 +221,76 @@ static void tsk_fib(void *pv)
   task_exit(0);
 }
 
+struct VBEInfoBlock {
+	uint8_t VESASignature[4];
+	uint16_t VESAVersion;
+	uint32_t OEMStringPtr;
+	uint32_t Capabilities;
+	uint32_t VideoModePtr;
+	uint16_t TotalMemory;
+	uint8_t reserved[236];
+} __attribute__ ((packed));
+
 void main(void *pv)
 {
   printf("task #%d: Hello world! I'm the first user task(pv=0x%08x)!\r\n",
          task_getid(), pv);
   {
-    struct vm86_context v86c;
-    memset(&v86c, 0, sizeof(v86c));
-    v86c.ss = 0x1000;
-    v86c.sp = 0;
+    struct vm86_context vm86ctx;
+    memset(&vm86ctx, 0, sizeof(vm86ctx));
+    vm86ctx.ss = 0x9000;
+    vm86ctx.sp = 0x0000;
 
 //  call BIOS
-//   int86(0x12, &v86c);
-//   printf("ss:sp=0x%04x:0x%04x\r\n", v86c.ss, v86c.sp);
+   vm86int(0x12, &vm86ctx);
+   printf("AX=0x%02x\r\n", vm86ctx.ax);
 
 //   call VBE
-   v86c.ax=0x4f02;/*set VBE mode*/
-   v86c.bx=0x0118;/*1024x768x24*/
-   int86(0x10, &v86c);
+/*
+   vm86ctx.ax=0x4f02; // set VBE mode
+   vm86ctx.bx=0x0118; // 1024x768x24
+   vm86int(0x10, &vm86ctx);
+*/
+
+    vm86ctx.ax=0x4f00;
+    vm86ctx.es=0x1000;
+    vm86ctx.di=0x1000;
+    vm86int(0x10, &vm86ctx);
+    printf("AX=0x%02x\r\n", vm86ctx.ax);
+    struct VBEInfoBlock *pvib = (struct VBEInfoBlock *)LINEAR(0x1000, 0x1000);
+    uint8_t *OEMStringPtr = (uint8_t *)LINEAR(pvib->OEMStringPtr >> 16, pvib->OEMStringPtr & 0xffff);
+    uint16_t *VideoModePtr = (uint16_t *)LINEAR(pvib->VideoModePtr >> 16, pvib->VideoModePtr & 0xffff);
+    printf("Signature: %c%c%c%c\r\nVersion: 0x%04x\r\nOEMStringPtr: %s\r\nCapabilities: 0x%08x\r\nTotal Memory: 0x%04x\r\n", 
+           pvib->VESASignature[0], pvib->VESASignature[1],
+           pvib->VESASignature[2], pvib->VESASignature[3],
+           pvib->VESAVersion,
+	   OEMStringPtr,
+           pvib->Capabilities,
+           pvib->TotalMemory
+          );
+
+    uint16_t *pm = VideoModePtr;
+    printf("Mode list: ");
+    while(*pm != 0xffff) {
+      printf("0x%04x ", *pm);
+      pm++;
+    }
+
+    
   }
 
-  if(0){
+  if(1){
     int code;
     int tid_hanoi, tid_fib;
     char *stack_hanoi, *stack_fib;
 
     stack_hanoi = malloc(1024*1024);
-    tid_hanoi = task_create(stack_hanoi+1024*1024, tsk_hanoi, (void *)6);
+    tid_hanoi = task_create((unsigned)(stack_hanoi+1024*1024), tsk_hanoi, 6);
     printf("task #%d: task #%d created(stack=0x%08x, size=%d)\r\n",
            task_getid(), tid_hanoi, stack_hanoi, 1024*1024);
 
     stack_fib = malloc(1024*1024);
-    tid_fib = task_create(stack_fib+1024*1024, tsk_fib, (void *)tid_hanoi);
+    tid_fib = task_create((unsigned)(stack_fib+1024*1024), tsk_fib, tid_hanoi);
     printf("task #%d: task #%d created(stack=0x%08x, size=%d)\r\n",
            task_getid(), tid_fib,   stack_fib,   1024*1024);
 

@@ -53,9 +53,9 @@ struct segment_descriptor {
 #define NR_IRQ        16
 
 struct context {
-  uint32_t   fs;       /* 0*/
-  uint32_t   es;       /* 4*/
-  uint32_t   ds;       /* 8*/
+  uint32_t   es;       /* 0*/
+  uint32_t   ds;       /* 4*/
+  uint32_t   fs;       /* 8*/
   uint32_t  edi;       /*12*/
   uint32_t  esi;       /*16*/
   uint32_t  ebp;       /*20*/

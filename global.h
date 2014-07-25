@@ -58,4 +58,9 @@ typedef          int    ssize_t;
 
 #define NULL            ((void *)0)
 
+#define LOWORD(l) ((uint16_t)(l))
+#define HIWORD(l) ((uint16_t)(((uint32_t)(l) >> 16) & 0xFFFF))
+
+#define LOBYTE(w) ((uint8_t)(w))
+#define HIBYTE(w) ((uint8_t)(((uint16_t)(w) >> 8) & 0xFF))
 #endif /* _GLOBAL_H */

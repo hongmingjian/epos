@@ -86,34 +86,6 @@ die:
   hlt
   jmp    die
 
-  .global _inportb
-_inportb:
-  movw 4(%esp), %dx
-  inb %dx, %al
-  movzx %al, %eax
-  ret
-
-  .global _outportb
-_outportb:
-  movw 4(%esp), %dx
-  movb 8(%esp), %al
-  outb %al, %dx
-  ret
-
-  .global _inportw
-_inportw:
-  movw 4(%esp), %dx
-  inw %dx, %ax
-  movzx %ax, %eax
-  ret
-
-  .global _outportw
-_outportw:
-  movw 4(%esp), %dx
-  movw 8(%esp), %ax
-  outw %ax, %dx
-  ret
-
   .globl _exception_divide_error
 _exception_divide_error:
   pushl $0
@@ -269,9 +241,14 @@ exception_common:
   call _exception
   addl $4, %esp
 
+  movl 44(%esp), %ebx
+  cmpl $0xd, %ebx
+  jne 4f
   movl 60(%esp), %ebx
   testl $0x20000, %ebx
   jz 4f
+  cmpl $0, %eax
+  je 4f
 
   addl $(22*4), %esp
   ret

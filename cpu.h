@@ -21,11 +21,62 @@
 
 #include "global.h"
 
-void outportb(uint16_t, uint8_t) ;
-uint8_t inportb(uint16_t) ;
+static __inline uint8_t inportb(uint16_t port)
+{
+register uint8_t val;
+__asm__ __volatile__ ("inb %%dx, %%al" : "=a" (val) : "d" (port));
+return( val );
+}
+static __inline uint16_t inportw(uint16_t port)
+{
+register uint16_t val;
+__asm__ __volatile__ ("inw %%dx, %%ax" : "=a" (val) : "d" (port));
+return( val );
+}
+static __inline uint32_t inportl(uint16_t port)
+{
+register uint32_t val;
+__asm__ __volatile__ ("inl %%dx, %%eax" : "=a" (val) : "d" (port));
+return( val );
+}
+static __inline void outportb(uint16_t port, uint8_t val)
+{
+__asm__ __volatile__ ("outb %%al, %%dx" : : "d" (port), "a" (val));
+}
 
-void outportw(uint16_t, uint16_t) ;
-uint16_t inportw(uint16_t) ;
+static __inline void outportw(uint16_t port, uint16_t val)
+{
+__asm__ __volatile__ ("outw %%ax, %%dx" : : "d" (port), "a" (val));
+}
+static __inline void outportl(uint16_t port, uint32_t val)
+{
+__asm__ __volatile__ ("outl %%eax, %%dx" : : "d" (port), "a" (val));
+}
+
+static __inline void insb(uint16_t port, void *addr, uint32_t count)
+{
+__asm__ __volatile__ ("rep ; insb": "=D"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+}
+static __inline void insw(uint16_t port, void *addr, uint32_t count)
+{
+__asm__ __volatile__ ("rep ; insw": "=D"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+}
+static __inline void insl(uint16_t port, void *addr, uint32_t count)
+{
+__asm__ __volatile__ ("rep ; insl": "=D"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+}
+static __inline void outsb(uint16_t port, void *addr, uint32_t count)
+{
+__asm__ __volatile__ ("rep ; outsb": "=S"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+}
+static __inline void outsw(uint16_t port, void *addr, uint32_t count)
+{
+__asm__ __volatile__ ("rep ; outsw": "=S"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+}
+static __inline void outsl(uint16_t port, void *addr, uint32_t count)
+{
+__asm__ __volatile__ ("rep ; outsl": "=S"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+}
 
 static __inline void cli()
 {

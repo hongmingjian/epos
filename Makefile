@@ -62,6 +62,9 @@ ifeq ($(shell uname -s),Darwin)
 endif
 endif
 
+.PHONY: run
+run: qemu
+
 .PHONY: debug
 debug: hd.img
 ifeq ($(OS),Windows_NT)
@@ -70,8 +73,8 @@ else
 	-bochsdbg -q -f bochsrc.txt
 endif
 
-.PHONY: run
-run: hd.img
+.PHONY: qemu
+qemu: hd.img
 ifeq ($(OS),Windows_NT)
 	-../Qemu/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 \
 		-boot order=c -hda $^

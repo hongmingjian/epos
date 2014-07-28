@@ -96,8 +96,6 @@ static void tsk_fib(void *pv)
   task_exit(0);
 }
 
-void foo();
-
 void main(void *pv)
 {
   printf("task #%d: Hello world! I'm the first user task(pv=0x%08x)!\r\n",

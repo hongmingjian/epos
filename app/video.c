@@ -130,9 +130,15 @@ int listGraphicsModes()
       continue;
     pmib = (struct ModeInfoBlock *)LADDR(0x4000, 0x0000);
 
-    if(!(pmib->ModeAttributes & 0x10)) {
+    if(!(pmib->ModeAttributes & 0x01))
       continue;
-    }
+    if(!(pmib->ModeAttributes & 0x10)) 
+      continue;
+
+    if(pmib->BitsPerPixel != 24)
+      continue;
+    if(pmib->NumberOfPlanes != 1)
+      continue;
 
     printf("0x%04x %4dx%4dx%2d %16d 0x%04x %12d\r\n", 
            *vmp, 
@@ -165,7 +171,7 @@ static int setVBEMode(int mode)
   return 0; 
 }
 
-static void setBank(int bank)
+static void switchBank(int bank)
 {
   int bankShift;
 
@@ -194,7 +200,7 @@ void putPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b)
 {
   long addr = y * g_mib.BytesPerScanLine + x*(g_mib.BitsPerPixel/8);
   uint8_t *p = (uint8_t *)LADDR(g_mib.WinASegment, LOWORD(addr));
-  setBank(HIWORD(addr));
+  switchBank(HIWORD(addr));
   *p = b; *(p+1)=g; *(p+2)=r;
 }
 
@@ -214,9 +220,9 @@ int initGraphics(int mode)
   return setVBEMode(mode);
 }
 
-void exitGraphics()
+int exitGraphics()
 {
-  setVBEMode(g_oldmode);
+  return setVBEMode(g_oldmode);
 }
 
 void line(int x1,int y1,int x2,int y2, uint8_t r, uint8_t g, uint8_t b)

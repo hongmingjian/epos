@@ -63,6 +63,10 @@ run: ../hd.img
 debug: ../hd.img
 	$(MAKE) -C .. $@ 
 
+.PHONY: qemu
+qemu: ../hd.img
+	$(MAKE) -C .. $@
+
 .PHONY: bochs
 bochs: ../hd.img
 	$(MAKE) -C .. $@ 

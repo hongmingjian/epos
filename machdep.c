@@ -530,53 +530,44 @@ static int vm86mon(struct vm86_context *vm86ctx)
       break;
     case 0x6c:/*INSB; INS m8, DX*/
       {
-        uint16_t seg = vm86ctx->es;
-
-        if(segp)
-          seg = *(uint16_t *)(((uint8_t *)vm86ctx)+segp);
-
-        if(addr32) {
+       if(addr32) {
           uint32_t ecx = rep ? vm86ctx->ecx : 1;
 
           while(ecx) {
-            *(uint8_t *)LADDR(seg, vm86ctx->esi) = inportb(LOWORD(vm86ctx->edx));
+            *(uint8_t *)LADDR(vm86ctx->es, vm86ctx->edi/*XXX*/) = inportb(LOWORD(vm86ctx->edx));
             ecx--;
-            vm86ctx->esi += (vm86ctx->eflags & 0x400)?-1:1;
+            vm86ctx->edi += (vm86ctx->eflags & 0x400)?-1:1;
           }
+
           if(rep)
             vm86ctx->ecx = ecx;
         } else {
           uint16_t cx=rep ? LOWORD(vm86ctx->ecx) : 1, 
-                   si=LOWORD(vm86ctx->esi);
+                   di=LOWORD(vm86ctx->edi);
           while(cx) {
-            *(uint8_t *)LADDR(seg, si) = inportb(LOWORD(vm86ctx->edx));
+            *(uint8_t *)LADDR(vm86ctx->es, di) = inportb(LOWORD(vm86ctx->edx));
             cx--;
-            si += (vm86ctx->eflags & 0x400)?-1:1;
+            di += (vm86ctx->eflags & 0x400)?-1:1;
           }
           if(rep)
             vm86ctx->ecx = (vm86ctx->ecx & 0xffff0000) | cx;
-          vm86ctx->esi = (vm86ctx->esi & 0xffff0000) | si;
+          vm86ctx->edi = (vm86ctx->edi & 0xffff0000) | di;
         }
       }
       ip++;
       break;
     case 0x6d:/*INSW; INSD; INS m16/m32, DX*/
       {
-        uint16_t seg = vm86ctx->es;
-
-        if(segp)
-          seg = *(uint16_t *)(((uint8_t *)vm86ctx)+segp);
-
         if(addr32) {
           uint32_t ecx = rep ? vm86ctx->ecx : 1;
 
           while(ecx) {
             if(data32) {
-              *(uint32_t *)LADDR(seg, vm86ctx->esi) = inportl(LOWORD(vm86ctx->edx));
-              vm86ctx->esi += (vm86ctx->eflags & 0x400)?-4:4;
+              *(uint32_t *)LADDR(vm86ctx->es, vm86ctx->edi/*XXX*/) = inportl(LOWORD(vm86ctx->edx));
+              vm86ctx->edi += (vm86ctx->eflags & 0x400)?-4:4;
             } else {
-              *(uint16_t *)LADDR(seg, vm86ctx->esi) = inportw(LOWORD(vm86ctx->edx));
-              vm86ctx->esi += (vm86ctx->eflags & 0x400)?-2:2;
+              *(uint16_t *)LADDR(vm86ctx->es, vm86ctx->edi/*XXX*/) = inportw(LOWORD(vm86ctx->edx));
+              vm86ctx->edi += (vm86ctx->eflags & 0x400)?-2:2;
             }
             ecx--;
           }
@@ -584,27 +575,27 @@ static int vm86mon(struct vm86_context *vm86ctx)
             vm86ctx->ecx = ecx;
         } else {
           uint16_t cx=rep ? LOWORD(vm86ctx->ecx) : 1, 
-                   si=LOWORD(vm86ctx->esi);
+                   di=LOWORD(vm86ctx->edi);
           while(cx) {
             if(data32) {
-              *(uint32_t *)LADDR(seg, si) = inportl(LOWORD(vm86ctx->edx));
-              si += (vm86ctx->eflags & 0x400)?-4:4;
+              *(uint32_t *)LADDR(vm86ctx->es, di) = inportl(LOWORD(vm86ctx->edx));
+              di += (vm86ctx->eflags & 0x400)?-4:4;
             } else {
-              *(uint16_t *)LADDR(seg, si) = inportw(LOWORD(vm86ctx->edx));
-              si += (vm86ctx->eflags & 0x400)?-2:2;
+              *(uint16_t *)LADDR(vm86ctx->es, di) = inportw(LOWORD(vm86ctx->edx));
+              di += (vm86ctx->eflags & 0x400)?-2:2;
             }
             cx--;
           }
           if(rep)
             vm86ctx->ecx = (vm86ctx->ecx & 0xffff0000) | cx;
-          vm86ctx->esi = (vm86ctx->esi & 0xffff0000) | si;
+          vm86ctx->edi = (vm86ctx->edi & 0xffff0000) | di;
         }
       }
       ip++;
       break;
     case 0x6e:/*OUTSB; OUTS DX, m8*/
       {
-        uint16_t seg = vm86ctx->es;
+        uint16_t seg = vm86ctx->ds;
 
         if(segp)
           seg = *(uint16_t *)(((uint8_t *)vm86ctx)+segp);
@@ -613,7 +604,7 @@ static int vm86mon(struct vm86_context *vm86ctx)
           uint32_t ecx = rep ? vm86ctx->ecx : 1;
 
           while(ecx) {
-            outportb(LOWORD(vm86ctx->edx), *(uint8_t *)LADDR(seg, vm86ctx->esi));
+            outportb(LOWORD(vm86ctx->edx), *(uint8_t *)LADDR(seg, vm86ctx->esi/*XXX*/));
             ecx--;
             vm86ctx->esi += (vm86ctx->eflags & 0x400)?-1:1;
           }
@@ -636,7 +627,7 @@ static int vm86mon(struct vm86_context *vm86ctx)
       break;
     case 0x6f:/*OUTSW; OUTSD; OUTS DX, m16/32*/
       {
-        uint16_t seg = vm86ctx->es;
+        uint16_t seg = vm86ctx->ds;
 
         if(segp)
           seg = *(uint16_t *)(((uint8_t *)vm86ctx)+segp);
@@ -646,10 +637,10 @@ static int vm86mon(struct vm86_context *vm86ctx)
 
           while(ecx) {
             if(data32) {
-              outportl(LOWORD(vm86ctx->edx), *(uint32_t *)LADDR(seg, vm86ctx->esi));
+              outportl(LOWORD(vm86ctx->edx), *(uint32_t *)LADDR(seg, vm86ctx->esi/*XXX*/));
               vm86ctx->esi += (vm86ctx->eflags & 0x400)?-4:4;
             } else {
-              outportw(LOWORD(vm86ctx->edx), *(uint16_t *)LADDR(seg, vm86ctx->esi));
+              outportw(LOWORD(vm86ctx->edx), *(uint16_t *)LADDR(seg, vm86ctx->esi/*XXX*/));
               vm86ctx->esi += (vm86ctx->eflags & 0x400)?-2:2;
             }
             ecx--;

@@ -1,3 +1,22 @@
+/**
+ * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ *
+ * Copyright (C) 2014 Hong MingJian<hongmingjian@gmail.com>
+ * All rights reserved.
+ *
+ * This file is part of the EPOS.
+ *
+ * Redistribution and use in source and binary forms are freely
+ * permitted provided that the above copyright notice and this
+ * paragraph and the following disclaimer are duplicated in all
+ * such forms.
+ *
+ * This software is provided "AS IS" and without any express or
+ * implied warranties, including, without limitation, the implied
+ * warranties of merchantability and fitness for a particular
+ * purpose.
+ *
+ */
 #include "../global.h"
 #include "syscall.h"
 
@@ -8,7 +27,7 @@ int vm86int(int n, struct vm86_context *vm86ctx)
   int fStop = 0, res = 0;
   uint16_t *ivt = (uint16_t *)0;
   uint16_t ip, sp;
-  uint16_t iret_cs = 0, iret_ip = 0x500;/*XXX*/
+  uint16_t iret_cs = 0, iret_ip = 0x600;/*XXX*/
 
   ip = LOWORD(vm86ctx->eip);
   sp = LOWORD(vm86ctx->esp);

@@ -1,3 +1,6 @@
+/**
+ * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ */
 #include "../global.h"
 #include "syscall.h"
 
@@ -5,13 +8,20 @@
 int vm86int(int n, struct vm86_context *vm86ctx);
 
 struct VBEInfoBlock {
-	uint8_t VESASignature[4];
-	uint16_t VESAVersion;
-	uint32_t OEMStringPtr;
+	uint8_t VbeSignature[4];
+	uint16_t VbeVersion;
+	uint32_t OemStringPtr;
 	uint32_t Capabilities;
 	uint32_t VideoModePtr;
 	uint16_t TotalMemory;
-	uint8_t reserved[236];
+
+	// Added for VBE 2.0 and above
+	uint16_t OemSoftwareRev;
+	uint32_t OemVendorNamePtr;
+	uint32_t OemProductNamePtr;
+	uint32_t OemProductRevPtr;
+	uint8_t reserved[222];
+	uint8_t OemData[256];
 } __attribute__ ((packed));
 
 struct ModeInfoBlock {
@@ -102,6 +112,43 @@ static int getModeInfo(int mode, struct ModeInfoBlock *pmib)
   return 0;
 }
 
+static int getVBEMode()
+{
+  g_vm86ctx.eax=0x4f03;
+  vm86int(0x10, &g_vm86ctx);
+  return g_vm86ctx.ebx & 0xffff;
+}
+
+static int setVBEMode(int mode)
+{
+  g_vm86ctx.eax=0x4f02;
+  g_vm86ctx.ebx=mode;
+  vm86int(0x10, &g_vm86ctx);
+  if(LOWORD(g_vm86ctx.eax) != 0x4f)
+    return -1;
+  return 0; 
+}
+
+static void switchBank(int bank)
+{
+  int bankShift;
+
+  if(bank == g_curBank)
+    return;
+  g_curBank = bank;
+
+  bankShift = 0; 
+  while((unsigned)(64 >> bankShift) != g_mib.WinGranularity)
+    bankShift++;
+
+  bank <<= bankShift;
+
+  g_vm86ctx.eax=0x4f05;
+  g_vm86ctx.ebx = 0x0;
+  g_vm86ctx.edx = bank;
+  vm86int(0x10, &g_vm86ctx);
+}
+
 int listGraphicsModes()
 {
   uint16_t *vmp;
@@ -139,6 +186,8 @@ int listGraphicsModes()
       continue;
     if(pmib->NumberOfPlanes != 1)
       continue;
+    if(pmib->MemoryModel != 6)
+      continue;
 
     printf("0x%04x %4dx%4dx%2d %16d 0x%04x %12d\r\n", 
            *vmp, 
@@ -152,48 +201,6 @@ int listGraphicsModes()
   }
   printf(" Mode   Resolution  BytesPerScanLine WinASegment NumberOfBanks\r\n");
   return 0;
-}
-
-static int getVBEMode()
-{
-  g_vm86ctx.eax=0x4f03;
-  vm86int(0x10, &g_vm86ctx);
-  return g_vm86ctx.ebx & 0xffff;
-}
-
-static int setVBEMode(int mode)
-{
-  g_vm86ctx.eax=0x4f02;
-  g_vm86ctx.ebx=mode;
-  vm86int(0x10, &g_vm86ctx);
-  if(LOWORD(g_vm86ctx.eax) != 0x4f)
-    return -1;
-  return 0; 
-}
-
-static void switchBank(int bank)
-{
-  int bankShift;
-
-  if(bank == g_curBank)
-    return;
-  g_curBank = bank;
-
-  bankShift = 0; 
-  while((unsigned)(64 >> bankShift) != g_mib.WinGranularity)
-    bankShift++;
-
-  bank <<= bankShift;
-
-  g_vm86ctx.eax=0x4f05;
-  g_vm86ctx.ebx = 0x0;
-  g_vm86ctx.edx = bank;
-  vm86int(0x10, &g_vm86ctx);
-
-  g_vm86ctx.eax=0x4f05;
-  g_vm86ctx.ebx = 0x1;
-  g_vm86ctx.edx = bank;
-  vm86int(0x10, &g_vm86ctx);
 }
 
 void putPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b)
@@ -225,6 +232,16 @@ int exitGraphics()
   return setVBEMode(g_oldmode);
 }
 
+/*
+ * The codes of `line' and `drawMoire' come from 
+ *
+ *         VESA BIOS EXTENSION(VBE)
+ *                Core Functions
+ *                  Standard
+ *
+ *                  Version: 3.0
+ */
+/* Draw a line from (x1,y1) to (x2,y2) in specified color */
 void line(int x1,int y1,int x2,int y2, uint8_t r, uint8_t g, uint8_t b)
 {
     int d; /* Decision variable */
@@ -332,17 +349,30 @@ void drawMoire(void)
     line(0,yres-1,xres-1,yres-1,15, 0, 0);
 }
 
-
-void testGraphics()
+/*
+ * The codes of `drawCheckerboard' comes from
+ *             Vbespy
+ */
+/* Draw a colorful checkerboard */
+void drawCheckerboard(void)
 {
-  if(initGraphics(0x115)) {
-    return;
+  int x, y;
+  int xres = g_mib.XResolution,
+      yres = g_mib.YResolution;
+
+  for (y = 0; y < yres; ++y) {
+    for (x = 0; x < xres; ++x) {
+      int r, g, b;
+      if ((x & 16) ^ (y & 16)) {
+        r = x * 255 / xres;
+        g = y * 255 / yres;
+        b = 255 - x * 255 / xres;
+      } else {
+        r = 255 - x * 255 / xres;
+        g = y * 255 / yres;
+        b = 255 - y * 255 / yres;
+      }
+      putPixel(x, y, r, g, b);
+    }
   }
-
-  drawMoire();
-
-  exitGraphics();
-
-  listGraphicsModes();
 }
-

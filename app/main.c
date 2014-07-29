@@ -96,6 +96,23 @@ static void tsk_fib(void *pv)
   task_exit(0);
 }
 
+void testGraphics()
+{
+  if(initGraphics(0x115)) {
+    return;
+  }
+
+  drawMoire();
+  DELAY(200000000);
+
+  drawCheckerboard();
+  DELAY(800000000);
+
+  exitGraphics();
+
+  listGraphicsModes();
+}
+
 void main(void *pv)
 {
   printf("task #%d: Hello world! I'm the first user task(pv=0x%08x)!\r\n",

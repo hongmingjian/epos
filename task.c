@@ -1,4 +1,5 @@
 /**
+ * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
  *
  * Copyright (C) 2008, 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.

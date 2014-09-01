@@ -56,27 +56,33 @@ __asm__ __volatile__ ("outl %%eax, %%dx" : : "d" (port), "a" (val));
 
 static __inline void insb(uint16_t port, void *addr, uint32_t count)
 {
-__asm__ __volatile__ ("rep ; insb": "=D"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+__asm__ __volatile__ ("rep ; insb": "=D"(addr), "=c"(count) 
+                                  : "d"(port), "0"(addr), "1"(count));
 }
 static __inline void insw(uint16_t port, void *addr, uint32_t count)
 {
-__asm__ __volatile__ ("rep ; insw": "=D"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+__asm__ __volatile__ ("rep ; insw": "=D"(addr), "=c"(count) 
+                                  : "d"(port), "0"(addr), "1"(count));
 }
 static __inline void insl(uint16_t port, void *addr, uint32_t count)
 {
-__asm__ __volatile__ ("rep ; insl": "=D"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+__asm__ __volatile__ ("rep ; insl": "=D"(addr), "=c"(count) 
+                                  : "d"(port), "0"(addr), "1"(count));
 }
 static __inline void outsb(uint16_t port, void *addr, uint32_t count)
 {
-__asm__ __volatile__ ("rep ; outsb": "=S"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+__asm__ __volatile__ ("rep ; outsb": "=S"(addr), "=c"(count) 
+                                   : "d"(port), "0"(addr), "1"(count));
 }
 static __inline void outsw(uint16_t port, void *addr, uint32_t count)
 {
-__asm__ __volatile__ ("rep ; outsw": "=S"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+__asm__ __volatile__ ("rep ; outsw": "=S"(addr), "=c"(count) 
+                                   : "d"(port), "0"(addr), "1"(count));
 }
 static __inline void outsl(uint16_t port, void *addr, uint32_t count)
 {
-__asm__ __volatile__ ("rep ; outsl": "=S"(addr), "=c"(count) : "d"(port), "0"(addr), "1"(count));
+__asm__ __volatile__ ("rep ; outsl": "=S"(addr), "=c"(count) 
+                                   : "d"(port), "0"(addr), "1"(count));
 }
 
 static __inline void cli()

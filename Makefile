@@ -46,21 +46,21 @@ $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
 
-hd.img: hd.img.bz2.txt
-	../bin/base64 -d $^ | bunzip2 >$@
-
-update: $(PROG).bin hd.img
+hd.img: $(PROG).bin
 ifeq ($(OS),Windows_NT)
-	../bin/imgcpy.exe $(PROG).bin hd.img=C:\$(PROG).bin
+	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
+	imgcpy.exe $^ $@=C:\$^
 else
 ifeq ($(shell uname -s),Linux)
-	sudo mount -o loop,offset=32256 -t vfat hd.img /mnt
-	sudo cp $(PROG).bin /mnt
+	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
+	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
+	sudo cp $^ /mnt
 	sudo umount /mnt
 endif
 ifeq ($(shell uname -s),Darwin)
-	hdiutil attach -imagekey diskimage-class=CRawDiskImage hd.img
-	cp $(PROG).bin /Volumes/EPOSDISK
+	if [ ! -s $@ ]; then base64 -D $@.bz2.txt | bunzip2 >$@ ; fi
+	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
+	cp $^ /Volumes/EPOSDISK
 	hdiutil detach /Volumes/EPOSDISK
 endif
 endif
@@ -69,15 +69,10 @@ endif
 run: qemu
 
 .PHONY: debug
-debug: update
-ifeq ($(OS),Windows_NT)
-	-../Bochs/bochsdbg.exe -q -f bochsrc.txt
-else
-	-bochsdbg -q -f bochsrc.txt
-endif
+debug: bochsdbg
 
 .PHONY: qemu
-qemu: update
+qemu: hd.img
 ifeq ($(OS),Windows_NT)
 	-../Qemu/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 \
 		-boot order=c -hda hd.img
@@ -86,11 +81,19 @@ else
 endif
 
 .PHONY: bochs
-bochs: update
+bochs: hd.img
 ifeq ($(OS),Windows_NT)
-	-../Bochs/bochs.exe -q -f bochsrc.txt
+	-../Bochs/bochs.exe -q -f bochsrc-win.txt
 else
-	-bochs -q -f bochsrc.txt
+	-bochs -q -f bochsrc-unix.txt
+endif
+
+.PHONY: bochsdbg
+bochsdbg: hd.img
+ifeq ($(OS),Windows_NT)
+	-../Bochs/bochsdbg.exe -q -f bochsrc-win.txt
+else
+	-bochsdbg -q -f bochsrc-unix.txt
 endif
 
 .PHONY: clean

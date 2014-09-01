@@ -39,39 +39,37 @@ OBJS=	crt0.o syscall.o utils.o vsprintf.o rand.o main.o tlsf.o vm86.o video.o
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
-../hd.img:
-	$(MAKE) -C .. hd.img
-
-update: $(PROG).out ../hd.img
+../hd.img: $(PROG).out
+	$(MAKE) -C .. $(shell basename $@)
 ifeq ($(OS),Windows_NT)
-	../../bin/imgcpy.exe $(PROG).out ../hd.img=C:\$(PROG).out
+	imgcpy.exe $^ $@=C:\$^
 else
 ifeq ($(shell uname -s),Linux)
-	sudo mount -o loop,offset=32256 -t vfat ../hd.img /mnt
-	sudo cp $(PROG).out /mnt
+	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
+	sudo cp $^ /mnt
 	sudo umount /mnt
 endif
 ifeq ($(shell uname -s),Darwin)
-	hdiutil attach -imagekey diskimage-class=CRawDiskImage ../hd.img
-	cp $(PROG).out /Volumes/EPOSDISK
+	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
+	cp $^ /Volumes/EPOSDISK
 	hdiutil detach /Volumes/EPOSDISK
 endif
 endif
 
 .PHONY: run
-run: update
+run: ../hd.img
 	$(MAKE) -C .. $@
 
 .PHONY: debug
-debug: update
+debug: ../hd.img
 	$(MAKE) -C .. $@ 
 
 .PHONY: qemu
-qemu: update
+qemu: ../hd.img
 	$(MAKE) -C .. $@
 
 .PHONY: bochs
-bochs: update 
+bochs: ../hd.img 
 	$(MAKE) -C .. $@ 
 
 vsprintf.o: ../vsprintf.c

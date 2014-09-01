@@ -46,18 +46,21 @@ $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
 
-hd.img: $(PROG).bin
+hd.img: hd.img.bz2.txt
+	../bin/base64 -d $^ | bunzip2 >$@
+
+update: $(PROG).bin hd.img
 ifeq ($(OS),Windows_NT)
-	../bin/imgcpy.exe $^ $@=C:\$^
+	../bin/imgcpy.exe $(PROG).bin hd.img=C:\$(PROG).bin
 else
 ifeq ($(shell uname -s),Linux)
-	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
-	sudo cp $^ /mnt
+	sudo mount -o loop,offset=32256 -t vfat hd.img /mnt
+	sudo cp $(PROG).bin /mnt
 	sudo umount /mnt
 endif
 ifeq ($(shell uname -s),Darwin)
-	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
-	cp $^ /Volumes/EPOSDISK
+	hdiutil attach -imagekey diskimage-class=CRawDiskImage hd.img
+	cp $(PROG).bin /Volumes/EPOSDISK
 	hdiutil detach /Volumes/EPOSDISK
 endif
 endif
@@ -66,7 +69,7 @@ endif
 run: qemu
 
 .PHONY: debug
-debug: hd.img
+debug: update
 ifeq ($(OS),Windows_NT)
 	-../Bochs/bochsdbg.exe -q -f bochsrc.txt
 else
@@ -74,16 +77,16 @@ else
 endif
 
 .PHONY: qemu
-qemu: hd.img
+qemu: update
 ifeq ($(OS),Windows_NT)
 	-../Qemu/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 \
-		-boot order=c -hda $^
+		-boot order=c -hda hd.img
 else
-	-qemu-system-i386 -m 4 -boot order=c -vga std -hda $^
+	-qemu-system-i386 -m 4 -boot order=c -vga std -hda hd.img
 endif
 
 .PHONY: bochs
-bochs: hd.img
+bochs: update
 ifeq ($(OS),Windows_NT)
 	-../Bochs/bochs.exe -q -f bochsrc.txt
 else

@@ -327,7 +327,7 @@ _ret_from_syscall:
   pushl %ds; \
   pushl %es; \
   ; \
-  movl $KDSEL, %eax;
+  movl $KDSEL, %eax; \
   movw %ax, %fs; \
   movw %ax, %ds; \
   movw %ax, %es; \

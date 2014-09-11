@@ -199,17 +199,7 @@ _exception_simd_fp:
   pushl $19
   jmp exception_common
 
-#define PRELUDE \
-  pushal; \
-  pushl %fs; \
-  pushl %ds; \
-  pushl %es; \
-  ; \
-  movl $KDSEL, %eax; \
-  movw %ax, %fs; \
-  movw %ax, %ds; \
-  movw %ax, %es; \
-  ; \
+#define PROLOGUE \
   movl _g_task_running, %eax; \
   cmpl $0, %eax; \
   je 3f; \
@@ -234,8 +224,39 @@ _exception_simd_fp:
   rep movsd; \
 3:
 
+#define EPILOGUE \
+  movl _g_task_running, %eax; \
+  cmpl $0, %eax; \
+  je 3f; \
+  ; \
+  movl %esp, %ecx; \
+  addl $(16*4), %ecx; \
+  movl 60(%esp), %ebx; \
+  testl $0x20000, %ebx; \
+  jz 1f; \
+  addl $(6*4), %ecx; \
+  jmp 2f; \
+1:; \
+  movl 56(%esp), %ebx; \
+  testl $3, %ebx; \
+  jz 2f; \
+  addl $(2*4), %ecx; \
+2:; \
+  movl %ecx, (%eax); \
+3:
+
 exception_common:
-  PRELUDE
+  pushal
+  pushl %fs
+  pushl %ds
+  pushl %es
+
+  movl $KDSEL, %eax
+  movw %ax, %fs
+  movw %ax, %ds
+  movw %ax, %es
+
+  PROLOGUE
 
   pushl %esp
   call _exception
@@ -251,7 +272,7 @@ exception_common:
   je 4f
 
   addl $(22*4), %esp
-  ret
+  ret # return from sys_vm86 to syscall
 
 4:
   jmp _ret_from_syscall
@@ -260,7 +281,17 @@ exception_common:
 _int0x82_syscall:
   subl $8, %esp # fake exception and errorcode
 
-  PRELUDE
+  pushal
+  pushl %fs
+  pushl %ds
+  pushl %es
+
+  movl $KDSEL, %eax
+  movw %ax, %fs
+  movw %ax, %ds
+  movw %ax, %es
+
+  PROLOGUE
 
   pushl %esp
   sti
@@ -270,26 +301,9 @@ _int0x82_syscall:
 
   .globl _ret_from_syscall
 _ret_from_syscall:
-  movl _g_task_running, %eax
-  cmpl $0, %eax
-  je 3f
 
-  movl %esp, %ecx
-  addl $(16*4), %ecx
-  movl 60(%esp), %ebx
-  testl $0x20000, %ebx
-  jz 1f
-  addl $(6*4), %ecx
-  jmp 2f
-1:
-  movl 56(%esp), %ebx
-  testl $3, %ebx
-  jz 2f
-  addl $(2*4), %ecx
-2:
-  movl %ecx, (%eax)
+  EPILOGUE
 
-3:
   popl %es
   popl %ds
   popl %fs
@@ -308,7 +322,17 @@ _ret_from_syscall:
 #define HWINT(irq, enable_icus) \
   subl $8, %esp; \
   ; \
-  PRELUDE; \
+  pushal; \
+  pushl %fs; \
+  pushl %ds; \
+  pushl %es; \
+  ; \
+  movl $KDSEL, %eax;
+  movw %ax, %fs; \
+  movw %ax, %ds; \
+  movw %ax, %es; \
+  ; \
+  PROLOGUE; \
   ; \
   pushl %esp; \
   pushl $irq; \
@@ -431,7 +455,7 @@ _sys_vm86:
 
   movl _g_task_running, %eax
   movl %edi, (%eax)
- 
+
   addl $(3*4), %esp
   popal
   addl $(2*4), %esp

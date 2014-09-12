@@ -320,7 +320,7 @@ _ret_from_syscall:
   outb  %al, $0xa0
 
 #define HWINT(irq, enable_icus) \
-  subl $8, %esp; \
+  subl $8, %esp; /*fake exception and errorcode*/\
   ; \
   pushal; \
   pushl %fs; \

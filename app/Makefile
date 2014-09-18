@@ -83,4 +83,4 @@ tlsf.o: ../tlsf/tlsf.c
 
 .PHONY: clean
 clean:
-	-$(RM)  *.o *.out *.bin *.*~ #$(PROG).map
+	-$(RM)  *.o *.out *.bin *.*~ $(PROG).map

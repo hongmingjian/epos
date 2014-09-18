@@ -74,8 +74,7 @@ debug: bochsdbg
 .PHONY: qemu
 qemu: hd.img
 ifeq ($(OS),Windows_NT)
-	-../Qemu/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 \
-		-boot order=c -hda hd.img
+	-../Qemu/qemu-system-i386w.exe -m 4 -boot order=c -vga std -hda hd.img
 else
 	-qemu-system-i386 -m 4 -boot order=c -vga std -hda hd.img
 endif
@@ -98,7 +97,7 @@ endif
 
 .PHONY: clean
 clean:
-	-$(RM)  *.o tlsf/*.o *.bin *.*~ $(PROG).out #$(PROG).map
+	-$(RM)  *.o tlsf/*.o *.bin *.*~ $(PROG).out $(PROG).map hd.img
 	-$(RM) *.aux *.log *.out *.nav *.snm *.toc *.vrb *.lol
 
 epos.pdf: epos.tex

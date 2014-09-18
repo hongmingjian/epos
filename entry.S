@@ -203,6 +203,7 @@ _exception_simd_fp:
   movl _g_task_running, %eax; \
   cmpl $0, %eax; \
   je 3f; \
+  ; \
   movl 60(%esp), %ebx; \
   testl $0x20000, %ebx; \
   jz 1f; \

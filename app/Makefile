@@ -34,7 +34,7 @@ CFLAGS=	-fno-builtin -ffreestanding -fno-stack-check \
 	-mno-stack-arg-probe -O #-fno-stack-protector #-Wall
 LDFLAGS=-nostdlib -nostartfiles -Wl,-Map,$(PROG).map 
 
-OBJS=	crt0.o syscall.o utils.o vsprintf.o rand.o main.o tlsf.o vm86.o video.o
+OBJS=	crt0.o syscall.o utils.o snprintf.o math.o main.o tlsf.o vm86.o video.o
 
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
@@ -71,9 +71,6 @@ qemu: ../hd.img
 .PHONY: bochs
 bochs: ../hd.img 
 	$(MAKE) -C .. $@ 
-
-vsprintf.o: ../vsprintf.c
-	$(CC) -c $(CFLAGS) $^
 
 utils.o: ../utils.c
 	$(CC) -c $(CFLAGS) $^

@@ -24,6 +24,7 @@ int g_resched;
 struct tcb *g_task_running;
 struct tcb *g_task_all_head;
 struct tcb *task0;
+struct tcb *g_task_own_fpu;
 
 void schedule()
 {
@@ -208,6 +209,9 @@ void sys_task_exit(int val)
   g_task_running->exit_code = val;
   g_task_running->state = TASK_STATE_ZOMBIE;
 
+  if(g_task_own_fpu == g_task_running)
+    g_task_own_fpu = NULL;
+
   schedule();
 }
 
@@ -267,6 +271,7 @@ void init_task()
   g_resched = 0;
   g_task_running = NULL;
   g_task_all_head = NULL;
+  g_task_own_fpu = NULL;
 
   task0 = task_get(sys_task_create(0, 0/*filled by run_as_task0*/, NULL));
 }

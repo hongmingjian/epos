@@ -48,6 +48,17 @@ struct segment_descriptor {
   unsigned hibase:8 ;
 };
 
+struct x87 {
+  uint32_t cwd;
+  uint32_t swd;
+  uint32_t twd;
+  uint32_t fip;
+  uint32_t fcs;
+  uint32_t foo;
+  uint32_t fos;
+  uint8_t  st[80];
+};
+
 #define IRQ_TIMER     0
 #define IRQ_KEYBOARD  1
 #define IRQ_FDC       6

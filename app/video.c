@@ -376,3 +376,123 @@ void drawCheckerboard(void)
     }
   }
 }
+
+/*http://www.brackeen.com/vga*/
+void polygon(int num_vertices, 
+             int *vertices,
+             uint8_t r, uint8_t g, uint8_t b) 
+{
+  int i;
+
+  for(i=0;i<num_vertices-1;i++)
+  {
+    line(vertices[(i<<1)+0],
+         vertices[(i<<1)+1],
+         vertices[(i<<1)+2],
+         vertices[(i<<1)+3],
+         r, g, b);
+  }
+  line(vertices[0],
+       vertices[1],
+       vertices[(num_vertices<<1)-2],
+       vertices[(num_vertices<<1)-1],
+       r, g, b);
+}
+
+/*http://rosettacode.org/wiki/Bitmap/Midpoint_circle_algorithm#C*/
+void circle(int x0, int y0, 
+            int radius, 
+            uint8_t r, uint8_t g, uint8_t b)
+{
+    int f = 1 - radius;
+    int ddF_x = 0;
+    int ddF_y = -2 * radius;
+    int x = 0;
+    int y = radius;
+ 
+    putPixel(x0, y0 + radius, r, g, b);
+    putPixel(x0, y0 - radius, r, g, b);
+    putPixel(x0 + radius, y0, r, g, b);
+    putPixel(x0 - radius, y0, r, g, b);
+ 
+    while(x < y) 
+    {
+        if(f >= 0) 
+        {
+            y--;
+            ddF_y += 2;
+            f += ddF_y;
+        }
+        x++;
+        ddF_x += 2;
+        f += ddF_x + 1;    
+        putPixel(x0 + x, y0 + y, r, g, b);
+        putPixel(x0 - x, y0 + y, r, g, b);
+        putPixel(x0 + x, y0 - y, r, g, b);
+        putPixel(x0 - x, y0 - y, r, g, b);
+        putPixel(x0 + y, y0 + x, r, g, b);
+        putPixel(x0 - y, y0 + x, r, g, b);
+        putPixel(x0 + y, y0 - x, r, g, b);
+        putPixel(x0 - y, y0 - x, r, g, b);
+    }
+}
+
+/*http://www.itglitz.in/CS71/cg_unit_1_notes.pdf*/
+#define ROUND(a) ((int)(a+0.5))
+void ellipse(int x0, int y0,
+             int rx, int ry,
+             uint8_t r, uint8_t g, uint8_t b)
+{
+  int rx2=rx*rx;
+  int ry2=ry*ry;
+  int tworx2 = 2*rx2;
+  int twory2 = 2*ry2;
+  int p;
+  int x = 0;
+  int y = ry;
+  int px = 0;
+  int py = tworx2*y;
+
+  /* Plot the first set of points */
+  putPixel (x0 + x, y0 + y, r, g, b);
+  putPixel (x0 - x, y0 + y, r, g, b);
+  putPixel (x0 + x, y0 - y, r, g, b);
+  putPixel (x0 - x, y0 - y, r, g, b);
+
+  /* Region 1 */
+  p = ROUND(ry2 - (rx2* ry) + (0.25*rx2));
+  while (px < py) {
+    x++;
+    px+=twory2;
+    if (p < 0)
+      p+=ry2+px;
+    else {
+      y--;
+      py-=tworx2;
+      p+=ry2+px-py;
+    }
+    putPixel (x0 + x, y0 + y, r, g, b);
+    putPixel (x0 - x, y0 + y, r, g, b);
+    putPixel (x0 + x, y0 - y, r, g, b);
+    putPixel (x0 - x, y0 - y, r, g, b);
+  }
+
+  /* Region 2 */
+  p = ROUND(ry2*(x+0.5)*(x+0.5)+ rx2*(y-1)*(y-1) - rx2*ry2);
+  while (y > 0) {
+    y--;
+    py-=tworx2;
+    if (p > 0)
+      p+=rx2-py;
+    else {
+      x++;
+      px+=twory2;
+      p+=rx2-py+px;
+    }
+    putPixel (x0 + x, y0 + y, r, g, b);
+    putPixel (x0 - x, y0 + y, r, g, b);
+    putPixel (x0 + x, y0 - y, r, g, b);
+    putPixel (x0 - x, y0 - y, r, g, b);
+  }
+}
+

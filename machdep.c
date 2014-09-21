@@ -98,6 +98,9 @@ void switch_to(struct tcb *new)
     "movl (%%eax), %%esp\n\t"
     "ret\n\t"
     "1:\n\t"
+    "movl %%cr0, %%eax\n\t"
+    "orl $8, %%eax\n\t"
+    "movl %%eax, %%cr0\n\t"
     "popal\n\t"
     :
     :"m"(g_task_running)
@@ -720,7 +723,28 @@ int exception(struct context *ctx)
       }
     }
     break;
+
+  case 7://device not available
+    __asm__ __volatile__("clts");
+
+    if(g_task_own_fpu == g_task_running)
+      return 0;
+
+    __asm__ __volatile__("fwait");
+
+    if(g_task_own_fpu) {
+      __asm__ __volatile__("fnsave %0"::"m"(g_task_own_fpu->fpu));
+    }
+
+    g_task_own_fpu = g_task_running;
+
+    __asm__ __volatile__("frstor %0"::"m"(g_task_running->fpu));
+
+    return 0;
+
+    break;
   }
+
   printk("Un-handled exception!\r\n");
   printk(" fs=0x%08x,  es=0x%08x,  ds=0x%08x\r\n",
          ctx->fs, ctx->es, ctx->ds);

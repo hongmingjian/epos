@@ -81,6 +81,7 @@ struct tcb {
   struct wait_queue *wait_head;
 
   struct tcb     *all_next;
+  struct x87      fpu;
 };
 
 struct wait_queue {
@@ -94,6 +95,7 @@ void wake_up(struct wait_queue **wq, int n);
 extern struct tcb *g_task_running;
 extern struct tcb *g_task_all_head;
 extern struct tcb *task0;
+extern struct tcb *g_task_own_fpu;
 
 extern int g_resched;
 void schedule();

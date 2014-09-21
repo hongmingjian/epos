@@ -1,10 +1,8 @@
 #include "../global.h"
 #include "syscall.h"
+#include "math.h"
 
 ///////////////////HELPERS///////////////////////
-void srand(uint32_t x);
-uint32_t random();
-
 #include "../tlsf/tlsf.h"
 extern char end[];
 void *malloc(size_t bytes)
@@ -15,8 +13,8 @@ void free(void *ptr)
 { free_ex(ptr, end); }
 
 #include <stdarg.h>
-int sprintf(char *buf, const char *fmt, ...);
-int vsprintf(char *buf, const char *fmt, va_list args);
+int snprintf (char *str, size_t count, const char *fmt, ...);
+int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 int printf(const char *fmt,...)
 {
 	char buf[1024];
@@ -24,7 +22,7 @@ int printf(const char *fmt,...)
 	int i, j;
 
 	va_start(args, fmt);
-	i=vsprintf(buf,fmt,args);
+	i=vsnprintf(buf,sizeof(buf), fmt,args);
 	va_end(args);
 
 	for(j = 0; j < i; j++)
@@ -108,6 +106,25 @@ void testGraphics()
   drawCheckerboard();
   DELAY(800000000);
 
+  {
+  int num_vertices=3;
+  int vertices[6]={500,0,    /* (x1,y1) */
+                   700,500,    /* (x2,y2) */
+                   100,400};   /* (x3,y3) */
+  polygon(3, vertices, 255, 255, 255);
+  DELAY(800000000);
+  }
+
+  {
+  circle(200, 200, 200, 255, 0, 0);
+  DELAY(800000000);
+  }
+
+  {
+  ellipse(200, 200, 200, 100, 255, 0, 0);
+  DELAY(800000000);
+  }
+  
   exitGraphics();
 
   listGraphicsModes();
@@ -140,6 +157,17 @@ void main(void *pv)
     free(stack_hanoi);
     printf("task #%d: task #%d exited with code %d\r\n",
            task_getid(), tid_hanoi, code);
+  }
+
+  if (1) {
+    printf("task #%d: sin(%f) = %f\r\n", task_getid(), M_PI/6, sin(M_PI/6));
+    printf("task #%d: sqrt(%f) = %f\r\n", task_getid(), 2.0, sqrt(2.0));
+    printf("task #%d: pow(%f, %f) = %f\r\n", task_getid(), 2.0, 1.0/2.0, pow(2.0, 1.0/2.0));
+    printf("task #%d: log2(%f) = %f\r\n", task_getid(), 4.0, log2(4.0, 1.0));
+    printf("task #%d: atan2(%f, %f) = %f\r\n", task_getid(), 10.0, -10.0, atan2(10.0, -10.0)*180/M_PI);
+    printf("task #%d: exp(%f) = %f\r\n", task_getid(), 5.0, exp(5.0));
+    printf("task #%d: tan(%f) = %f\r\n", task_getid(), 30.0, tan(30.0*M_PI/180));
+    printf("task #%d: cot(%f) = %f\r\n", task_getid(), 30.0, cot(30.0*M_PI/180));
   }
 
   while(1)

@@ -498,8 +498,10 @@ void drawCheckerboard(void)
 }
 
 /*http://rosettacode.org/wiki/Mandelbrot_set#JavaScript*/
-void mandelbrot(int width, int height)
+void mandelbrot()
 {
+  int width  = g_mib.XResolution,
+      height = g_mib.YResolution;
   double xstart=-2, xend=1,
          ystart=-1, yend=1;
   double x, y, xstep, ystep;

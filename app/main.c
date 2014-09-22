@@ -103,29 +103,12 @@ void testGraphics()
   drawMoire();
   DELAY(200000000);
 
-//  drawCheckerboard();
-
-  {
-  int num_vertices=3;
-  int vertices[6]={500,0,    /* (x1,y1) */
-                   700,500,    /* (x2,y2) */
-                   100,400};   /* (x3,y3) */
-  polygon(3, vertices, 255, 255, 255);
-  }
-
-  {
-  circle(200, 200, 200, 255, 0, 0);
-  }
-
-  {
-  ellipse(200, 200, 200, 100, 255, 0, 0);
+  drawCheckerboard();
   DELAY(200000000);
-  }
-  
-  {
-  mandelbrot(800, 600);
-  DELAY(400000000);
-  }
+
+  mandelbrot();
+  DELAY(200000000);
+
   exitGraphics();
 
   listGraphicsModes();

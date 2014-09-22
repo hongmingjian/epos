@@ -3,6 +3,7 @@
  */
 #include "../global.h"
 #include "syscall.h"
+#include "math.h"
 
 #define LADDR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))
 int vm86int(int n, struct vm86_context *vm86ctx);
@@ -126,7 +127,7 @@ static int setVBEMode(int mode)
   vm86int(0x10, &g_vm86ctx);
   if(LOWORD(g_vm86ctx.eax) != 0x4f)
     return -1;
-  return 0; 
+  return 0;
 }
 
 static void switchBank(int bank)
@@ -137,7 +138,7 @@ static void switchBank(int bank)
     return;
   g_curBank = bank;
 
-  bankShift = 0; 
+  bankShift = 0;
   while((unsigned)(64 >> bankShift) != g_mib.WinGranularity)
     bankShift++;
 
@@ -164,9 +165,9 @@ int listGraphicsModes()
   pvib = (struct VBEInfoBlock *)LADDR(0x1000, 0x0000);
 
   printf(" Mode   Resolution  BytesPerScanLine WinASegment NumberOfBanks\r\n");
-  for(vmp = (uint16_t *)LADDR(HIWORD(pvib->VideoModePtr), 
+  for(vmp = (uint16_t *)LADDR(HIWORD(pvib->VideoModePtr),
 		              LOWORD(pvib->VideoModePtr));
-      *vmp != 0xffff; 
+      *vmp != 0xffff;
       vmp++) {
     g_vm86ctx.eax=0x4f01;
     g_vm86ctx.ecx=*vmp;
@@ -179,7 +180,7 @@ int listGraphicsModes()
 
     if(!(pmib->ModeAttributes & 0x01))
       continue;
-    if(!(pmib->ModeAttributes & 0x10)) 
+    if(!(pmib->ModeAttributes & 0x10))
       continue;
 
     if(pmib->BitsPerPixel != 24)
@@ -189,12 +190,12 @@ int listGraphicsModes()
     if(pmib->MemoryModel != 6)
       continue;
 
-    printf("0x%04x %4dx%4dx%2d %16d 0x%04x %12d\r\n", 
-           *vmp, 
-	   pmib->XResolution, 
-	   pmib->YResolution, 
-	   pmib->BitsPerPixel, 
-	   pmib->BytesPerScanLine, 
+    printf("0x%04x %4dx%4dx%2d %16d 0x%04x %12d\r\n",
+           *vmp,
+	   pmib->XResolution,
+	   pmib->YResolution,
+	   pmib->BitsPerPixel,
+	   pmib->BytesPerScanLine,
            pmib->WinASegment,
 	   pmib->NumberOfBanks
 	   );
@@ -213,11 +214,11 @@ void putPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b)
 
 int initGraphics(int mode)
 {
-  if(getVBEInfo(&g_vib)) { 
+  if(getVBEInfo(&g_vib)) {
     printf("No VESA BIOS EXTENSION(VBE) detected!\r\n");
     return -1;
   }
-    
+
   if(getModeInfo(mode, &g_mib)) {
     printf("VESA mode 0x%x is not supported!\r\n");
     return -1;
@@ -233,7 +234,7 @@ int exitGraphics()
 }
 
 /*
- * The codes of `line' and `drawMoire' come from 
+ * The codes of `line' and `drawMoire' come from
  *
  *         VESA BIOS EXTENSION(VBE)
  *                Core Functions
@@ -247,20 +248,20 @@ void line(int x1,int y1,int x2,int y2, uint8_t r, uint8_t g, uint8_t b)
     int d; /* Decision variable */
     int dx,dy; /* Dx and Dy values for the line */
     int Eincr, NEincr;/* Decision variable increments */
-    int yincr;/* Increment for y values */ 
+    int yincr;/* Increment for y values */
     int t; /* Counters etc. */
-    
+
 #define ABS(a) ((a) >= 0 ? (a) : -(a))
-    
-    dx = ABS(x2 - x1); 
-    dy = ABS(y2 - y1); 
+
+    dx = ABS(x2 - x1);
+    dy = ABS(y2 - y1);
     if (dy <= dx)
     {
         /* We have a line with a slope between -1 and 1
          *
          * Ensure that we are always scan converting the line from left to
          * right to ensure that we produce the same line from P1 to P0 as the
-         * line from P0 to P1. 
+         * line from P0 to P1.
 	 */
         if (x2 < x1)
 	{
@@ -275,7 +276,7 @@ void line(int x1,int y1,int x2,int y2, uint8_t r, uint8_t g, uint8_t b)
         Eincr = 2*dy;/* Increment to move to E pixel */
         NEincr = 2*(dy - dx);/* Increment to move to NE pixel */
         putPixel(x1,y1,r,g,b); /* Draw the first point at (x1,y1) */
-        
+
         /* Incrementally determine the positions of the remaining pixels */
         for (x1++; x1 <= x2; x1++)
         {
@@ -310,7 +311,7 @@ void line(int x1,int y1,int x2,int y2, uint8_t r, uint8_t g, uint8_t b)
         Eincr = 2*dx;/* Increment to move to E pixel */
         NEincr = 2*(dx - dy);/* Increment to move to NE pixel */
         putPixel(x1,y1,r,g,b); /* Draw the first point at (x1,y1) */
-        
+
         /* Incrementally determine the positions of the remaining pixels */
         for (y1++; y1 <= y2; y1++)
         {
@@ -332,55 +333,27 @@ void drawMoire(void)
     int i;
     int xres = g_mib.XResolution,
         yres = g_mib.YResolution;
-    
+
     for (i = 0; i < xres; i += 5)
     {
-        line(xres/2,yres/2,i,0,i % 0xFF, 0, 0); 
+        line(xres/2,yres/2,i,0,i % 0xFF, 0, 0);
         line(xres/2,yres/2,i,yres,(i+1) % 0xFF, 0, 0);
     }
     for (i = 0; i < yres; i += 5)
     {
-        line(xres/2,yres/2,0,i,(i+2) % 0xFF, 0, 0); 
+        line(xres/2,yres/2,0,i,(i+2) % 0xFF, 0, 0);
         line(xres/2,yres/2,xres,i,(i+3) % 0xFF, 0, 0);
-    } 
-    line(0,0,xres-1,0,15, 0, 0); 
+    }
+    line(0,0,xres-1,0,15, 0, 0);
     line(0,0,0,yres-1,15, 0, 0);
     line(xres-1,0,xres-1,yres-1,15, 0, 0);
     line(0,yres-1,xres-1,yres-1,15, 0, 0);
 }
 
-/*
- * The codes of `drawCheckerboard' comes from
- *             Vbespy
- */
-/* Draw a colorful checkerboard */
-void drawCheckerboard(void)
-{
-  int x, y;
-  int xres = g_mib.XResolution,
-      yres = g_mib.YResolution;
-
-  for (y = 0; y < yres; ++y) {
-    for (x = 0; x < xres; ++x) {
-      int r, g, b;
-      if ((x & 16) ^ (y & 16)) {
-        r = x * 255 / xres;
-        g = y * 255 / yres;
-        b = 255 - x * 255 / xres;
-      } else {
-        r = 255 - x * 255 / xres;
-        g = y * 255 / yres;
-        b = 255 - y * 255 / yres;
-      }
-      putPixel(x, y, r, g, b);
-    }
-  }
-}
-
 /*http://www.brackeen.com/vga*/
-void polygon(int num_vertices, 
+void polygon(int num_vertices,
              int *vertices,
-             uint8_t r, uint8_t g, uint8_t b) 
+             uint8_t r, uint8_t g, uint8_t b)
 {
   int i;
 
@@ -400,8 +373,8 @@ void polygon(int num_vertices,
 }
 
 /*http://rosettacode.org/wiki/Bitmap/Midpoint_circle_algorithm#C*/
-void circle(int x0, int y0, 
-            int radius, 
+void circle(int x0, int y0,
+            int radius,
             uint8_t r, uint8_t g, uint8_t b)
 {
     int f = 1 - radius;
@@ -409,15 +382,15 @@ void circle(int x0, int y0,
     int ddF_y = -2 * radius;
     int x = 0;
     int y = radius;
- 
+
     putPixel(x0, y0 + radius, r, g, b);
     putPixel(x0, y0 - radius, r, g, b);
     putPixel(x0 + radius, y0, r, g, b);
     putPixel(x0 - radius, y0, r, g, b);
- 
-    while(x < y) 
+
+    while(x < y)
     {
-        if(f >= 0) 
+        if(f >= 0)
         {
             y--;
             ddF_y += 2;
@@ -425,7 +398,7 @@ void circle(int x0, int y0,
         }
         x++;
         ddF_x += 2;
-        f += ddF_x + 1;    
+        f += ddF_x + 1;
         putPixel(x0 + x, y0 + y, r, g, b);
         putPixel(x0 - x, y0 + y, r, g, b);
         putPixel(x0 + x, y0 - y, r, g, b);
@@ -496,3 +469,81 @@ void ellipse(int x0, int y0,
   }
 }
 
+/*
+ * The codes of `drawCheckerboard' comes from
+ *             Vbespy
+ */
+/* Draw a colorful checkerboard */
+void drawCheckerboard(void)
+{
+  int x, y;
+  int xres = g_mib.XResolution,
+      yres = g_mib.YResolution;
+
+  for (y = 0; y < yres; ++y) {
+    for (x = 0; x < xres; ++x) {
+      int r, g, b;
+      if ((x & 16) ^ (y & 16)) {
+        r = x * 255 / xres;
+        g = y * 255 / yres;
+        b = 255 - x * 255 / xres;
+      } else {
+        r = 255 - x * 255 / xres;
+        g = y * 255 / yres;
+        b = 255 - y * 255 / yres;
+      }
+      putPixel(x, y, r, g, b);
+    }
+  }
+}
+
+/*http://rosettacode.org/wiki/Mandelbrot_set#JavaScript*/
+void mandelbrot(int width, int height)
+{
+  double xstart=-2, xend=1,
+         ystart=-1, yend=1;
+  double x, y, xstep, ystep;
+
+  int maxiter = 100;
+  int i, j, k;
+
+  xstep = (xend-xstart)/width;
+  ystep = (yend-ystart)/height;
+
+  x = xstart; y = ystart;
+  for (i=0; i<height; i++) {
+    for (j=0; j<width; j++) {
+
+		{
+		  double z,zi,newz,newzi;
+		  z = 0;
+		  zi = 0;
+		  for (k=0; k<maxiter; k++) {
+			newz = (z*z)-(zi*zi) + x;
+			newzi = 2*z*zi + y;
+			z = newz;
+			zi = newzi;
+			if(((z*z)+(zi*zi)) > 4) {
+			  break;
+			}
+		  }
+		}
+
+      if (k==maxiter) {
+        putPixel(j, i, 0, 0, 0);
+      } else {
+        double c = 3*log(k)/log(maxiter - 1.0);
+        if (c < 1) {
+		  putPixel(j, i, 255*c, 0, 0);
+        } else if (c < 2) {
+		  putPixel(j, i, 255, 255*(c-1), 0);
+        } else {
+		  putPixel(j, i, 255, 255, 255*(c-2));
+        }
+      }
+      x += xstep;
+    }
+    y += ystep;
+    x = xstart;
+  }
+}

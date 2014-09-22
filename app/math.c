@@ -2,6 +2,7 @@
  * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
  */
 #include "../global.h"
+#include "math.h"
 
 /*
  * http://en.wikipedia.org/wiki/Multiply-with-carry
@@ -163,3 +164,8 @@ double exp(double x)
              : "st(6)", "st(7)", "%2", "%3");
     return(result);
     }
+
+double log(double x)
+{
+  return log2(x, 1.0)/1.442695040888963;
+}

@@ -103,8 +103,7 @@ void testGraphics()
   drawMoire();
   DELAY(200000000);
 
-  drawCheckerboard();
-  DELAY(800000000);
+//  drawCheckerboard();
 
   {
   int num_vertices=3;
@@ -112,19 +111,21 @@ void testGraphics()
                    700,500,    /* (x2,y2) */
                    100,400};   /* (x3,y3) */
   polygon(3, vertices, 255, 255, 255);
-  DELAY(800000000);
   }
 
   {
   circle(200, 200, 200, 255, 0, 0);
-  DELAY(800000000);
   }
 
   {
   ellipse(200, 200, 200, 100, 255, 0, 0);
-  DELAY(800000000);
+  DELAY(200000000);
   }
   
+  {
+  mandelbrot(800, 600);
+  DELAY(400000000);
+  }
   exitGraphics();
 
   listGraphicsModes();
@@ -159,7 +160,7 @@ void main(void *pv)
            task_getid(), tid_hanoi, code);
   }
 
-  if (1) {
+  if (0) {
     printf("task #%d: sin(%f) = %f\r\n", task_getid(), M_PI/6, sin(M_PI/6));
     printf("task #%d: sqrt(%f) = %f\r\n", task_getid(), 2.0, sqrt(2.0));
     printf("task #%d: pow(%f, %f) = %f\r\n", task_getid(), 2.0, 1.0/2.0, pow(2.0, 1.0/2.0));

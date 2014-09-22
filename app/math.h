@@ -17,5 +17,6 @@ double cot(double x);
 
 double pow(double a, double b);
 double exp(double x);
+double log(double x);
 
 #endif /*_MATH_H*/

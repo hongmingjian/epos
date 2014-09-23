@@ -68,8 +68,8 @@ struct tcb {
 
 
   int32_t         tid;     /* task id */
-  int32_t         state;   /* -1:blocked, 0:running, 1:ready, 2:zombie */
-#define TASK_STATE_BLOCKED  -1
+  int32_t         state;   /* -1:waiting, 0:running, 1:ready, 2:zombie */
+#define TASK_STATE_WAITING  -1
 #define TASK_STATE_READY     1
 #define TASK_STATE_ZOMBIE    2
 

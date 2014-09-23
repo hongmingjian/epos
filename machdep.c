@@ -766,10 +766,10 @@ void syscall(struct context *ctx)
 {
 //  printk("task #%d syscalling #%d.\r\n", sys_task_getid(), ctx->eax);
   switch(ctx->eax) {
-  case SYSCALL_TASK_EXIT:
+  case SYSCALL_task_exit:
     sys_task_exit(*((uint32_t *)(ctx->esp+4)));
     break;
-  case SYSCALL_TASK_CREATE:
+  case SYSCALL_task_create:
     {
       uint32_t user_stack = *((uint32_t *)(ctx->esp+4));
       uint32_t user_entry = *((uint32_t *)(ctx->esp+8));
@@ -786,13 +786,13 @@ void syscall(struct context *ctx)
                                  (void *)user_pvoid);
     }
     break;
-  case SYSCALL_TASK_GETID:
+  case SYSCALL_task_getid:
     ctx->eax=sys_task_getid();
     break;
-  case SYSCALL_TASK_YIELD:
+  case SYSCALL_task_yield:
     sys_task_yield();
     break;
-  case SYSCALL_TASK_WAIT:
+  case SYSCALL_task_wait:
     {
       uint32_t tid  = *((uint32_t  *)(ctx->esp+4));
        int32_t **code = ( int32_t **)(ctx->esp+8);
@@ -806,10 +806,10 @@ void syscall(struct context *ctx)
       ctx->eax = sys_task_wait(tid, *code);
     }
     break;
-  case SYSCALL_BEEP:
+  case SYSCALL_beep:
     sys_beep((*((uint32_t *)(ctx->esp+4))));
     break;
-  case SYSCALL_VM86:
+  case SYSCALL_vm86:
     {
       struct vm86_context **p = (struct vm86_context **)(ctx->esp+4);
       (*p)->eflags &= 0x0ffff;
@@ -817,7 +817,7 @@ void syscall(struct context *ctx)
       sys_vm86(*p);
     }
     break;
-  case SYSCALL_PUTCHAR:
+  case SYSCALL_putchar:
     ctx->eax = sys_putchar((*((uint32_t *)(ctx->esp+4)))&0xff);
     break;
   default:

@@ -62,7 +62,7 @@ void sleep_on(struct wait_queue **head)
   wait.next = *head;
   *head = &wait;
 
-  g_task_running->state = TASK_STATE_BLOCKED;
+  g_task_running->state = TASK_STATE_WAITING;
   schedule();
 
   if(*head == &wait)

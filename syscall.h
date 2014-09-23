@@ -20,14 +20,14 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
 
-#define SYSCALL_TASK_EXIT     1
-#define SYSCALL_TASK_CREATE   2
-#define SYSCALL_TASK_GETID    3
-#define SYSCALL_TASK_YIELD    4
-#define SYSCALL_TASK_WAIT     5
-#define SYSCALL_BEEP          6
-#define SYSCALL_VM86      182
+#define SYSCALL_task_exit     1
+#define SYSCALL_task_create   2
+#define SYSCALL_task_getid    3
+#define SYSCALL_task_yield    4
+#define SYSCALL_task_wait     5
+#define SYSCALL_beep          6
+#define SYSCALL_vm86      182
 
-#define SYSCALL_PUTCHAR       1000
+#define SYSCALL_putchar       1000
 
 #endif

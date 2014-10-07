@@ -102,7 +102,7 @@ void schedule();
 void switch_to(struct tcb *new);
 
 void init_task(void);
-int  sys_task_create(uint32_t ustack, void (*handler)(void *), void *param);
+int  sys_task_create(void *tos, void (*func)(void *), void *pv);
 void sys_task_exit(int val);
 int  sys_task_wait(int32_t tid, int32_t *exit_code);
 int32_t sys_task_getid();

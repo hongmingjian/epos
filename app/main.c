@@ -52,7 +52,7 @@ static void hanoi(int d, char from, char to, char aux)
   hanoi(d - 1, aux, to, from);
 }
 
-static tsk_hanoi(void *pv)
+static void tsk_hanoi(void *pv)
 {
   int n = (int)pv;
   printf("task #%d: Playing Hanoi tower with %d plates\r\n",
@@ -106,7 +106,7 @@ void testGraphics()
   drawCheckerboard();
   DELAY(200000000);
 
-  mandelbrot();
+  drawMandelbrot();
   DELAY(200000000);
 
   exitGraphics();
@@ -124,15 +124,15 @@ void main(void *pv)
   if(1){
     int code;
     int tid_hanoi, tid_fib;
-    char *stack_hanoi, *stack_fib;
+    unsigned char *stack_hanoi, *stack_fib;
 
-    stack_hanoi = malloc(1024*1024);
-    tid_hanoi = task_create((unsigned)(stack_hanoi+1024*1024), tsk_hanoi, 6);
+    stack_hanoi = (unsigned char *)malloc(1024*1024);
+    tid_hanoi = task_create(stack_hanoi+1024*1024, tsk_hanoi, (void *)6);
     printf("task #%d: task #%d created(stack=0x%08x, size=%d)\r\n",
            task_getid(), tid_hanoi, stack_hanoi, 1024*1024);
 
-    stack_fib = malloc(1024*1024);
-    tid_fib = task_create((unsigned)(stack_fib+1024*1024), tsk_fib, tid_hanoi);
+    stack_fib = (unsigned char *)malloc(1024*1024);
+    tid_fib = task_create(stack_fib+1024*1024, tsk_fib, (void *)tid_hanoi);
     printf("task #%d: task #%d created(stack=0x%08x, size=%d)\r\n",
            task_getid(), tid_fib,   stack_fib,   1024*1024);
 

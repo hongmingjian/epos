@@ -153,13 +153,14 @@ struct tcb *task_get(int tid)
   return p;
 }
 
-int sys_task_create(uint32_t ustack,
-                    void (*handler)(void *), void *param)
+int sys_task_create(void *tos,
+                    void (*func)(void *), void *pv)
 {
   static int tid = 0;
   struct tcb *new;
   char *p;
   uint32_t flags;
+  uint32_t ustack=(uint32_t)tos;
 
   if(ustack & 3)
     return -1;
@@ -182,14 +183,14 @@ int sys_task_create(uint32_t ustack,
   new->all_next = NULL;
 
   if(ustack != 0) {
-    STACK_PUSH(ustack, param);
+    STACK_PUSH(ustack, pv);
     STACK_PUSH(ustack, 0);
   } else {
-    STACK_PUSH(new->kstack, param);
+    STACK_PUSH(new->kstack, pv);
     STACK_PUSH(new->kstack, 0);
   }
 
-  INIT_TASK_CONTEXT(ustack, new->kstack, handler);
+  INIT_TASK_CONTEXT(ustack, new->kstack, func);
 
   save_flags_cli(flags);
   add_task(new);
@@ -198,7 +199,7 @@ int sys_task_create(uint32_t ustack,
   return new->tid;
 }
 
-void sys_task_exit(int val)
+void sys_task_exit(int exit_code)
 {
   uint32_t flags;
 
@@ -206,7 +207,7 @@ void sys_task_exit(int val)
 
   wake_up(&g_task_running->wait_head, -1);
 
-  g_task_running->exit_code = val;
+  g_task_running->exit_code = exit_code;
   g_task_running->state = TASK_STATE_ZOMBIE;
 
   if(g_task_own_fpu == g_task_running)
@@ -215,7 +216,7 @@ void sys_task_exit(int val)
   schedule();
 }
 
-int sys_task_wait(int32_t tid, int32_t *exit_code)
+int sys_task_wait(int32_t tid, int32_t *pexit_code)
 {
   uint32_t flags;
   struct tcb *tsk;
@@ -233,8 +234,8 @@ int sys_task_wait(int32_t tid, int32_t *exit_code)
   if(tsk->state != TASK_STATE_ZOMBIE)
     sleep_on(&tsk->wait_head);
 
-  if(exit_code != NULL)
-    *exit_code = tsk->exit_code;
+  if(pexit_code != NULL)
+    *pexit_code = tsk->exit_code;
 
   if(tsk->wait_head == NULL) {
     char *p;

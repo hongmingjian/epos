@@ -1,10 +1,12 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
-int task_exit(int val);
-int task_create(unsigned stack, void *func, unsigned pv);
+
+int task_exit(int exit_code);
+int task_create(void *tos, void (*func)(void *), void *pv);
 int task_getid();
 void task_yield();
-int task_wait(int tid, int *exit_code);
+int task_wait(int tid, int *pexit_code);
+
 void beep(unsigned freq);
 int putchar(int c);
 

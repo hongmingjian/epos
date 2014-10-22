@@ -9,13 +9,13 @@
  */
 #define PHI 0x9e3779b9
 static uint32_t Q[4096], c = 362436;
-void srand(uint32_t x)
+void srand(uint32_t seed)
 {
         int i;
  
-        Q[0] = x;
-        Q[1] = x + PHI;
-        Q[2] = x + PHI + PHI;
+        Q[0] = seed;
+        Q[1] = seed + PHI;
+        Q[2] = seed + PHI + PHI;
  
         for (i = 3; i < 4096; i++)
                 Q[i] = Q[i - 3] ^ Q[i - 2] ^ PHI ^ i;
@@ -169,3 +169,4 @@ double log(double x)
 {
   return log2(x, 1.0)/1.442695040888963;
 }
+

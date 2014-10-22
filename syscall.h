@@ -30,5 +30,6 @@
 #define SYSCALL_vm86      182
 
 #define SYSCALL_putchar       1000
+#define SYSCALL_getchar       1001
 
 #endif

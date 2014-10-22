@@ -39,6 +39,13 @@ uint32_t g_frame_count = 0;
 uint8_t *g_kern_heap_base;
 uint32_t g_kern_heap_size = 0;
 
+#define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
+#define CMOS_READ(addr) ({ \
+outportb(0x80|addr,0x70); \
+inportb(0x71); \
+})
+time_t g_startup_time;
+
 VOLINFO g_volinfo;
 
 /*The default interrupt service routine*/
@@ -154,7 +161,7 @@ void start_user_task()
     }
 
     printk("task #%d: Creating first user task...", sys_task_getid());
-    tid = sys_task_create(USER_MAX_ADDR, (void *)entry, (void *)0x12345678);
+    tid = sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678);
     if(tid < 0)
       printk("Failed\r\n");
     else {
@@ -258,18 +265,46 @@ void cstart(uint32_t magic, uint32_t addr)
   }
 
   /*
+   * Save the startup time in the number of seconds elapsed 
+   * since the Epoch, that is, 1970-01-01 00:00:00 +0000 (UTC).
+   */
+  if(1) {
+    struct tm time;
+
+    do {
+      time.tm_sec  = CMOS_READ(0);
+      time.tm_min  = CMOS_READ(2);
+      time.tm_hour = CMOS_READ(4);
+      time.tm_mday = CMOS_READ(7);
+      time.tm_mon  = CMOS_READ(8)-1;
+      time.tm_year = CMOS_READ(9);
+    } while (time.tm_sec != CMOS_READ(0));
+    BCD_TO_BIN(time.tm_sec);
+    BCD_TO_BIN(time.tm_min);
+    BCD_TO_BIN(time.tm_hour);
+    BCD_TO_BIN(time.tm_mday);
+    BCD_TO_BIN(time.tm_mon);
+    BCD_TO_BIN(time.tm_year);
+    g_startup_time = mktime(&time);
+  }
+
+  /*
    * Initialise the interrupt vector
    */
   if(80) {
+
+    /*Install default ISR*/
     uint32_t i;
     for(i = 0; i < NR_IRQ; i++)
       intr_vector[i]=isr_default;
 
+    /*Install the timer ISR*/
     intr_vector[IRQ_TIMER] = isr_timer;
     enable_irq(IRQ_TIMER);
 
-//    intr_vector[IRQ_KEYBOARD] = isr_keyboard;
-//    enable_irq(IRQ_KEYBOARD);
+    /*Install the keyboard ISR*/
+    intr_vector[IRQ_KEYBOARD] = isr_keyboard;
+    enable_irq(IRQ_KEYBOARD);
   }
 
   /*

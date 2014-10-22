@@ -781,8 +781,8 @@ void syscall(struct context *ctx)
         ctx->eax = -ctx->eax;
         break;
       }
-      ctx->eax = sys_task_create(user_stack,
-                                 (void *)user_entry,
+      ctx->eax = sys_task_create((void *)user_stack,
+                                 (void (*)(void *))user_entry,
                                  (void *)user_pvoid);
     }
     break;
@@ -819,6 +819,9 @@ void syscall(struct context *ctx)
     break;
   case SYSCALL_putchar:
     ctx->eax = sys_putchar((*((uint32_t *)(ctx->esp+4)))&0xff);
+    break;
+  case SYSCALL_getchar:
+    ctx->eax = sys_getchar();
     break;
   default:
     printk("syscall #%d not implemented.\r\n", ctx->eax);

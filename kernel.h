@@ -112,6 +112,19 @@ extern void *ret_from_syscall;
 #define HZ   100
 extern unsigned volatile ticks;
 void isr_timer(uint32_t irq, struct context *ctx);
+struct tm {
+  int tm_sec;         /* seconds */
+  int tm_min;         /* minutes */
+  int tm_hour;        /* hours */
+  int tm_mday;        /* day of the month */
+  int tm_mon;         /* month */
+  int tm_year;        /* year */
+  int tm_wday;        /* day of the week */
+  int tm_yday;        /* day in the year */
+  int tm_isdst;       /* daylight saving time */
+};
+time_t mktime(struct tm * tm);
+extern time_t g_startup_time;
 
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code);
 void syscall(struct context *ctx);

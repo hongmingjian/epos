@@ -154,7 +154,7 @@ struct tcb *task_get(int tid)
 }
 
 int sys_task_create(void *tos,
-                    void (*func)(void *), void *pv)
+                    void (*func)(void *pv), void *pv)
 {
   static int tid = 0;
   struct tcb *new;

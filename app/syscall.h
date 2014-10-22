@@ -2,13 +2,14 @@
 #define _SYSCALL_H
 
 int task_exit(int exit_code);
-int task_create(void *tos, void (*func)(void *), void *pv);
+int task_create(void *tos, void (*func)(void *pv), void *pv);
 int task_getid();
 void task_yield();
 int task_wait(int tid, int *pexit_code);
 
 void beep(unsigned freq);
 int putchar(int c);
+int getchar();
 
 struct vm86_context {
   uint32_t  : 32;/*0*/ 

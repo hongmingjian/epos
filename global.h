@@ -56,6 +56,8 @@ typedef unsigned long long uint64_t;
 
 typedef unsigned int    size_t;
 typedef          int    ssize_t;
+typedef          long   time_t;
+typedef          long   clock_t;
 
 #define NULL            ((void *)0)
 

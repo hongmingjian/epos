@@ -4,7 +4,7 @@
 #define M_E  2.7182818284590452354 
 #define M_PI 3.14159265358979323846
 
-void srand(uint32_t x);
+void srand(uint32_t seed);
 uint32_t random();
 
 double sin(double x); 

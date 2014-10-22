@@ -1,3 +1,6 @@
+/* 
+ * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ */
 /* ============================================================ */
 /* File: KEYBOARD.C                                             */
 /*                                                              */
@@ -8,6 +11,9 @@
 /*                                                              */
 /* ============================================================ */
 
+/*
+ * http://flint.cs.yale.edu/cs422/doc/art-of-asm/pdf/CH20.PDF
+ */
 #include "kernel.h"
 #include "cpu.h"
 
@@ -205,42 +211,48 @@ PRIVATE int kbd_set_state(uint8_t scan)
 	return TRUE ;
 }
 
-#define	PORT_KBD_STS 0x64
-#define      KBD_STS_RDY	0x01
-#define	PORT_KBD_DAT 0x60
+#define PORT_KBD_STS 0x64
+#define      KBD_STS_RDY  0x01
+#define PORT_KBD_DAT 0x60
+
+static uint16_t kbd_buf;
+
+static struct wait_queue *wqhead = NULL;
 
 void isr_keyboard(uint32_t irq, struct context *ctx)	   
 {
-  /*
-   * Check if user does press a key by
-   * reading keyboard status port
-   */
+  /*Does user press a key?*/
   if(inportb(PORT_KBD_STS) & KBD_STS_RDY) {
     uint8_t scan;
     uint16_t ascii;
 
-    /* Yes, read it in */
+    /*Yes, read it in*/
     scan = inportb(PORT_KBD_DAT);
 
-    /* Is it a modifier? */
+    /*Is it a modifier?*/
     if(kbd_set_state(scan))
       return;
 
     /*No, translate it*/
-    ascii = kbd_translate(scan);
-    if(ascii == 0)
+    if((ascii = kbd_translate(scan)) == 0)
       return;
 
-//    if(ascii&0xff)
-//      sys_putchar(ascii&0xff);
-
-    /*LAB-1: put the ascii to a queue*/
-
+    /*Put the data into the buffer*/
+    kbd_buf = ascii;
+    
+    /*Wake up the task waiting for keyboard input*/
+    wake_up(&wqhead, 1);
   }
 }
 
-/*LAB-1: implement sys_getchar*/
 int sys_getchar()
 {
-  return -1;
+  uint32_t flags;
+
+  /*Wait for the keyboard interrupt*/
+  save_flags_cli(flags);
+  sleep_on(&wqhead);
+  restore_flags(flags);
+
+  return kbd_buf;
 }

@@ -26,19 +26,19 @@ struct VBEInfoBlock {
 #define LADDR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))
 int vm86int(int n, struct vm86_context *vm86ctx);
 
-static struct vm86_context g_vm86ctx = {.ss = 0x9000, .esp = 0x0000};
 static struct VBEInfoBlock g_vib;
-static int g_curBank = -1;
+static int g_bankShift;
 static int g_oldmode;
        struct ModeInfoBlock g_mib;
 
 static int getVBEInfo(struct VBEInfoBlock *pvib)
 {
-  g_vm86ctx.eax=0x4f00;
-  g_vm86ctx.es=0x1000;
-  g_vm86ctx.edi=0x0000;
-  vm86int(0x10, &g_vm86ctx);
-  if(LOWORD(g_vm86ctx.eax) != 0x4f)
+  struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+  vm86ctx.eax=0x4f00;
+  vm86ctx.es=0x1000;
+  vm86ctx.edi=0x0000;
+  vm86int(0x10, &vm86ctx);
+  if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
 
   *pvib = *(struct VBEInfoBlock *)LADDR(0x1000, 0x0000);
@@ -47,12 +47,13 @@ static int getVBEInfo(struct VBEInfoBlock *pvib)
 
 static int getModeInfo(int mode, struct ModeInfoBlock *pmib)
 {
-  g_vm86ctx.eax=0x4f01;
-  g_vm86ctx.ecx=mode;
-  g_vm86ctx.es =0x4000;
-  g_vm86ctx.edi=0x0000;
-  vm86int(0x10, &g_vm86ctx);
-  if(LOWORD(g_vm86ctx.eax) != 0x4f)
+  struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+  vm86ctx.eax=0x4f01;
+  vm86ctx.ecx=mode;
+  vm86ctx.es =0x4000;
+  vm86ctx.edi=0x0000;
+  vm86int(0x10, &vm86ctx);
+  if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
   *pmib = *(struct ModeInfoBlock *)LADDR(0x4000, 0x0000);
   return 0;
@@ -60,39 +61,47 @@ static int getModeInfo(int mode, struct ModeInfoBlock *pmib)
 
 static int getVBEMode()
 {
-  g_vm86ctx.eax=0x4f03;
-  vm86int(0x10, &g_vm86ctx);
-  return g_vm86ctx.ebx & 0xffff;
+  struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+  vm86ctx.eax=0x4f03;
+  vm86int(0x10, &vm86ctx);
+  return vm86ctx.ebx & 0xffff;
 }
 
 static int setVBEMode(int mode)
 {
-  g_vm86ctx.eax=0x4f02;
-  g_vm86ctx.ebx=mode;
-  vm86int(0x10, &g_vm86ctx);
-  if(LOWORD(g_vm86ctx.eax) != 0x4f)
+  struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+  vm86ctx.eax=0x4f02;
+  vm86ctx.ebx=mode;
+  vm86int(0x10, &vm86ctx);
+  if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
   return 0;
 }
 
-static void switchBank(int bank)
+static int switchBank(int bank)
 {
-  int bankShift;
+  int curBank;
+  struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
 
-  if(bank == g_curBank)
-    return;
-  g_curBank = bank;
+  vm86ctx.eax=0x4f05;
+  vm86ctx.ebx = 0x0100;
+  vm86int(0x10, &vm86ctx);
+  if(LOWORD(vm86ctx.eax) != 0x4f)
+    return -1;
 
-  bankShift = 0;
-  while((unsigned)(64 >> bankShift) != g_mib.WinGranularity)
-    bankShift++;
+  curBank = LOWORD(vm86ctx.edx);
+  bank <<= g_bankShift;
 
-  bank <<= bankShift;
+  if(bank == curBank)
+    return 0;
 
-  g_vm86ctx.eax=0x4f05;
-  g_vm86ctx.ebx = 0x0;
-  g_vm86ctx.edx = bank;
-  vm86int(0x10, &g_vm86ctx);
+  vm86ctx.eax=0x4f05;
+  vm86ctx.ebx = 0x0;
+  vm86ctx.edx = bank;
+  vm86int(0x10, &vm86ctx);
+  if(LOWORD(vm86ctx.eax) != 0x4f)
+    return -1;
+  return 0;
 }
 
 int listGraphicsModes()
@@ -100,12 +109,13 @@ int listGraphicsModes()
   uint16_t *vmp;
   struct VBEInfoBlock *pvib;
   struct ModeInfoBlock *pmib;
+  struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
 
-  g_vm86ctx.eax=0x4f00;
-  g_vm86ctx.es=0x1000;
-  g_vm86ctx.edi=0x0000;
-  vm86int(0x10, &g_vm86ctx);
-  if(LOWORD(g_vm86ctx.eax) != 0x4f)
+  vm86ctx.eax=0x4f00;
+  vm86ctx.es=0x1000;
+  vm86ctx.edi=0x0000;
+  vm86int(0x10, &vm86ctx);
+  if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
   pvib = (struct VBEInfoBlock *)LADDR(0x1000, 0x0000);
 
@@ -114,12 +124,12 @@ int listGraphicsModes()
 		              LOWORD(pvib->VideoModePtr));
       *vmp != 0xffff;
       vmp++) {
-    g_vm86ctx.eax=0x4f01;
-    g_vm86ctx.ecx=*vmp;
-    g_vm86ctx.es =0x4000;
-    g_vm86ctx.edi=0x0000;
-    vm86int(0x10, &g_vm86ctx);
-    if(LOWORD(g_vm86ctx.eax) != 0x4f)
+    vm86ctx.eax=0x4f01;
+    vm86ctx.ecx=*vmp;
+    vm86ctx.es =0x4000;
+    vm86ctx.edi=0x0000;
+    vm86int(0x10, &vm86ctx);
+    if(LOWORD(vm86ctx.eax) != 0x4f)
       continue;
     pmib = (struct ModeInfoBlock *)LADDR(0x4000, 0x0000);
 
@@ -163,6 +173,10 @@ int initGraphics(int mode)
     printf("VESA mode 0x%x is not supported!\r\n");
     return -1;
   }
+
+  g_bankShift = 0;
+  while((unsigned)(64 >> g_bankShift) != g_mib.WinGranularity)
+    g_bankShift++;
 
   g_oldmode = getVBEMode();
   return setVBEMode(mode);

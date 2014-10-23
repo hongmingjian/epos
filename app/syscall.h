@@ -1,6 +1,8 @@
 #ifndef _SYSCALL_H
 #define _SYSCALL_H
 
+#include "../global.h"
+
 int task_exit(int exit_code);
 int task_create(void *tos, void (*func)(void *pv), void *pv);
 int task_getid();

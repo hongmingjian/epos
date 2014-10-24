@@ -20,11 +20,11 @@
 #include "kernel.h"
 #include "utils.h"
 
-unsigned volatile ticks = 0;
+unsigned volatile g_timer_ticks = 0;
 
 void isr_timer(uint32_t irq, struct context *ctx)
 {
-  ticks++;
+  g_timer_ticks++;
 //  sys_putchar('.');
 
   if(g_task_running != NULL) {

@@ -334,7 +334,7 @@ static void isr_floppy(uint32_t irq, struct context *ctx)
 
 void init_floppy()
 {
-  intr_vector[IRQ_FDC] = isr_floppy;
+  g_intr_vector[IRQ_FDC] = isr_floppy;
   enable_irq(IRQ_FDC);
 
   *vtopte((uint32_t)g_buf_dma)=((uint32_t)g_buf_dma)|PTE_V|PTE_RW;

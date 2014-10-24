@@ -22,7 +22,7 @@
 #include "dosfs.h"
 
 /*The interrupt vector*/
-void (*intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
+void (*g_intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
 
 uint32_t g_mem_zone[MEM_ZONE_LEN];
 
@@ -296,14 +296,14 @@ void cstart(uint32_t magic, uint32_t addr)
     /*Install default ISR*/
     uint32_t i;
     for(i = 0; i < NR_IRQ; i++)
-      intr_vector[i]=isr_default;
+      g_intr_vector[i]=isr_default;
 
     /*Install the timer ISR*/
-    intr_vector[IRQ_TIMER] = isr_timer;
+    g_intr_vector[IRQ_TIMER] = isr_timer;
     enable_irq(IRQ_TIMER);
 
     /*Install the keyboard ISR*/
-    intr_vector[IRQ_KEYBOARD] = isr_keyboard;
+    g_intr_vector[IRQ_KEYBOARD] = isr_keyboard;
     enable_irq(IRQ_KEYBOARD);
   }
 

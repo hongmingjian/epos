@@ -3,11 +3,11 @@
 
 #include "../global.h"
 
-int task_exit(int exit_code);
+int task_exit(int code_exit);
 int task_create(void *tos, void (*func)(void *pv), void *pv);
 int task_getid();
 void task_yield();
-int task_wait(int tid, int *pexit_code);
+int task_wait(int tid, int *pcode_exit);
 
 void beep(unsigned freq);
 int putchar(int c);
@@ -39,5 +39,5 @@ struct vm86_context {
   uint16_t  gs; uint16_t  : 16;/*84*/
 };
 
-int vm86(struct vm86_context *ctx);
+int vm86(struct vm86_context *vm86ctx);
 #endif

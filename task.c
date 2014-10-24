@@ -179,7 +179,7 @@ int sys_task_create(void *tos,
   new->tid = tid++;
   new->state = TASK_STATE_READY;
   new->quantum = DEFAULT_QUANTUM;
-  new->wait_head = NULL;
+  new->wq_exit = NULL;
   new->all_next = NULL;
 
   if(ustack != 0) {
@@ -199,15 +199,15 @@ int sys_task_create(void *tos,
   return new->tid;
 }
 
-void sys_task_exit(int exit_code)
+void sys_task_exit(int code_exit)
 {
   uint32_t flags;
 
   save_flags_cli(flags);
 
-  wake_up(&g_task_running->wait_head, -1);
+  wake_up(&g_task_running->wq_exit, -1);
 
-  g_task_running->exit_code = exit_code;
+  g_task_running->code_exit = code_exit;
   g_task_running->state = TASK_STATE_ZOMBIE;
 
   if(g_task_own_fpu == g_task_running)
@@ -216,7 +216,7 @@ void sys_task_exit(int exit_code)
   schedule();
 }
 
-int sys_task_wait(int32_t tid, int32_t *pexit_code)
+int sys_task_wait(int32_t tid, int32_t *pcode_exit)
 {
   uint32_t flags;
   struct tcb *tsk;
@@ -232,12 +232,12 @@ int sys_task_wait(int32_t tid, int32_t *pexit_code)
   }
 
   if(tsk->state != TASK_STATE_ZOMBIE)
-    sleep_on(&tsk->wait_head);
+    sleep_on(&tsk->wq_exit);
 
-  if(pexit_code != NULL)
-    *pexit_code = tsk->exit_code;
+  if(pcode_exit != NULL)
+    *pcode_exit= tsk->code_exit;
 
-  if(tsk->wait_head == NULL) {
+  if(tsk->wq_exit == NULL) {
     char *p;
     remove_task(tsk);
 //    printk("%d: Task %d reaped\r\n", sys_task_getid(), tsk->tid);

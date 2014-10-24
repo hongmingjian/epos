@@ -20,7 +20,7 @@
 #
   .extern _edata
   .extern _end
-  .extern _intr_vector
+  .extern _g_intr_vector
   .extern _g_resched
   .extern _schedule
   .extern _g_task_running
@@ -337,7 +337,7 @@ _ret_from_syscall:
   ; \
   pushl %esp; \
   pushl $irq; \
-  movl (_intr_vector + 4 * irq), %eax; \
+  movl (_g_intr_vector + 4 * irq), %eax; \
   call *%eax; \
   addl $8, %esp; \
   ; \

@@ -22,7 +22,7 @@
 
 #include "machdep.h"
 
-extern void (*intr_vector[])(uint32_t irq, struct context *ctx);
+extern void (*g_intr_vector[])(uint32_t irq, struct context *ctx);
 
 /**
  * `VADDR' comes from FreeBSD
@@ -76,9 +76,8 @@ struct tcb {
   int32_t         quantum;
 #define DEFAULT_QUANTUM 10
 
-  int32_t         exit_code;
-
-  struct wait_queue *wait_head;
+  int32_t          code_exit;
+  struct wait_queue *wq_exit;
 
   struct tcb     *all_next;
   struct x87      fpu;
@@ -89,8 +88,8 @@ struct wait_queue {
   struct wait_queue *next;
 };
 
-void sleep_on(struct wait_queue **wq);
-void wake_up(struct wait_queue **wq, int n);
+void sleep_on(struct wait_queue **head);
+void wake_up(struct wait_queue **head, int n);
 
 extern struct tcb *g_task_running;
 extern struct tcb *g_task_all_head;
@@ -102,15 +101,15 @@ void schedule();
 void switch_to(struct tcb *new);
 
 void init_task(void);
-int  sys_task_create(void *tos, void (*func)(void *), void *pv);
-void sys_task_exit(int val);
-int  sys_task_wait(int32_t tid, int32_t *exit_code);
+int  sys_task_create(void *tos, void (*func)(void *pv), void *pv);
+void sys_task_exit(int code_exit);
+int  sys_task_wait(int32_t tid, int32_t *pcode_exit);
 int32_t sys_task_getid();
 void sys_task_yield();
 extern void *ret_from_syscall;
 
 #define HZ   100
-extern unsigned volatile ticks;
+extern unsigned volatile g_timer_ticks;
 void isr_timer(uint32_t irq, struct context *ctx);
 struct tm {
   int tm_sec;         /* seconds */

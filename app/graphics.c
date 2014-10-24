@@ -33,15 +33,20 @@ static int g_oldmode;
 
 static int getVBEInfo(struct VBEInfoBlock *pvib)
 {
+  char *VbeSignature;
   struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
   vm86ctx.eax=0x4f00;
-  vm86ctx.es=0x1000;
+  vm86ctx.es=0x0070;
   vm86ctx.edi=0x0000;
+  VbeSignature = (char *)LADDR(vm86ctx.es, LOWORD(vm86ctx.edi));
+  VbeSignature[0]='V'; VbeSignature[1]='B';
+  VbeSignature[2]='E'; VbeSignature[3]='2';
   vm86int(0x10, &vm86ctx);
-  if(LOWORD(vm86ctx.eax) != 0x4f)
+  if(LOWORD(vm86ctx.eax) != 0x4f) {
     return -1;
+  }
 
-  *pvib = *(struct VBEInfoBlock *)LADDR(0x1000, 0x0000);
+  *pvib = *(struct VBEInfoBlock *)LADDR(vm86ctx.es, LOWORD(vm86ctx.edi));
   return 0;
 }
 
@@ -50,12 +55,12 @@ static int getModeInfo(int mode, struct ModeInfoBlock *pmib)
   struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
   vm86ctx.eax=0x4f01;
   vm86ctx.ecx=mode;
-  vm86ctx.es =0x4000;
+  vm86ctx.es =0x0090;
   vm86ctx.edi=0x0000;
   vm86int(0x10, &vm86ctx);
   if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
-  *pmib = *(struct ModeInfoBlock *)LADDR(0x4000, 0x0000);
+  *pmib = *(struct ModeInfoBlock *)LADDR(vm86ctx.es, LOWORD(vm86ctx.edi));
   return 0;
 }
 
@@ -64,6 +69,8 @@ static int getVBEMode()
   struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
   vm86ctx.eax=0x4f03;
   vm86int(0x10, &vm86ctx);
+  if(LOWORD(vm86ctx.eax) != 0x4f)
+    return -1;
   return vm86ctx.ebx & 0xffff;
 }
 
@@ -80,7 +87,6 @@ static int setVBEMode(int mode)
 
 static int switchBank(int bank)
 {
-  int curBank;
   struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
 
   vm86ctx.eax=0x4f05;
@@ -89,10 +95,8 @@ static int switchBank(int bank)
   if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
 
-  curBank = LOWORD(vm86ctx.edx);
   bank <<= g_bankShift;
-
-  if(bank == curBank)
+  if(bank == LOWORD(vm86ctx.edx))
     return 0;
 
   vm86ctx.eax=0x4f05;
@@ -106,51 +110,57 @@ static int switchBank(int bank)
 
 int listGraphicsModes()
 {
-  uint16_t *vmp;
-  struct VBEInfoBlock *pvib;
-  struct ModeInfoBlock *pmib;
-  struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+  uint16_t *modep;
+#ifdef _WIN32
+  uint16_t mode;
+#endif
 
-  vm86ctx.eax=0x4f00;
-  vm86ctx.es=0x1000;
-  vm86ctx.edi=0x0000;
-  vm86int(0x10, &vm86ctx);
-  if(LOWORD(vm86ctx.eax) != 0x4f)
+  if(getVBEInfo(&g_vib)) {
+    printf("No VESA BIOS EXTENSION(VBE) detected!\r\n");
     return -1;
-  pvib = (struct VBEInfoBlock *)LADDR(0x1000, 0x0000);
-
-  printf(" Mode  Resolution\r\n");
-  for(vmp = (uint16_t *)LADDR(HIWORD(pvib->VideoModePtr),
-		              LOWORD(pvib->VideoModePtr));
-      *vmp != 0xffff;
-      vmp++) {
-    vm86ctx.eax=0x4f01;
-    vm86ctx.ecx=*vmp;
-    vm86ctx.es =0x4000;
-    vm86ctx.edi=0x0000;
-    vm86int(0x10, &vm86ctx);
-    if(LOWORD(vm86ctx.eax) != 0x4f)
-      continue;
-    pmib = (struct ModeInfoBlock *)LADDR(0x4000, 0x0000);
-
-    if(!(pmib->ModeAttributes & 0x01))
-      continue;
-    if(!(pmib->ModeAttributes & 0x10))
-      continue;
-    if(pmib->BitsPerPixel != 24)
-      continue;
-    if(pmib->NumberOfPlanes != 1)
-      continue;
-
-    printf("0x%04x %4dx%4dx%2d\r\n",
-           *vmp,
-	   pmib->XResolution,
-	   pmib->YResolution,
-	   pmib->BitsPerPixel,
-	   pmib->BytesPerScanLine
-	   );
   }
-  printf(" Mode  Resolution\r\n");
+
+//  printf("VideoModePtr: %04X:%04X\r\n", HIWORD(g_vib.VideoModePtr),
+//         LOWORD(g_vib.VideoModePtr));
+
+  printf("\r\n");
+  printf(" Mode      Resolution\r\n");
+  printf("----------------------\r\n");
+#ifdef _WIN32
+  modep = &mode;
+  for(mode = 0x100; mode < 0x200; mode++) {
+#else
+  for(modep = (uint16_t *)LADDR(LOWORD(g_vib.VideoModePtr),
+                                HIWORD(g_vib.VideoModePtr));
+      *modep != 0xffff;
+      modep++) {
+#endif
+    if(getModeInfo(*modep, &g_mib))
+      continue;
+
+    // Must be supported in hardware
+    if(!(g_mib.ModeAttributes & 0x1))
+      continue;
+
+    // Must be graphics mode
+    if(!(g_mib.ModeAttributes & 0x10))
+      continue;
+
+    if(g_mib.BitsPerPixel != 24)
+      continue;
+    if(g_mib.NumberOfPlanes != 1)
+      continue;
+
+    printf("0x%04x    %4dx%4dx%2d\r\n",
+           *modep,
+           g_mib.XResolution,
+           g_mib.YResolution,
+           g_mib.BitsPerPixel,
+           g_mib.BytesPerScanLine
+          );
+  }
+  printf("----------------------\r\n");
+  printf(" Mode      Resolution\r\n");
   return 0;
 }
 
@@ -170,7 +180,7 @@ int initGraphics(int mode)
   }
 
   if(getModeInfo(mode, &g_mib)) {
-    printf("VESA mode 0x%x is not supported!\r\n");
+    printf("Mode 0x%04x is not supported!\r\n", mode);
     return -1;
   }
 

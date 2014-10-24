@@ -54,7 +54,7 @@ void main(void *pv)
   /*
    * Print all supported graphics modes
    */
-//  listGraphicsModes(); 
+  listGraphicsModes(); 
 
   /*
    * Initialise the graphics system with specified mode
@@ -64,7 +64,9 @@ void main(void *pv)
    *      g_mib.YResolution = 600
    *      g_mib.BitsPerPixel= 24
    */
-//  initGraphics(0x115);   
+//  if(initGraphics(0x115)) {
+//    task_exit(-1);
+//  }
 
   if(0) {
     /*

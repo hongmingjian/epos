@@ -74,7 +74,7 @@ debug: bochsdbg
 .PHONY: qemu
 qemu: hd.img
 ifeq ($(OS),Windows_NT)
-	-../Qemu/qemu-system-i386w.exe -m 4 -boot order=c -vga std -hda hd.img
+	-../Qemu/qemu-system-i386w.exe -L ../Qemu/Bios -m 4 -boot order=c -vga std -hda hd.img
 else
 	-qemu-system-i386 -m 4 -boot order=c -vga std -hda hd.img
 endif

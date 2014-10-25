@@ -274,5 +274,5 @@ void init_task()
   g_task_all_head = NULL;
   g_task_own_fpu = NULL;
 
-  task0 = task_get(sys_task_create(0, 0/*filled by run_as_task0*/, NULL));
+  task0 = task_get(sys_task_create(NULL, NULL/*filled by run_as_task0*/, NULL));
 }

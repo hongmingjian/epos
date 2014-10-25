@@ -34,10 +34,10 @@ uint32_t g_kern_cur_addr;
 uint32_t g_kern_end_addr;
 
 uint8_t *g_frame_freemap;
-uint32_t g_frame_count = 0;
+uint32_t g_frame_count;
 
 uint8_t *g_kern_heap_base;
-uint32_t g_kern_heap_size = 0;
+uint32_t g_kern_heap_size;
 
 #define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
 #define CMOS_READ(addr) ({ \
@@ -191,7 +191,7 @@ void cstart(uint32_t magic, uint32_t addr)
 //  printk("g_kern_cur_addr=0x%08x, g_kern_end_addr=0x%08x\r\n",
 //         g_kern_cur_addr, g_kern_end_addr);
 
-  if(77) {
+  if(1) {
     uint32_t i;
 
 
@@ -225,7 +225,7 @@ void cstart(uint32_t magic, uint32_t addr)
    *
    * The freemap is then mapped to the top of the physical memory.
    */
-  if(78) {
+  if(1) {
     uint32_t size;
     uint32_t i, vaddr, paddr;
 
@@ -257,7 +257,7 @@ void cstart(uint32_t magic, uint32_t addr)
   /*
    * The kernel heap is initialised for kmalloc/kfree.
    */
-  if(79) {
+  if(1) {
     g_kern_heap_base = (uint8_t *)g_kern_cur_addr;
     g_kern_heap_size = 1024 * PAGE_SIZE;
     g_kern_cur_addr += g_kern_heap_size;
@@ -291,7 +291,7 @@ void cstart(uint32_t magic, uint32_t addr)
   /*
    * Initialise the interrupt vector
    */
-  if(80) {
+  if(1) {
 
     /*Install default ISR*/
     uint32_t i;

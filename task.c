@@ -21,8 +21,8 @@
 #include "kernel.h"
 
 int g_resched;
+struct tcb *g_task_head;
 struct tcb *g_task_running;
-struct tcb *g_task_all_head;
 struct tcb *task0;
 struct tcb *g_task_own_fpu;
 
@@ -30,9 +30,9 @@ void schedule()
 {
   struct tcb *select = g_task_running;
   do {
-    select = select->all_next;
+    select = select->next;
     if(select == NULL)
-      select = g_task_all_head;
+      select = g_task_head;
     if(select == g_task_running)
       break;
     if((select->tid != 0) &&
@@ -92,37 +92,37 @@ void wake_up(struct wait_queue **head, int n)
 static
 void add_task(struct tcb *tsk)
 {
-  if(g_task_all_head == NULL)
-    g_task_all_head = tsk;
+  if(g_task_head == NULL)
+    g_task_head = tsk;
   else {
     struct tcb *p, *q;
-    p = g_task_all_head;
+    p = g_task_head;
     do {
       q = p;
-      p = p->all_next;
+      p = p->next;
     } while(p != NULL);
-    q->all_next = tsk;
+    q->next = tsk;
   }
 }
 
 static
 void remove_task(struct tcb *tsk)
 {
-  if(g_task_all_head != NULL) {
-    if(tsk == g_task_all_head) {
-      g_task_all_head = g_task_all_head->all_next;
+  if(g_task_head != NULL) {
+    if(tsk == g_task_head) {
+      g_task_head = g_task_head->next;
     } else {
       struct tcb *p, *q;
-      p = g_task_all_head;
+      p = g_task_head;
       do {
         q = p;
-        p = p->all_next;
+        p = p->next;
         if(p == tsk)
           break;
       } while(p != NULL);
 
       if(p == tsk)
-        q->all_next = p->all_next;
+        q->next = p->next;
     }
   }
 }
@@ -132,11 +132,11 @@ struct tcb* find_task(int tid)
 {
   struct tcb *tsk;
 
-  tsk = g_task_all_head;
+  tsk = g_task_head;
   while(tsk != NULL) {
     if(tsk->tid == tid)
       break;
-    tsk = tsk->all_next;
+    tsk = tsk->next;
   }
 
   return tsk;
@@ -180,7 +180,7 @@ int sys_task_create(void *tos,
   new->state = TASK_STATE_READY;
   new->quantum = DEFAULT_QUANTUM;
   new->wq_exit = NULL;
-  new->all_next = NULL;
+  new->next = NULL;
 
   if(ustack != 0) {
     STACK_PUSH(ustack, pv);
@@ -271,7 +271,7 @@ void init_task()
 {
   g_resched = 0;
   g_task_running = NULL;
-  g_task_all_head = NULL;
+  g_task_head = NULL;
   g_task_own_fpu = NULL;
 
   task0 = task_get(sys_task_create(NULL, NULL/*filled by run_as_task0*/, NULL));

@@ -66,6 +66,4 @@ int exitGraphics();
 
 void putPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b);
 
-void drawLine(int x1,int y1,int x2,int y2, uint8_t r, uint8_t g, uint8_t b);
-
 #endif /*_GRAPHICS_H*/

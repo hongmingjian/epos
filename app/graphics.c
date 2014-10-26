@@ -164,14 +164,6 @@ int listGraphicsModes()
   return 0;
 }
 
-void putPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b)
-{
-  long addr = y * g_mib.BytesPerScanLine + x*(g_mib.BitsPerPixel/8);
-  uint8_t *p = (uint8_t *)LADDR(g_mib.WinASegment, LOWORD(addr));
-  switchBank(HIWORD(addr));
-  *p = b; *(p+1)=g; *(p+2)=r;
-}
-
 int initGraphics(int mode)
 {
   if(getVBEInfo(&g_vib)) {
@@ -197,96 +189,11 @@ int exitGraphics()
   return setVBEMode(g_oldmode);
 }
 
-/*
- * The codes of `line' come from
- *
- *         VESA BIOS EXTENSION(VBE)
- *                Core Functions
- *                  Standard
- *
- *                  Version: 3.0
- */
-void line(int x1,int y1,int x2,int y2, uint8_t r, uint8_t g, uint8_t b)
+void putPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b)
 {
-    int d; /* Decision variable */
-    int dx,dy; /* Dx and Dy values for the line */
-    int Eincr, NEincr;/* Decision variable increments */
-    int yincr;/* Increment for y values */
-    int t; /* Counters etc. */
-
-#define ABS(a) ((a) >= 0 ? (a) : -(a))
-
-    dx = ABS(x2 - x1);
-    dy = ABS(y2 - y1);
-    if (dy <= dx)
-    {
-        /* We have a line with a slope between -1 and 1
-         *
-         * Ensure that we are always scan converting the line from left to
-         * right to ensure that we produce the same line from P1 to P0 as the
-         * line from P0 to P1.
-	 */
-        if (x2 < x1)
-	{
-            t=x2;x2=x1;x1=t; /*SwapXcoordinates */
-            t=y2;y2=y1;y1=t; /*SwapYcoordinates */
-        }
-        if (y2 > y1)
-            yincr = 1;
-        else
-            yincr = -1;
-        d = 2*dy - dx;/* Initial decision variable value */
-        Eincr = 2*dy;/* Increment to move to E pixel */
-        NEincr = 2*(dy - dx);/* Increment to move to NE pixel */
-        putPixel(x1,y1,r,g,b); /* Draw the first point at (x1,y1) */
-
-        /* Incrementally determine the positions of the remaining pixels */
-        for (x1++; x1 <= x2; x1++)
-        {
-            if (d < 0)
-                d += Eincr; /* Choose the Eastern Pixel */
-            else
-            {
-                d += NEincr; /* Choose the North Eastern Pixel */
-                y1 += yincr; /* (or SE pixel for dx/dy < 0!) */
-            }
-            putPixel(x1,y1,r,g,b); /* Draw the point */
-        }
-    }
-    else
-    {
-        /* We have a line with a slope between -1 and 1 (ie: includes
-         * vertical lines). We must swap our x and y coordinates for this. *
-         * Ensure that we are always scan converting the line from left to
-         * right to ensure that we produce the same line from P1 to P0 as the
-         * line from P0 to P1.
-	 */
-        if (y2 < y1)
-	{
-            t=x2;x2=x1;x1=t; /*SwapXcoordinates */
-            t=y2;y2=y1;y1=t; /*SwapYcoordinates */
-        }
-        if (x2 > x1)
-            yincr = 1;
-        else
-            yincr = -1;
-        d = 2*dx - dy;/* Initial decision variable value */
-        Eincr = 2*dx;/* Increment to move to E pixel */
-        NEincr = 2*(dx - dy);/* Increment to move to NE pixel */
-        putPixel(x1,y1,r,g,b); /* Draw the first point at (x1,y1) */
-
-        /* Incrementally determine the positions of the remaining pixels */
-        for (y1++; y1 <= y2; y1++)
-        {
-            if (d < 0)
-                d += Eincr; /* Choose the Eastern Pixel */
-            else
-            {
-                d += NEincr; /* Choose the North Eastern Pixel */
-                x1 += yincr; /* (or SE pixel for dx/dy < 0!) */
-            }
-            putPixel(x1, y1, r, g, b);
-        }
-    }
+  long addr = y * g_mib.BytesPerScanLine + x*(g_mib.BitsPerPixel/8);
+  uint8_t *p = (uint8_t *)LADDR(g_mib.WinASegment, LOWORD(addr));
+  switchBank(HIWORD(addr));
+  *p = b; *(p+1)=g; *(p+2)=r;
 }
 

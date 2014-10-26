@@ -79,7 +79,7 @@ struct tcb {
   int32_t          code_exit;
   struct wait_queue *wq_exit;
 
-  struct tcb     *all_next;
+  struct tcb     *next;
   struct x87      fpu;
 };
 
@@ -92,7 +92,7 @@ void sleep_on(struct wait_queue **head);
 void wake_up(struct wait_queue **head, int n);
 
 extern struct tcb *g_task_running;
-extern struct tcb *g_task_all_head;
+extern struct tcb *g_task_head;
 extern struct tcb *task0;
 extern struct tcb *g_task_own_fpu;
 

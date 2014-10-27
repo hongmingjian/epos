@@ -215,9 +215,9 @@ PRIVATE int kbd_set_state(uint8_t scan)
 #define      KBD_STS_RDY  0x01
 #define PORT_KBD_DAT 0x60
 
-static uint16_t kbd_buf;
+static uint16_t buf_kbd;
 
-static struct wait_queue *wqhead = NULL;
+static struct wait_queue *wq_kbd = NULL;
 
 void isr_keyboard(uint32_t irq, struct context *ctx)	   
 {
@@ -238,10 +238,10 @@ void isr_keyboard(uint32_t irq, struct context *ctx)
       return;
 
     /*Put the data into the buffer*/
-    kbd_buf = ascii;
+    buf_kbd = ascii;
     
     /*Wake up the task waiting for keyboard input*/
-    wake_up(&wqhead, 1);
+    wake_up(&wq_kbd, 1);
   }
 }
 
@@ -251,8 +251,8 @@ int sys_getchar()
 
   /*Wait for the keyboard interrupt*/
   save_flags_cli(flags);
-  sleep_on(&wqhead);
+  sleep_on(&wq_kbd);
   restore_flags(flags);
 
-  return kbd_buf;
+  return buf_kbd;
 }

@@ -1,7 +1,6 @@
-#ifndef UTILS_H
-#define UTILS_H 1
+#ifndef _UTILS_H
+#define _UTILS_H
 
-//#include <sys/types.h>
 #include <stdarg.h>
 #include "global.h"
 
@@ -40,4 +39,4 @@ int strncmp(const char *s1, const char *s2, size_t n);
 int sprintf(char *buf, const char *fmt, ...);
 int vsprintf(char *buf, const char *fmt, va_list args);
 
-#endif /*UTILS_H*/
+#endif /*_UTILS_H*/

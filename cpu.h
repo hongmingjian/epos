@@ -17,8 +17,8 @@
  * purpose.
  *
  */
-#ifndef _CPU_H_
-#define _CPU_H_
+#ifndef _CPU_H
+#define _CPU_H
 
 #include "global.h"
 
@@ -159,4 +159,4 @@ read_eflags(void)
 #define PTE_A   0x020 /* Accessed */
 #define PTE_M   0x040 /* Dirty */
 
-#endif
+#endif /*_CPU_H*/

@@ -167,4 +167,4 @@ struct vm86_context {
 };
 void sys_vm86(struct vm86_context *vm86ctx);
 
-#endif
+#endif /*_MACHDEP_H*/

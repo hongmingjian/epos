@@ -86,20 +86,6 @@ void init_task(void);
 void syscall(struct context *ctx);
 extern void *ret_from_syscall;
 
-int     sys_putchar(int c);
-int     sys_getchar();
-
-int     sys_task_create(void *tos, void (*func)(void *pv), void *pv);
-void    sys_task_exit(int code_exit);
-int     sys_task_wait(int32_t tid, int32_t *pcode_exit);
-int32_t sys_task_getid();
-void    sys_task_yield();
-
-void   *sys_sem_create(int value);
-int     sys_sem_destroy(void *hsem);
-int     sys_sem_wait(void *hsem);
-int     sys_sem_signal(void *hsem);
-
 /**
  * `VADDR' comes from FreeBSD
  */
@@ -152,4 +138,13 @@ void ide_write_sector(uint16_t bus, uint8_t slave, uint32_t lba, uint8_t *buf);
 #include "dosfs.h"
 uint32_t load_pe(VOLINFO *pvi, char *filename);
 
-#endif
+int     sys_putchar(int c);
+int     sys_getchar();
+
+int     sys_task_create(void *tos, void (*func)(void *pv), void *pv);
+void    sys_task_exit(int code_exit);
+int     sys_task_wait(int32_t tid, int32_t *pcode_exit);
+int32_t sys_task_getid();
+void    sys_task_yield();
+
+#endif /*_KERNEL_H*/

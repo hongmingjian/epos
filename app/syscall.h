@@ -40,4 +40,4 @@ struct vm86_context {
 };
 int vm86(struct vm86_context *vm86ctx);
 
-#endif
+#endif /*_SYSCALL_H*/

@@ -3,7 +3,6 @@
  */
 #include "../global.h"
 #include "syscall.h"
-#include "math.h"
 #include "graphics.h"
 
 struct VBEInfoBlock {

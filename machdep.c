@@ -17,9 +17,8 @@
  * purpose.
  *
  */
-#include "machdep.h"
 #include "kernel.h"
-#include "syscall.h"
+#include "syscallnr.h"
 #include "multiboot.h"
 
 #define IO_ICU1  0x20  /* 8259A Interrupt Controller #1 */

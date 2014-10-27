@@ -137,12 +137,8 @@ struct context {
   ); \
 } while(0)
 
-void disable_irq(uint32_t irq);
-void enable_irq(uint32_t irq);
-
-int  sys_putchar(int c);
-void sys_beep(uint32_t freq);
 void init_machdep(uint32_t mbi, uint32_t physfree);
+void sys_beep(uint32_t freq);
 
 struct vm86_context {
   uint32_t  : 32;/*0*/ 

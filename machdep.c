@@ -366,9 +366,81 @@ static void init_idt()
   lidt(&rd);
 }
 
+int sys_putchar(int c)
+{
+  unsigned char *SCREEN_BASE = (char *)(KERNBASE+0xB8000);
+  unsigned int curpos, i;
+
+  uint32_t flags;
+
+  save_flags_cli(flags);
+
+  outportb(0x3d4, 0x0e);
+  curpos = inportb(0x3d5);
+  curpos <<= 8;
+  outportb(0x3d4, 0x0f);
+  curpos += inportb(0x3d5);
+  curpos <<= 1;
+
+  switch(c) {
+  case '\n':
+    curpos = (curpos/160)*160 + 160;
+    break;
+  case '\r':
+    curpos = (curpos/160)*160;
+    break;
+  case '\t':
+    curpos += 8;
+    break;
+  case '\b':
+    curpos -= 2;
+    SCREEN_BASE[curpos] = 0x20;
+    break;
+  default:
+    SCREEN_BASE[curpos++] = c;
+    SCREEN_BASE[curpos++] = 0x07;
+    break;
+  }
+
+  if(curpos >= 160*25) {
+    for(i = 0; i < 160*24; i++) {
+      SCREEN_BASE[i] = SCREEN_BASE[i+160];
+    }
+    for(i = 0; i < 80; i++) {
+      SCREEN_BASE[(160*24)+(i*2)  ] = 0x20;
+      SCREEN_BASE[(160*24)+(i*2)+1] = 0x07;
+    }
+    curpos -= 160;
+  }
+
+  curpos >>= 1;
+  outportb(0x3d4, 0x0f);
+  outportb(0x3d5, curpos & 0x0ff);
+  outportb(0x3d4, 0x0e);
+  outportb(0x3d5, curpos >> 8);
+
+  restore_flags(flags);
+
+  return c;
+}
+
+void sys_beep(uint32_t freq)
+{
+  freq = freq & 0xffff;
+
+  if(!freq)
+    outportb (0x61, inportb(0x61) & 0xFC);
+  else {
+    freq = 1193182 / freq;
+    outportb (0x61, inportb(0x61) | 3);
+    outportb (0x43, 0xB6);
+    outportb (0x42,  freq       & 0xFF);
+    outportb (0x42, (freq >> 8) & 0xFF);
+  }
+}
+
 #define LADDR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))
 #define EFLAGS_IF   0x00200
-
 static int vm86mon(struct vm86_context *vm86ctx)
 {
     int eaten = 1;
@@ -827,79 +899,6 @@ void syscall(struct context *ctx)
     printk("syscall #%d not implemented.\r\n", ctx->eax);
     ctx->eax = -ctx->eax;
     break;
-  }
-}
-
-int sys_putchar(int c)
-{
-  unsigned char *SCREEN_BASE = (char *)(KERNBASE+0xB8000);
-  unsigned int curpos, i;
-
-  uint32_t flags;
-
-  save_flags_cli(flags);
-
-  outportb(0x3d4, 0x0e);
-  curpos = inportb(0x3d5);
-  curpos <<= 8;
-  outportb(0x3d4, 0x0f);
-  curpos += inportb(0x3d5);
-  curpos <<= 1;
-
-  switch(c) {
-  case '\n':
-    curpos = (curpos/160)*160 + 160;
-    break;
-  case '\r':
-    curpos = (curpos/160)*160;
-    break;
-  case '\t':
-    curpos += 8;
-    break;
-  case '\b':
-    curpos -= 2;
-    SCREEN_BASE[curpos] = 0x20;
-    break;
-  default:
-    SCREEN_BASE[curpos++] = c;
-    SCREEN_BASE[curpos++] = 0x07;
-    break;
-  }
-
-  if(curpos >= 160*25) {
-    for(i = 0; i < 160*24; i++) {
-      SCREEN_BASE[i] = SCREEN_BASE[i+160];
-    }
-    for(i = 0; i < 80; i++) {
-      SCREEN_BASE[(160*24)+(i*2)  ] = 0x20;
-      SCREEN_BASE[(160*24)+(i*2)+1] = 0x07;
-    }
-    curpos -= 160;
-  }
-
-  curpos >>= 1;
-  outportb(0x3d4, 0x0f);
-  outportb(0x3d5, curpos & 0x0ff);
-  outportb(0x3d4, 0x0e);
-  outportb(0x3d5, curpos >> 8);
-
-  restore_flags(flags);
-
-  return c;
-}
-
-void sys_beep(uint32_t freq)
-{
-  freq = freq & 0xffff;
-
-  if(!freq)
-    outportb (0x61, inportb(0x61) & 0xFC);
-  else {
-    freq = 1193182 / freq;
-    outportb (0x61, inportb(0x61) | 3);
-    outportb (0x43, 0xB6);
-    outportb (0x42,  freq       & 0xFF);
-    outportb (0x42, (freq >> 8) & 0xFF);
   }
 }
 

@@ -23,6 +23,82 @@
 #include "machdep.h"
 
 extern void (*g_intr_vector[])(uint32_t irq, struct context *ctx);
+void disable_irq(uint32_t irq);
+void enable_irq(uint32_t irq);
+
+#define HZ   100
+extern unsigned volatile g_timer_ticks;
+void isr_timer(uint32_t irq, struct context *ctx);
+struct tm {
+  int tm_sec;         /* seconds */
+  int tm_min;         /* minutes */
+  int tm_hour;        /* hours */
+  int tm_mday;        /* day of the month */
+  int tm_mon;         /* month */
+  int tm_year;        /* year */
+  int tm_wday;        /* day of the week */
+  int tm_yday;        /* day in the year */
+  int tm_isdst;       /* daylight saving time */
+};
+time_t mktime(struct tm * tm);
+extern time_t g_startup_time;
+
+void isr_keyboard(uint32_t irq, struct context *ctx);
+
+struct tcb {
+  /*hardcoded*/
+  uint32_t        kstack;   /*saved top of the kernel stack for this task*/
+
+
+  int32_t         tid;     /* task id */
+  int32_t         state;   /* -1:waiting, 0:running, 1:ready, 2:zombie */
+#define TASK_STATE_WAITING  -1
+#define TASK_STATE_READY     1
+#define TASK_STATE_ZOMBIE    2
+
+  int32_t         quantum;
+#define DEFAULT_QUANTUM 10
+
+  int32_t          code_exit;
+  struct wait_queue *wq_exit;
+
+  struct tcb     *next;
+  struct x87      fpu;
+};
+
+extern struct tcb *g_task_running;
+extern struct tcb *g_task_head;
+extern struct tcb *task0;
+extern struct tcb *g_task_own_fpu;
+
+extern int g_resched;
+void schedule();
+void switch_to(struct tcb *new);
+
+struct wait_queue {
+  struct tcb *tsk;
+  struct wait_queue *next;
+};
+void sleep_on(struct wait_queue **head);
+void wake_up(struct wait_queue **head, int n);
+
+void init_task(void);
+void syscall(struct context *ctx);
+extern void *ret_from_syscall;
+
+int     sys_putchar(int c);
+int     sys_getchar();
+
+int     sys_task_create(void *tos, void (*func)(void *pv), void *pv);
+void    sys_task_exit(int code_exit);
+int     sys_task_wait(int32_t tid, int32_t *pcode_exit);
+int32_t sys_task_getid();
+void    sys_task_yield();
+
+void   *sys_sem_create(int value);
+int     sys_sem_destroy(void *hsem);
+int     sys_sem_wait(void *hsem);
+int     sys_sem_signal(void *hsem);
 
 /**
  * `VADDR' comes from FreeBSD
@@ -61,74 +137,7 @@ extern uint8_t *g_frame_freemap;
 extern uint32_t g_frame_count;
 extern uint8_t *g_kern_heap_base;
 extern uint32_t g_kern_heap_size;
-
-struct tcb {
-  /*hardcoded*/
-  uint32_t        kstack;   /*saved top of the kernel stack for this task*/
-
-
-  int32_t         tid;     /* task id */
-  int32_t         state;   /* -1:waiting, 0:running, 1:ready, 2:zombie */
-#define TASK_STATE_WAITING  -1
-#define TASK_STATE_READY     1
-#define TASK_STATE_ZOMBIE    2
-
-  int32_t         quantum;
-#define DEFAULT_QUANTUM 10
-
-  int32_t          code_exit;
-  struct wait_queue *wq_exit;
-
-  struct tcb     *next;
-  struct x87      fpu;
-};
-
-struct wait_queue {
-  struct tcb *tsk;
-  struct wait_queue *next;
-};
-
-void sleep_on(struct wait_queue **head);
-void wake_up(struct wait_queue **head, int n);
-
-extern struct tcb *g_task_running;
-extern struct tcb *g_task_head;
-extern struct tcb *task0;
-extern struct tcb *g_task_own_fpu;
-
-extern int g_resched;
-void schedule();
-void switch_to(struct tcb *new);
-
-void init_task(void);
-int  sys_task_create(void *tos, void (*func)(void *pv), void *pv);
-void sys_task_exit(int code_exit);
-int  sys_task_wait(int32_t tid, int32_t *pcode_exit);
-int32_t sys_task_getid();
-void sys_task_yield();
-extern void *ret_from_syscall;
-
-#define HZ   100
-extern unsigned volatile g_timer_ticks;
-void isr_timer(uint32_t irq, struct context *ctx);
-struct tm {
-  int tm_sec;         /* seconds */
-  int tm_min;         /* minutes */
-  int tm_hour;        /* hours */
-  int tm_mday;        /* day of the month */
-  int tm_mon;         /* month */
-  int tm_year;        /* year */
-  int tm_wday;        /* day of the week */
-  int tm_yday;        /* day in the year */
-  int tm_isdst;       /* daylight saving time */
-};
-time_t mktime(struct tm * tm);
-extern time_t g_startup_time;
-
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code);
-void syscall(struct context *ctx);
-
-void isr_keyboard(uint32_t irq, struct context *ctx);
 
 #if USE_FLOPPY
 void init_floppy();

@@ -37,7 +37,7 @@
 
 \title{THE EPOS SOURCE CODE}
 \author{洪明坚\ 重庆大学软件学院}
-\date{2014年8月}
+\date{2014年10月}
 
 \begin{document}
 \begin{CJK*}{UTF8}{songti}
@@ -50,7 +50,7 @@
 \newpage
 \lstinputlisting[label=entry.S,caption=entry.S]{entry.S}
 
-\foreach \n in {machdep.c,startup.c,task.c,timer.c,page.c,pe.c,global.h,cpu.h,kernel.h,machdep.h,syscall.h}{\newpage \lstinputlisting[language=C,label=\n,caption=\n]{\n}}
+\foreach \n in {machdep.c,startup.c,task.c,timer.c,keyboard.c,page.c,pe.c,global.h,cpu.h,kernel.h,machdep.h,syscall.h}{\newpage \lstinputlisting[language=C,label=\n,caption=\n]{\n}}
 
 \newpage
 \lstinputlisting[label=ldscript,caption=ldscript]{ldscript}
@@ -61,15 +61,17 @@
 \newpage
 \lstinputlisting[label=app/crt0.S,caption=app/crt0.S]{app/crt0.S}
 \newpage
-\lstinputlisting[language=C,label=app/syscall.h,caption=app/syscall.h]{app/syscall.h}
-\newpage
 \lstinputlisting[label=app/syscall.S,caption=app/syscall.S]{app/syscall.S}
 \newpage
-\lstinputlisting[language=C,label=app/vm86.c,caption=app/vm86.c]{app/vm86.c}
-\newpage
-\lstinputlisting[language=C,label=app/video.c,caption=app/video.c]{app/video.c}
-\newpage
 \lstinputlisting[language=C,label=app/main.c,caption=app/main.c]{app/main.c}
+\newpage
+\lstinputlisting[language=C,label=app/graphics.c,caption=app/graphics.c]{app/graphics.c}
+\newpage
+\lstinputlisting[language=C,label=app/syscall.h,caption=app/syscall.h]{app/syscall.h}
+\newpage
+\lstinputlisting[language=C,label=app/math.h,caption=app/math.h]{app/math.h}
+\newpage
+\lstinputlisting[language=C,label=app/graphics.h,caption=app/graphics.h]{app/graphics.h}
 \newpage
 \lstinputlisting[language={[gnu]make},label=app/Makefile,caption=app/Makefile]{app/Makefile}
 

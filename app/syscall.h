@@ -38,6 +38,6 @@ struct vm86_context {
   uint16_t  fs; uint16_t  : 16;/*80*/
   uint16_t  gs; uint16_t  : 16;/*84*/
 };
-
 int vm86(struct vm86_context *vm86ctx);
+
 #endif

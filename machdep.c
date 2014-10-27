@@ -794,16 +794,16 @@ void syscall(struct context *ctx)
     break;
   case SYSCALL_task_wait:
     {
-      uint32_t tid  = *((uint32_t  *)(ctx->esp+4));
-       int32_t **code = ( int32_t **)(ctx->esp+8);
-      if(((*code) != NULL) &&
-         (((uint32_t)(*code) <  USER_MIN_ADDR) ||
-          ((uint32_t)(*code) >= USER_MAX_ADDR))) {
+      uint32_t tid    = *(uint32_t  *)(ctx->esp+4);
+       int32_t *pcode = *( int32_t **)(ctx->esp+8);
+      if((pcode != NULL) &&
+         (((uint32_t)pcode <  USER_MIN_ADDR) ||
+          ((uint32_t)pcode >= USER_MAX_ADDR))) {
         ctx->eax = -ctx->eax;
         break;
       }
 
-      ctx->eax = sys_task_wait(tid, *code);
+      ctx->eax = sys_task_wait(tid, pcode);
     }
     break;
   case SYSCALL_beep:
@@ -811,10 +811,10 @@ void syscall(struct context *ctx)
     break;
   case SYSCALL_vm86:
     {
-      struct vm86_context **p = (struct vm86_context **)(ctx->esp+4);
-      (*p)->eflags &= 0x0ffff;
-      (*p)->eflags |= 0x20000;
-      sys_vm86(*p);
+      struct vm86_context *p = *(struct vm86_context **)(ctx->esp+4);
+      p->eflags &= 0x0ffff;
+      p->eflags |= 0x20000;
+      sys_vm86(p);
     }
     break;
   case SYSCALL_putchar:

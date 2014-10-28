@@ -1,6 +1,13 @@
 #ifndef _GRAPHICS_H
 #define _GRAPHICS_H
 
+typedef uint32_t COLORREF;
+
+#define getRValue(c) ((BYTE)(c))
+#define getGValue(c) ((BYTE)(((WORD)(c))>>8))
+#define getBValue(c) ((BYTE)((c)>>16))
+#define RGB(r,g,b) ((COLORREF)((BYTE)(r)|((BYTE)(g) << 8)|((BYTE)(b) << 16)))
+
 struct ModeInfoBlock {
 	uint16_t ModeAttributes;
         uint8_t  WinAAttributes;
@@ -64,6 +71,6 @@ int listGraphicsModes();
 int initGraphics(int mode);
 int exitGraphics();
 
-void putPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b);
+void setPixel(int x, int y, COLORREF cr);
 
 #endif /*_GRAPHICS_H*/

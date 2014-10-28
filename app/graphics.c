@@ -188,11 +188,15 @@ int exitGraphics()
   return setVBEMode(g_oldmode);
 }
 
-void putPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b)
+void setPixel(int x, int y, COLORREF cr)
 {
   long addr = y * g_mib.BytesPerScanLine + x*(g_mib.BitsPerPixel/8);
   uint8_t *p = (uint8_t *)LADDR(g_mib.WinASegment, LOWORD(addr));
+
   switchBank(HIWORD(addr));
-  *p = b; *(p+1)=g; *(p+2)=r;
+
+  *p     = getBValue(cr);
+  *(p+1) = getGValue(cr);
+  *(p+2) = getRValue(cr);
 }
 

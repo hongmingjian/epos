@@ -114,8 +114,8 @@ void *kmalloc(size_t bytes);
 void *krealloc(void *oldptr, size_t size);
 void  kfree(void *ptr);
 
-#define MEM_ZONE_LEN (2 * 8)
-extern uint32_t g_mem_zone[MEM_ZONE_LEN];
+#define RAM_ZONE_LEN (2 * 8)
+extern uint32_t g_ram_zone[RAM_ZONE_LEN];
 
 extern uint32_t g_kern_cur_addr;
 extern uint32_t g_kern_end_addr;

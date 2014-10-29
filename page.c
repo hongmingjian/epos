@@ -151,7 +151,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     if(found) {
 
       /* Got one :), clear its data before returning */
-      paddr = g_mem_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
+      paddr = g_ram_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
       *vtopte(vaddr)=paddr|PTE_V|PTE_W|(code&PTE_U);
       memset(PAGE_TRUNCATE(vaddr), 0, PAGE_SIZE);
       invlpg(vaddr);

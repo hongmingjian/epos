@@ -24,7 +24,7 @@
 /*The interrupt vector*/
 void (*g_intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
 
-uint32_t g_mem_zone[MEM_ZONE_LEN];
+uint32_t g_ram_zone[RAM_ZONE_LEN];
 
 /*The pointers to the page tables and page directory*/
 uint32_t *PT  = (uint32_t *)USER_MAX_ADDR,
@@ -177,9 +177,9 @@ void start_user_task()
  * It just does some machine-dependent initialization and then set the ball
  * rolling.
  */
-void cstart(uint32_t magic, uint32_t addr)
+void cstart(uint32_t magic, uint32_t mbi)
 {
-  init_machdep( addr, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
+  init_machdep( mbi, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
 
   printk("Welcome to EPOS\r\n");
   printk("Copyright (C) 2005-2013 MingJian Hong<hongmingjian@gmail.com>\r\n");
@@ -229,15 +229,15 @@ void cstart(uint32_t magic, uint32_t addr)
     uint32_t size;
     uint32_t i, vaddr, paddr;
 
-    size = (g_mem_zone[1/*XXX*/] - g_mem_zone[0/*XXX*/]) >> PAGE_SHIFT;
+    size = (g_ram_zone[1/*XXX*/] - g_ram_zone[0/*XXX*/]) >> PAGE_SHIFT;
     size = PAGE_ROUNDUP(size);
     g_frame_freemap = (uint8_t *)g_kern_cur_addr;
     g_kern_cur_addr += size;
 
-    g_mem_zone[1/*XXX*/] -= size;
+    g_ram_zone[1/*XXX*/] -= size;
 
     vaddr = (uint32_t)g_frame_freemap;
-    paddr = g_mem_zone[1];
+    paddr = g_ram_zone[1];
     for(i =0 ;i < (size>>PAGE_SHIFT); i++) {
       *vtopte(vaddr)=paddr|PTE_V|PTE_W;
       vaddr += PAGE_SIZE;
@@ -245,10 +245,10 @@ void cstart(uint32_t magic, uint32_t addr)
     }
     memset(g_frame_freemap, 0, size);
 
-    g_frame_count = (g_mem_zone[1]-g_mem_zone[0])>>PAGE_SHIFT;
+    g_frame_count = (g_ram_zone[1]-g_ram_zone[0])>>PAGE_SHIFT;
 
     printk("Available memory: 0x%08x - 0x%08x (%d pages)\r\n\r\n",
-           g_mem_zone[0], g_mem_zone[1], g_frame_count);
+           g_ram_zone[0], g_ram_zone[1], g_frame_count);
 
 //    printk("g_frame_freemap=0x%08x\r\n", g_frame_freemap);
 //    printk("g_frame_count=%d\r\n", g_frame_count);

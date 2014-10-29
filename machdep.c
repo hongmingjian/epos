@@ -945,7 +945,7 @@ static uint32_t init_paging(uint32_t physfree)
   return physfree;
 }
 
-static void init_mem(multiboot_memory_map_t *mmap,
+static void init_ram(multiboot_memory_map_t *mmap,
                      uint32_t size,
                      uint32_t physfree)
 {
@@ -957,27 +957,27 @@ static void init_mem(multiboot_memory_map_t *mmap,
                                           mmap->size +
                                           sizeof (mmap->size))) {
     if(mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
-      g_mem_zone[n  ] = PAGE_TRUNCATE(mmap->addr&0xffffffff);
-      g_mem_zone[n+1] = PAGE_TRUNCATE(g_mem_zone[n]+(mmap->len&0xffffffff));
+      g_ram_zone[n  ] = PAGE_TRUNCATE(mmap->addr&0xffffffff);
+      g_ram_zone[n+1] = PAGE_TRUNCATE(g_ram_zone[n]+(mmap->len&0xffffffff));
 
-      if(g_mem_zone[n+1] < g_mem_zone[n] + 256 * PAGE_SIZE)
+      if(g_ram_zone[n+1] < g_ram_zone[n] + 256 * PAGE_SIZE)
         continue;
 
-      if((physfree >  g_mem_zone[n  ]) &&
-         (physfree <= g_mem_zone[n+1]))
-        g_mem_zone[n]=physfree;
+      if((physfree >  g_ram_zone[n  ]) &&
+         (physfree <= g_ram_zone[n+1]))
+        g_ram_zone[n]=physfree;
 
-      if(g_mem_zone[n+1] >= g_mem_zone[n] + PAGE_SIZE) {
-//        printk("Memory: 0x%08x-0x%08x\r\n", g_mem_zone[n], g_mem_zone[n+1]);
+      if(g_ram_zone[n+1] >= g_ram_zone[n] + PAGE_SIZE) {
+//        printk("Memory: 0x%08x-0x%08x\r\n", g_ram_zone[n], g_ram_zone[n+1]);
         n += 2;
-        if(n + 2 >= MEM_ZONE_LEN)
+        if(n + 2 >= RAM_ZONE_LEN)
           break;
       }
     }
   }
 
-  g_mem_zone[n  ] = 0;
-  g_mem_zone[n+1] = 0;
+  g_ram_zone[n  ] = 0;
+  g_ram_zone[n+1] = 0;
 }
 
 void init_machdep(uint32_t mbi, uint32_t physfree)
@@ -987,7 +987,7 @@ void init_machdep(uint32_t mbi, uint32_t physfree)
   init_gdt();
   init_idt();
 
-  init_mem((void *)(((multiboot_info_t *)mbi)->mmap_addr),
+  init_ram((void *)(((multiboot_info_t *)mbi)->mmap_addr),
            ((multiboot_info_t *)mbi)->mmap_length,
            physfree);
 

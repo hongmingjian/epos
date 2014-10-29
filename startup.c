@@ -41,7 +41,7 @@ uint32_t g_kern_heap_size;
 
 #define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
 #define CMOS_READ(addr) ({ \
-outportb(0x80|addr,0x70); \
+outportb(0x70, 0x80|addr); \
 inportb(0x71); \
 })
 time_t g_startup_time;
@@ -276,7 +276,7 @@ void cstart(uint32_t magic, uint32_t mbi)
       time.tm_min  = CMOS_READ(2);
       time.tm_hour = CMOS_READ(4);
       time.tm_mday = CMOS_READ(7);
-      time.tm_mon  = CMOS_READ(8)-1;
+      time.tm_mon  = CMOS_READ(8);
       time.tm_year = CMOS_READ(9);
     } while (time.tm_sec != CMOS_READ(0));
     BCD_TO_BIN(time.tm_sec);
@@ -285,6 +285,11 @@ void cstart(uint32_t magic, uint32_t mbi)
     BCD_TO_BIN(time.tm_mday);
     BCD_TO_BIN(time.tm_mon);
     BCD_TO_BIN(time.tm_year);
+
+    time.tm_mon--;
+    if((time.tm_year+1900) < 1970)
+      time.tm_year += 100;
+
     g_startup_time = mktime(&time);
   }
 

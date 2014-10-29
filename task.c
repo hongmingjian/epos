@@ -46,7 +46,7 @@ void schedule()
     select = task0;
   }
 
-//  printk("0x%x -> 0x%x\r\n",
+//  printk("0x%d -> 0x%d\r\n",
 //         (g_task_running == NULL) ? -1 : g_task_running->tid,
 //         select->tid);
 

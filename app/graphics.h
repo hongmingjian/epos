@@ -1,12 +1,14 @@
 #ifndef _GRAPHICS_H
 #define _GRAPHICS_H
 
+#include "../global.h"
+
 typedef uint32_t COLORREF;
 
-#define getRValue(c) ((BYTE)(c))
-#define getGValue(c) ((BYTE)(((WORD)(c))>>8))
-#define getBValue(c) ((BYTE)((c)>>16))
-#define RGB(r,g,b) ((COLORREF)((BYTE)(r)|((BYTE)(g) << 8)|((BYTE)(b) << 16)))
+#define getRValue(c) ((uint8_t)(c))
+#define getGValue(c) ((uint8_t)(((uint16_t)(c))>>8))
+#define getBValue(c) ((uint8_t)((c)>>16))
+#define RGB(r,g,b) ((COLORREF)((uint8_t)(r)|((uint8_t)(g) << 8)|((uint8_t)(b) << 16)))
 
 struct ModeInfoBlock {
 	uint16_t ModeAttributes;

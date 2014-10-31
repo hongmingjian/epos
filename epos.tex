@@ -51,7 +51,7 @@
 \lstinputlisting[label=entry.S,caption=entry.S]{entry.S}
 
 \foreach \n in
-{machdep.c,startup.c,task.c,timer.c,keyboard.c,page.c,pe.c,global.h,cpu.h,kernel.h,machdep.h,syscallnr.h}{\newpage \lstinputlisting[language=C,label=\n,caption=\n]{\n}}
+{machdep.c,startup.c,task.c,timer.c,kbd.c,page.c,pe.c,global.h,cpu.h,kernel.h,machdep.h,syscall-nr.h}{\newpage \lstinputlisting[language=C,label=\n,caption=\n]{\n}}
 
 \newpage
 \lstinputlisting[label=ldscript,caption=ldscript]{ldscript}
@@ -62,7 +62,7 @@
 \newpage
 \lstinputlisting[label=app/crt0.S,caption=app/crt0.S]{app/crt0.S}
 \newpage
-\lstinputlisting[label=app/syscallstub.S,caption=app/syscallstub.S]{app/syscallstub.S}
+\lstinputlisting[label=app/syscall-stub.S,caption=app/syscall-stub.S]{app/syscall-stub.S}
 \newpage
 \lstinputlisting[language=C,label=app/main.c,caption=app/main.c]{app/main.c}
 \newpage

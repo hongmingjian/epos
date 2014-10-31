@@ -18,7 +18,7 @@
  *
  */
 #include "kernel.h"
-#include "syscallnr.h"
+#include "syscall-nr.h"
 #include "multiboot.h"
 
 #define IO_ICU1  0x20  /* 8259A Interrupt Controller #1 */

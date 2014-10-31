@@ -1,4 +1,4 @@
-#include "../syscallnr.h"
+#include "../syscall-nr.h"
 
 #define STUB(name) \
   .globl _ ## name; \

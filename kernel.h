@@ -57,7 +57,7 @@ struct tcb {
 #define TASK_STATE_ZOMBIE    2
 
   int32_t         quantum;
-#define DEFAULT_QUANTUM 10
+#define DEFAULT_QUANTUM 4
 
   int32_t          code_exit;
   struct wait_queue *wq_exit;

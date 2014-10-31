@@ -5,6 +5,10 @@
 #include "syscall.h"
 #include "graphics.h"
 
+#define LADDR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))
+
+int vm86call(int fintr, uint32_t n, struct vm86_context *vm86ctx);
+
 struct VBEInfoBlock {
 	uint8_t VbeSignature[4];
 	uint16_t VbeVersion;
@@ -22,12 +26,10 @@ struct VBEInfoBlock {
 	uint8_t OemData[256];
 } __attribute__ ((packed));
 
-#define LADDR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))
-int vm86int(int n, struct vm86_context *vm86ctx);
-
-static struct VBEInfoBlock g_vib;
-static int g_bankShift;
-static int g_oldmode;
+static struct VBEInfoBlock vib;
+static int bankShift;
+static int currBank = -1;
+static int oldmode;
        struct ModeInfoBlock g_mib;
 
 static int getVBEInfo(struct VBEInfoBlock *pvib)
@@ -40,7 +42,7 @@ static int getVBEInfo(struct VBEInfoBlock *pvib)
   VbeSignature = (char *)LADDR(vm86ctx.es, LOWORD(vm86ctx.edi));
   VbeSignature[0]='V'; VbeSignature[1]='B';
   VbeSignature[2]='E'; VbeSignature[3]='2';
-  vm86int(0x10, &vm86ctx);
+  vm86call(1, 0x10, &vm86ctx);
   if(LOWORD(vm86ctx.eax) != 0x4f) {
     return -1;
   }
@@ -56,7 +58,7 @@ static int getModeInfo(int mode, struct ModeInfoBlock *pmib)
   vm86ctx.ecx=mode;
   vm86ctx.es =0x0090;
   vm86ctx.edi=0x0000;
-  vm86int(0x10, &vm86ctx);
+  vm86call(1, 0x10, &vm86ctx);
   if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
   *pmib = *(struct ModeInfoBlock *)LADDR(vm86ctx.es, LOWORD(vm86ctx.edi));
@@ -67,7 +69,7 @@ static int getVBEMode()
 {
   struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
   vm86ctx.eax=0x4f03;
-  vm86int(0x10, &vm86ctx);
+  vm86call(1, 0x10, &vm86ctx);
   if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
   return vm86ctx.ebx & 0xffff;
@@ -78,32 +80,61 @@ static int setVBEMode(int mode)
   struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
   vm86ctx.eax=0x4f02;
   vm86ctx.ebx=mode;
-  vm86int(0x10, &vm86ctx);
+  vm86call(1, 0x10, &vm86ctx);
   if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
   return 0;
 }
 
+/*
+ * XXX - This function is not thread-safe!
+ */
 static int switchBank(int bank)
 {
   struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
 
+#if 1
   vm86ctx.eax=0x4f05;
   vm86ctx.ebx = 0x0100;
-  vm86int(0x10, &vm86ctx);
+  vm86call(1, 0x10, &vm86ctx);
   if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
 
-  bank <<= g_bankShift;
-  if(bank == LOWORD(vm86ctx.edx))
+  if((bank << bankShift) == LOWORD(vm86ctx.edx))
     return 0;
 
   vm86ctx.eax=0x4f05;
   vm86ctx.ebx = 0x0;
-  vm86ctx.edx = bank;
-  vm86int(0x10, &vm86ctx);
+  vm86ctx.edx = (bank << bankShift);
+  vm86call(1, 0x10, &vm86ctx);
   if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
+#else
+	/*http://timetraces.ca/nw/vbe12_sb.htm*/
+	  if(bank == currBank)
+		return 0;
+	#if 1
+	  vm86ctx.eax=0x4f05;
+	  vm86ctx.ebx = 0x0;
+	  vm86ctx.edx = (bank << bankShift);
+	  vm86call(1, 0x10, &vm86ctx);
+	  if(LOWORD(vm86ctx.eax) != 0x4f)
+		return -1;
+	//  vm86ctx.eax=0x4f05;
+	//  vm86ctx.ebx = 0x1;
+	//  vm86ctx.edx = (bank << bankShift);
+	//  vm86call(1, 0x10, &vm86ctx);
+	#else
+	  vm86ctx.ebx = 0x0;
+	  vm86ctx.edx = (bank << bankShift);
+	  vm86call(0, g_mib.WinFuncPtr, &vm86ctx);
+	//  vm86ctx.ebx = 0x1;
+	//  vm86ctx.edx = (bank << bankShift);
+	//  vm86call(0, g_mib.WinFuncPtr, &vm86ctx);
+	#endif
+	  currBank = bank;
+#endif
+
   return 0;
 }
 
@@ -114,23 +145,25 @@ int listGraphicsModes()
   uint16_t mode;
 #endif
 
-  if(getVBEInfo(&g_vib)) {
+  if(getVBEInfo(&vib)) {
     printf("No VESA BIOS EXTENSION(VBE) detected!\r\n");
     return -1;
   }
 
-//  printf("VideoModePtr: %04X:%04X\r\n", HIWORD(g_vib.VideoModePtr),
-//         LOWORD(g_vib.VideoModePtr));
+  printf("VESA VBE Version %d.%d detected (%s)\r\n",
+         vib.VbeVersion>>8,
+         vib.VbeVersion&0xf,
+         (char *)LADDR(HIWORD(vib.OemStringPtr), LOWORD(vib.OemStringPtr)));
 
   printf("\r\n");
-  printf(" Mode      Resolution\r\n");
+  printf(" Mode     Resolution\r\n");
   printf("----------------------\r\n");
 #ifdef _WIN32
   modep = &mode;
   for(mode = 0x100; mode < 0x200; mode++) {
 #else
-  for(modep = (uint16_t *)LADDR(LOWORD(g_vib.VideoModePtr),
-                                HIWORD(g_vib.VideoModePtr));
+  for(modep = (uint16_t *)LADDR(LOWORD(vib.VideoModePtr),
+                                HIWORD(vib.VideoModePtr));
       *modep != 0xffff;
       modep++) {
 #endif
@@ -150,22 +183,21 @@ int listGraphicsModes()
     if(g_mib.NumberOfPlanes != 1)
       continue;
 
-    printf("0x%04x    %4dx%4dx%2d\r\n",
+    printf("0x%04x    %4dx%4d\r\n",
            *modep,
            g_mib.XResolution,
-           g_mib.YResolution,
-           g_mib.BitsPerPixel,
-           g_mib.BytesPerScanLine
+           g_mib.YResolution
           );
   }
   printf("----------------------\r\n");
-  printf(" Mode      Resolution\r\n");
+  printf(" Mode     Resolution\r\n");
+
   return 0;
 }
 
 int initGraphics(int mode)
 {
-  if(getVBEInfo(&g_vib)) {
+  if(getVBEInfo(&vib)) {
     printf("No VESA BIOS EXTENSION(VBE) detected!\r\n");
     return -1;
   }
@@ -175,17 +207,17 @@ int initGraphics(int mode)
     return -1;
   }
 
-  g_bankShift = 0;
-  while((unsigned)(64 >> g_bankShift) != g_mib.WinGranularity)
-    g_bankShift++;
+  bankShift = 0;
+  while((unsigned)(64 >> bankShift) != g_mib.WinGranularity)
+    bankShift++;
 
-  g_oldmode = getVBEMode();
+  oldmode = getVBEMode();
   return setVBEMode(mode);
 }
 
 int exitGraphics()
 {
-  return setVBEMode(g_oldmode);
+  return setVBEMode(oldmode);
 }
 
 void setPixel(int x, int y, COLORREF cr)
@@ -199,4 +231,3 @@ void setPixel(int x, int y, COLORREF cr)
   *(p+1) = getGValue(cr);
   *(p+2) = getRValue(cr);
 }
-

@@ -86,9 +86,6 @@ static int setVBEMode(int mode)
   return 0;
 }
 
-/*
- * XXX - This function is not thread-safe!
- */
 static int switchBank(int bank)
 {
   struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};

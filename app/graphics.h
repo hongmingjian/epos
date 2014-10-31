@@ -1,3 +1,6 @@
+/**
+ * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ */
 #ifndef _GRAPHICS_H
 #define _GRAPHICS_H
 
@@ -8,7 +11,9 @@ typedef uint32_t COLORREF;
 #define getRValue(c) ((uint8_t)(c))
 #define getGValue(c) ((uint8_t)(((uint16_t)(c))>>8))
 #define getBValue(c) ((uint8_t)((c)>>16))
-#define RGB(r,g,b) ((COLORREF)((uint8_t)(r)|((uint8_t)(g) << 8)|((uint8_t)(b) << 16)))
+#define RGB(r,g,b) ((COLORREF)((uint8_t)(r)|\
+                              ((uint8_t)(g) << 8)|\
+                              ((uint8_t)(b) << 16)))
 
 struct ModeInfoBlock {
 	uint16_t ModeAttributes;

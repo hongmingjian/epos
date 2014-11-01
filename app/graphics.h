@@ -69,7 +69,7 @@ struct ModeInfoBlock {
         uint32_t MaxPixelClock;
 
         uint8_t reserved4[190];
-} __attribute__ ((packed));
+} __attribute__ ((gcc_struct, packed));
 
 extern struct ModeInfoBlock g_mib;
 

@@ -9,7 +9,7 @@ ifeq ($(shell uname -s),Linux)
 #CROSS=i486-mingw32-
 endif
 ifeq ($(shell uname -s),Darwin)
-CROSS=i386-mingw32-
+CROSS=i586-mingw32-
 endif
 endif
 
@@ -30,7 +30,7 @@ PROG=	a
 all: $(PROG).out
 
 CFLAGS=	-fno-builtin -ffreestanding -fno-stack-check \
-	-fleading-underscore \
+	-fleading-underscore -mno-ms-bitfields \
 	-mno-stack-arg-probe -O #-fno-stack-protector #-Wall
 LDFLAGS=-nostdlib -nostartfiles -Wl,-Map,$(PROG).map 
 

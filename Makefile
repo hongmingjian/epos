@@ -9,7 +9,7 @@ ifeq ($(shell uname -s),Linux)
 #CROSS=i486-mingw32-
 endif
 ifeq ($(shell uname -s),Darwin)
-CROSS=i386-mingw32-
+CROSS=i586-mingw32-
 endif
 endif
 

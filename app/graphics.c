@@ -24,7 +24,7 @@ struct VBEInfoBlock {
 	uint32_t OemProductRevPtr;
 	uint8_t reserved[222];
 	uint8_t OemData[256];
-} __attribute__ ((packed));
+} __attribute__ ((gcc_struct, packed));
 
 static struct VBEInfoBlock vib;
 static int bankShift;
@@ -138,9 +138,6 @@ static int switchBank(int bank)
 int listGraphicsModes()
 {
   uint16_t *modep;
-#ifdef _WIN32
-  uint16_t mode;
-#endif
 
   if(getVBEInfo(&vib)) {
     printf("No VESA BIOS EXTENSION(VBE) detected!\r\n");
@@ -150,20 +147,16 @@ int listGraphicsModes()
   printf("VESA VBE Version %d.%d detected (%s)\r\n",
          vib.VbeVersion>>8,
          vib.VbeVersion&0xf,
-         (char *)LADDR(HIWORD(vib.OemStringPtr), LOWORD(vib.OemStringPtr)));
+         (char *)(LADDR(HIWORD(vib.OemStringPtr), LOWORD(vib.OemStringPtr)))
+         );
 
   printf("\r\n");
   printf(" Mode     Resolution\r\n");
   printf("----------------------\r\n");
-#ifdef _WIN32
-  modep = &mode;
-  for(mode = 0x100; mode < 0x200; mode++) {
-#else
-  for(modep = (uint16_t *)LADDR(LOWORD(vib.VideoModePtr),
-                                HIWORD(vib.VideoModePtr));
+  for(modep = (uint16_t *)LADDR(HIWORD(vib.VideoModePtr),
+                                LOWORD(vib.VideoModePtr));
       *modep != 0xffff;
       modep++) {
-#endif
     if(getModeInfo(*modep, &g_mib))
       continue;
 

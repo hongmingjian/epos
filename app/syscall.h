@@ -9,7 +9,7 @@ int task_getid();
 void task_yield();
 int task_wait(int tid, int *pcode_exit);
 
-void beep(unsigned freq);
+void beep(int freq);
 int putchar(int c);
 int getchar();
 
@@ -37,7 +37,7 @@ struct vm86_context {
   uint16_t  ds; uint16_t  : 16;/*76*/
   uint16_t  fs; uint16_t  : 16;/*80*/
   uint16_t  gs; uint16_t  : 16;/*84*/
-};
+} __attribute__ ((gcc_struct, packed));
 int vm86(struct vm86_context *vm86ctx);
 
 #endif /*_SYSCALL_H*/

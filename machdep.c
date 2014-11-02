@@ -373,13 +373,13 @@ int sys_putchar(int c)
   uint32_t flags;
 
   save_flags_cli(flags);
-
   outportb(0x3d4, 0x0e);
   curpos = inportb(0x3d5);
   curpos <<= 8;
   outportb(0x3d4, 0x0f);
   curpos += inportb(0x3d5);
   curpos <<= 1;
+  restore_flags(flags);
 
   switch(c) {
   case '\n':
@@ -412,29 +412,33 @@ int sys_putchar(int c)
     curpos -= 160;
   }
 
+  save_flags_cli(flags);
   curpos >>= 1;
   outportb(0x3d4, 0x0f);
   outportb(0x3d5, curpos & 0x0ff);
   outportb(0x3d4, 0x0e);
   outportb(0x3d5, curpos >> 8);
-
   restore_flags(flags);
 
   return c;
 }
 
-void sys_beep(uint32_t freq)
+void sys_beep(int32_t freq)
 {
-  freq = freq & 0xffff;
-
-  if(!freq)
-    outportb (0x61, inportb(0x61) & 0xFC);
+  if(freq <= 0)
+    outportb (0x61, 0);
   else {
+    uint32_t flags;
+
     freq = 1193182 / freq;
-    outportb (0x61, inportb(0x61) | 3);
+
+    save_flags_cli(flags);
     outportb (0x43, 0xB6);
     outportb (0x42,  freq       & 0xFF);
     outportb (0x42, (freq >> 8) & 0xFF);
+    restore_flags(flags);
+
+    outportb (0x61, 3);
   }
 }
 
@@ -878,7 +882,7 @@ void syscall(struct context *ctx)
     }
     break;
   case SYSCALL_beep:
-    sys_beep((*((uint32_t *)(ctx->esp+4))));
+    sys_beep((*((int32_t *)(ctx->esp+4))));
     break;
   case SYSCALL_vm86:
     {

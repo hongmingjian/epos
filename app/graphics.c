@@ -173,7 +173,7 @@ int listGraphicsModes()
     if(g_mib.NumberOfPlanes != 1)
       continue;
 
-    printf("0x%04x    %4dx%4d\r\n",
+    printf("0x%04x    %4dx%-4d\r\n",
            *modep,
            g_mib.XResolution,
            g_mib.YResolution

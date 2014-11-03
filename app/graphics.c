@@ -90,47 +90,22 @@ static int switchBank(int bank)
 {
   struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
 
-#if 1
-  vm86ctx.eax=0x4f05;
-  vm86ctx.ebx = 0x0100;
-  vm86call(1, 0x10, &vm86ctx);
-  if(LOWORD(vm86ctx.eax) != 0x4f)
-    return -1;
-
-  if((bank << bankShift) == LOWORD(vm86ctx.edx))
+  if(bank == currBank)
     return 0;
 
-  vm86ctx.eax=0x4f05;
   vm86ctx.ebx = 0x0;
   vm86ctx.edx = (bank << bankShift);
+
+#if 0
+  vm86ctx.eax=0x4f05;
   vm86call(1, 0x10, &vm86ctx);
   if(LOWORD(vm86ctx.eax) != 0x4f)
     return -1;
 #else
-	/*http://timetraces.ca/nw/vbe12_sb.htm*/
-	  if(bank == currBank)
-		return 0;
-	#if 1
-	  vm86ctx.eax=0x4f05;
-	  vm86ctx.ebx = 0x0;
-	  vm86ctx.edx = (bank << bankShift);
-	  vm86call(1, 0x10, &vm86ctx);
-	  if(LOWORD(vm86ctx.eax) != 0x4f)
-		return -1;
-	//  vm86ctx.eax=0x4f05;
-	//  vm86ctx.ebx = 0x1;
-	//  vm86ctx.edx = (bank << bankShift);
-	//  vm86call(1, 0x10, &vm86ctx);
-	#else
-	  vm86ctx.ebx = 0x0;
-	  vm86ctx.edx = (bank << bankShift);
-	  vm86call(0, g_mib.WinFuncPtr, &vm86ctx);
-	//  vm86ctx.ebx = 0x1;
-	//  vm86ctx.edx = (bank << bankShift);
-	//  vm86call(0, g_mib.WinFuncPtr, &vm86ctx);
-	#endif
-	  currBank = bank;
+  vm86call(0, g_mib.WinFuncPtr, &vm86ctx);
 #endif
+
+  currBank = bank;
 
   return 0;
 }

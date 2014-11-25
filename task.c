@@ -46,9 +46,7 @@ void schedule()
     select = task0;
   }
 
-//  printk("0x%d -> 0x%d\r\n",
-//         (g_task_running == NULL) ? -1 : g_task_running->tid,
-//         select->tid);
+//  printk("0x%d -> 0x%d\r\n", (g_task_running == NULL) ? -1 : g_task_running->tid, select->tid);
 
   g_resched = 0;
   switch_to(select);
@@ -128,7 +126,7 @@ void remove_task(struct tcb *tsk)
 }
 
 static
-struct tcb* find_task(int tid)
+struct tcb* get_task(int tid)
 {
   struct tcb *tsk;
 
@@ -142,19 +140,8 @@ struct tcb* find_task(int tid)
   return tsk;
 }
 
-static
-struct tcb *task_get(int tid)
-{
-  uint32_t flags;
-  struct tcb *p;
-  save_flags_cli(flags);
-  p = find_task(tid);
-  restore_flags(flags);
-  return p;
-}
-
-int sys_task_create(void *tos,
-                    void (*func)(void *pv), void *pv)
+struct tcb *sys_task_create(void *tos,
+                            void (*func)(void *pv), void *pv)
 {
   static int tid = 0;
   struct tcb *new;
@@ -163,11 +150,11 @@ int sys_task_create(void *tos,
   uint32_t ustack=(uint32_t)tos;
 
   if(ustack & 3)
-    return -1;
+    return NULL;
 
   p = (char *)kmalloc(PAGE_SIZE+PAGE_SIZE);
   if(p == NULL)
-    return -2;
+    return NULL;
 
   p = p + PAGE_SIZE+PAGE_SIZE;
   p -= sizeof(struct tcb);
@@ -178,7 +165,7 @@ int sys_task_create(void *tos,
   new->kstack = (uint32_t)new;
   new->tid = tid++;
   new->state = TASK_STATE_READY;
-  new->quantum = DEFAULT_QUANTUM;
+  new->timeslice = DEFAULT_TIMESLICE;
   new->wq_exit = NULL;
   new->next = NULL;
 
@@ -196,7 +183,7 @@ int sys_task_create(void *tos,
   add_task(new);
   restore_flags(flags);
 
-  return new->tid;
+  return new;
 }
 
 void sys_task_exit(int code_exit)
@@ -226,7 +213,7 @@ int sys_task_wait(int32_t tid, int32_t *pcode_exit)
 
   save_flags_cli(flags);
 
-  if((tsk = find_task(tid)) == NULL) {
+  if((tsk = get_task(tid)) == NULL) {
     restore_flags(flags);
     return -1;
   }
@@ -274,5 +261,5 @@ void init_task()
   g_task_head = NULL;
   g_task_own_fpu = NULL;
 
-  task0 = task_get(sys_task_create(NULL, NULL/*filled by run_as_task0*/, NULL));
+  task0 = sys_task_create(NULL, NULL/*filled by run_as_task0*/, NULL);
 }

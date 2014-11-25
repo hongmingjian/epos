@@ -849,6 +849,8 @@ void syscall(struct context *ctx)
       uint32_t user_stack = *((uint32_t *)(ctx->esp+4));
       uint32_t user_entry = *((uint32_t *)(ctx->esp+8));
       uint32_t user_pvoid = *((uint32_t *)(ctx->esp+12));
+      struct tcb *tsk;
+
 //      printk("stack: 0x%08x, entry: 0x%08x, pvoid: 0x%08x\r\n",
 //             user_stack, user_entry, user_pvoid);
       if((user_stack < USER_MIN_ADDR) || (user_stack >= USER_MAX_ADDR) ||
@@ -856,9 +858,10 @@ void syscall(struct context *ctx)
         ctx->eax = -ctx->eax;
         break;
       }
-      ctx->eax = sys_task_create((void *)user_stack,
-                                 (void (*)(void *))user_entry,
-                                 (void *)user_pvoid);
+      tsk = sys_task_create((void *)user_stack,
+                            (void (*)(void *))user_entry,
+                            (void *)user_pvoid);
+      ctx->eax = (tsk==NULL)?-1:tsk->tid;
     }
     break;
   case SYSCALL_task_getid:

@@ -56,8 +56,8 @@ struct tcb {
 #define TASK_STATE_READY     1
 #define TASK_STATE_ZOMBIE    2
 
-  int32_t         quantum;
-#define DEFAULT_QUANTUM 4
+  int32_t         timeslice;
+#define DEFAULT_TIMESLICE 4
 
   int32_t          code_exit;
   struct wait_queue *wq_exit;
@@ -141,10 +141,10 @@ uint32_t load_pe(VOLINFO *pvi, char *filename);
 int     sys_putchar(int c);
 int     sys_getchar();
 
-int     sys_task_create(void *tos, void (*func)(void *pv), void *pv);
-void    sys_task_exit(int code_exit);
-int     sys_task_wait(int32_t tid, int32_t *pcode_exit);
-int32_t sys_task_getid();
-void    sys_task_yield();
+struct tcb *sys_task_create(void *tos, void (*func)(void *pv), void *pv);
+void        sys_task_exit(int code_exit);
+int         sys_task_wait(int32_t tid, int32_t *pcode_exit);
+int32_t     sys_task_getid();
+void        sys_task_yield();
 
 #endif /*_KERNEL_H*/

@@ -1,5 +1,5 @@
 /*
- * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  */
 #include "../global.h"
 #include "syscall.h"
@@ -21,18 +21,18 @@ int snprintf (char *str, size_t count, const char *fmt, ...);
 int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 int printf(const char *fmt,...)
 {
-  char buf[1024];
-  va_list args;
-  int i, j;
+    char buf[1024];
+    va_list args;
+    int i, j;
 
-  va_start(args, fmt);
-  i=vsnprintf(buf,sizeof(buf), fmt, args);
-  va_end(args);
+    va_start(args, fmt);
+    i=vsnprintf(buf,sizeof(buf), fmt, args);
+    va_end(args);
 
-  for(j = 0; j < i; j++)
-    putchar(buf[j]);
+    for(j = 0; j < i; j++)
+        putchar(buf[j]);
 
-  return i;
+    return i;
 }
 
 /**
@@ -41,27 +41,27 @@ int printf(const char *fmt,...)
  */
 void __main()
 {
-  init_memory_pool(64*1024*1024, end);
+    init_memory_pool(64*1024*1024, end);
 }
 
 #define DELAY(n) do { \
-  unsigned __n=(n); \
-  while(__n--); \
+    unsigned __n=(n); \
+    while(__n--); \
 } while(0);
 ///////////////////HELPERS///////////////////////
 
 void main(void *pv)
 {
-  printf("task #%d: I'm the first user task(pv=0x%08x)!\r\n",
-         task_getid(), pv);
+    printf("task #%d: I'm the first user task(pv=0x%08x)!\r\n",
+            task_getid(), pv);
 
-  //TODO: Your code goes here
-
-
+    //TODO: Your code goes here
 
 
-  while(1)
-    ;
-  task_exit(0);
+
+
+    while(1)
+        ;
+    task_exit(0);
 }
 

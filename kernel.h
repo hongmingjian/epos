@@ -1,5 +1,5 @@
 /**
- * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  *
  * Copyright (C) 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
@@ -30,15 +30,15 @@ void enable_irq(uint32_t irq);
 extern unsigned volatile g_timer_ticks;
 void isr_timer(uint32_t irq, struct context *ctx);
 struct tm {
-  int tm_sec;         /* seconds */
-  int tm_min;         /* minutes */
-  int tm_hour;        /* hours */
-  int tm_mday;        /* day of the month */
-  int tm_mon;         /* month */
-  int tm_year;        /* year */
-  int tm_wday;        /* day of the week */
-  int tm_yday;        /* day in the year */
-  int tm_isdst;       /* daylight saving time */
+    int tm_sec;         /* seconds */
+    int tm_min;         /* minutes */
+    int tm_hour;        /* hours */
+    int tm_mday;        /* day of the month */
+    int tm_mon;         /* month */
+    int tm_year;        /* year */
+    int tm_wday;        /* day of the week */
+    int tm_yday;        /* day in the year */
+    int tm_isdst;       /* daylight saving time */
 };
 time_t mktime(struct tm * tm);
 extern time_t g_startup_time;
@@ -46,24 +46,23 @@ extern time_t g_startup_time;
 void isr_keyboard(uint32_t irq, struct context *ctx);
 
 struct tcb {
-  /*hardcoded*/
-  uint32_t        kstack;   /*saved top of the kernel stack for this task*/
+    /*hardcoded*/
+    uint32_t        kstack;/*saved top of the kernel stack for this task*/
 
-
-  int32_t         tid;     /* task id */
-  int32_t         state;   /* -1:waiting, 0:running, 1:ready, 2:zombie */
+    int         tid;/* task id */
+    int         state;/* -1:waiting, 0:running, 1:ready, 2:zombie */
 #define TASK_STATE_WAITING  -1
 #define TASK_STATE_READY     1
 #define TASK_STATE_ZOMBIE    2
 
-  int32_t         timeslice;
+    int         timeslice;
 #define DEFAULT_TIMESLICE 4
 
-  int32_t          code_exit;
-  struct wait_queue *wq_exit;
+    int          code_exit;
+    struct wait_queue *wq_exit;
 
-  struct tcb     *next;
-  struct x87      fpu;
+    struct tcb     *next;
+    struct x87      fpu;
 };
 
 extern struct tcb *g_task_running;
@@ -76,8 +75,8 @@ void schedule();
 void switch_to(struct tcb *new);
 
 struct wait_queue {
-  struct tcb *tsk;
-  struct wait_queue *next;
+    struct tcb *tsk;
+    struct wait_queue *next;
 };
 void sleep_on(struct wait_queue **head);
 void wake_up(struct wait_queue **head, int n);
@@ -143,8 +142,8 @@ int     sys_getchar();
 
 struct tcb *sys_task_create(void *tos, void (*func)(void *pv), void *pv);
 void        sys_task_exit(int code_exit);
-int         sys_task_wait(int32_t tid, int32_t *pcode_exit);
-int32_t     sys_task_getid();
+int         sys_task_wait(int tid, int *pcode_exit);
+int         sys_task_getid();
 void        sys_task_yield();
 
 #endif /*_KERNEL_H*/

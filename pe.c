@@ -1,5 +1,5 @@
 /**
- * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  *
  * Copyright (C) 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
@@ -66,8 +66,8 @@ typedef struct _IMAGE_FILE_HEADER {
 } IMAGE_FILE_HEADER, *PIMAGE_FILE_HEADER;
 
 typedef struct _IMAGE_DATA_DIRECTORY {
-  DWORD VirtualAddress;  // RVA of table
-  DWORD Size;   // size of table
+    DWORD VirtualAddress;  // RVA of table
+    DWORD Size;   // size of table
 } IMAGE_DATA_DIRECTORY, *PIMAGE_DATA_DIRECTORY;
 
 #define IMAGE_NUMBEROF_DIRECTORY_ENTRIES    16
@@ -109,122 +109,122 @@ typedef struct _IMAGE_OPTIONAL_HEADER {
 #define IMAGE_NT_SIGNATURE 0x00004550
 
 typedef struct _IMAGE_NT_HEADERS {
-  DWORD                 Signature;
-  IMAGE_FILE_HEADER     FileHeader;
-  IMAGE_OPTIONAL_HEADER OptionalHeader;
+    DWORD                 Signature;
+    IMAGE_FILE_HEADER     FileHeader;
+    IMAGE_OPTIONAL_HEADER OptionalHeader;
 } IMAGE_NT_HEADERS, *PIMAGE_NT_HEADERS;
 
 #define  IMAGE_SIZEOF_SHORT_NAME 8
 
 typedef struct _IMAGE_SECTION_HEADER {
-  BYTE  Name[IMAGE_SIZEOF_SHORT_NAME];
-  union {
-    DWORD PhysicalAddress;
-    DWORD VirtualSize;
-  } Misc;
-  DWORD VirtualAddress;
-  DWORD SizeOfRawData;
-  DWORD PointerToRawData;
-  DWORD PointerToRelocations;
-  DWORD PointerToLinenumbers;
-  WORD  NumberOfRelocations;
-  WORD  NumberOfLinenumbers;
-  DWORD Characteristics;
+    BYTE  Name[IMAGE_SIZEOF_SHORT_NAME];
+    union {
+        DWORD PhysicalAddress;
+        DWORD VirtualSize;
+    } Misc;
+    DWORD VirtualAddress;
+    DWORD SizeOfRawData;
+    DWORD PointerToRawData;
+    DWORD PointerToRelocations;
+    DWORD PointerToLinenumbers;
+    WORD  NumberOfRelocations;
+    WORD  NumberOfLinenumbers;
+    DWORD Characteristics;
 } IMAGE_SECTION_HEADER, *PIMAGE_SECTION_HEADER;
 
 uint32_t load_pe(VOLINFO *pvi, char *filename)
 {
-  char scratch[SECTOR_SIZE];
-  FILEINFO fi;
-  uint32_t res;
+    char scratch[SECTOR_SIZE];
+    FILEINFO fi;
+    uint32_t res;
 
-  res = DFS_OpenFile(pvi, filename, DFS_READ, scratch, &fi);
-  if(DFS_OK != res) {
-    printk("task #%d: failed to open %s(%d)\r\n",
-           sys_task_getid(), filename, res);
+    res = DFS_OpenFile(pvi, filename, DFS_READ, scratch, &fi);
+    if(DFS_OK != res) {
+        printk("task #%d: failed to open %s(%d)\r\n",
+                sys_task_getid(), filename, res);
+        return 0;
+    }
+
+    {
+        int i, read, e_lfanew;
+        char *buffer = NULL;
+        int bufsize;
+        PIMAGE_DOS_HEADER pidh;
+        PIMAGE_NT_HEADERS pinh;
+        PIMAGE_SECTION_HEADER pish;
+
+        bufsize = sizeof(IMAGE_DOS_HEADER);
+        buffer = krealloc(buffer, bufsize);
+        DFS_ReadFile(&fi, scratch, buffer, &read, bufsize);
+        pidh = (PIMAGE_DOS_HEADER)buffer;
+        if((read != bufsize) ||
+           (pidh->e_magic != IMAGE_DOS_SIGNATURE)) {
+            printk("task #%d: invalid executable file %s\r\n",
+                    sys_task_getid(), filename);
+            kfree(buffer);
+            return 0;
+        }
+        e_lfanew=pidh->e_lfanew;
+
+        bufsize = sizeof(IMAGE_NT_HEADERS);
+        buffer = krealloc(buffer, bufsize);
+        DFS_Seek(&fi, e_lfanew, scratch);
+        DFS_ReadFile(&fi, scratch, buffer, &read, bufsize);
+        pinh = (PIMAGE_NT_HEADERS)buffer;
+        if((read != bufsize) ||
+           (pinh->Signature != IMAGE_NT_SIGNATURE)) {
+            printk("task #%d: invalid executable file %s\r\n",
+                    sys_task_getid(), filename);
+            kfree(buffer);
+            return 0;
+        }
+
+        bufsize = pinh->OptionalHeader.SizeOfHeaders - e_lfanew;
+        buffer = krealloc(buffer, bufsize);
+        DFS_Seek(&fi, e_lfanew, scratch);
+        DFS_ReadFile(&fi, scratch, buffer, &read, bufsize);
+        if(read != bufsize) {
+            printk("task #%d: invalid executable file %s\r\n",
+                    sys_task_getid(), filename);
+            kfree(buffer);
+            return 0;
+        }
+
+        pinh = (PIMAGE_NT_HEADERS)buffer;
+        pish = (PIMAGE_SECTION_HEADER)(pinh + 1);
+        for(i = 0; i < pinh->FileHeader.NumberOfSections; i++, pish++) {
+
+            if(pish->Name[0] == '/')
+                continue;
+
+            if(pish->PointerToRawData) {
+                DFS_Seek(&fi, pish->PointerToRawData, scratch);
+                DFS_ReadFile(&fi, scratch,
+                             (void *)(pinh->OptionalHeader.ImageBase+
+                                      pish->VirtualAddress),
+                             &read, pish->SizeOfRawData);
+                //pish->Name[IMAGE_SIZEOF_SHORT_NAME-1] = 0;
+                //printk("task #%d: %s@0x%08x:%d -> 0x%08x, %d bytes read\r\n",
+                //       sys_task_getid(), pish->Name, pish->PointerToRawData,
+                //       pish->SizeOfRawData,
+                //       pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
+                //       read);
+            }
+
+            if(pish->Misc.VirtualSize > pish->SizeOfRawData) {
+                memset((void *)(pinh->OptionalHeader.ImageBase+
+                                pish->VirtualAddress+
+                                pish->SizeOfRawData),
+                       0,
+                       pish->Misc.VirtualSize-pish->SizeOfRawData);
+            }
+        }
+
+        kfree(buffer);
+
+        return (pinh->OptionalHeader.ImageBase+
+                pinh->OptionalHeader.AddressOfEntryPoint);
+    }
+
     return 0;
-  }
-
-  {
-    int i, read, e_lfanew;
-    char *buffer = NULL;
-    int bufsize;
-    PIMAGE_DOS_HEADER pidh;
-    PIMAGE_NT_HEADERS pinh;
-    PIMAGE_SECTION_HEADER pish;
-
-    bufsize = sizeof(IMAGE_DOS_HEADER);
-    buffer = krealloc(buffer, bufsize);
-    DFS_ReadFile(&fi, scratch, buffer, &read, bufsize);
-    pidh = (PIMAGE_DOS_HEADER)buffer;
-    if((read != bufsize) ||
-       (pidh->e_magic != IMAGE_DOS_SIGNATURE)) {
-      printk("task #%d: invalid executable file %s\r\n",
-             sys_task_getid(), filename);
-      kfree(buffer);
-      return 0;
-    }
-    e_lfanew=pidh->e_lfanew;
-
-    bufsize = sizeof(IMAGE_NT_HEADERS);
-    buffer = krealloc(buffer, bufsize);
-    DFS_Seek(&fi, e_lfanew, scratch);
-    DFS_ReadFile(&fi, scratch, buffer, &read, bufsize);
-    pinh = (PIMAGE_NT_HEADERS)buffer;
-    if((read != bufsize) ||
-       (pinh->Signature != IMAGE_NT_SIGNATURE)) {
-      printk("task #%d: invalid executable file %s\r\n",
-             sys_task_getid(), filename);
-      kfree(buffer);
-      return 0;
-    }
-
-    bufsize = pinh->OptionalHeader.SizeOfHeaders - e_lfanew;
-    buffer = krealloc(buffer, bufsize);
-    DFS_Seek(&fi, e_lfanew, scratch);
-    DFS_ReadFile(&fi, scratch, buffer, &read, bufsize);
-    if(read != bufsize) {
-      printk("task #%d: invalid executable file %s\r\n",
-             sys_task_getid(), filename);
-      kfree(buffer);
-      return 0;
-    }
-
-    pinh = (PIMAGE_NT_HEADERS)buffer;
-    pish = (PIMAGE_SECTION_HEADER)(pinh + 1);
-    for(i = 0; i < pinh->FileHeader.NumberOfSections; i++, pish++) {
-
-      if(pish->Name[0] == '/')
-        continue;
-
-      if(pish->PointerToRawData) {
-        DFS_Seek(&fi, pish->PointerToRawData, scratch);
-        DFS_ReadFile(&fi, scratch,
-                     (void *)(pinh->OptionalHeader.ImageBase+
-                              pish->VirtualAddress),
-                     &read, pish->SizeOfRawData);
-//        pish->Name[IMAGE_SIZEOF_SHORT_NAME-1] = 0;
-//        printk("task #%d: %s@0x%08x:%d -> 0x%08x, %d bytes read\r\n",
-//               sys_task_getid(), pish->Name, pish->PointerToRawData,
-//               pish->SizeOfRawData,
-//               pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
-//               read);
-      }
-
-      if(pish->Misc.VirtualSize > pish->SizeOfRawData) {
-        memset((void *)(pinh->OptionalHeader.ImageBase+
-                        pish->VirtualAddress+
-                        pish->SizeOfRawData),
-               0,
-               pish->Misc.VirtualSize-pish->SizeOfRawData);
-      }
-    }
-
-    kfree(buffer);
-
-    return (pinh->OptionalHeader.ImageBase+
-            pinh->OptionalHeader.AddressOfEntryPoint);
-  }
-
-  return 0;
 }

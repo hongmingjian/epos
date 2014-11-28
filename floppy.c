@@ -22,7 +22,7 @@ static void _dma_xfer(unsigned char DMA_channel, unsigned char page, unsigned in
     outportb(MaskReg[DMA_channel], 0x04 | DMA_channel);
 
     /* Clear any data transfers that are currently executing. */
-//    outportb(ClearReg[DMA_channel], 0x00);
+    //outportb(ClearReg[DMA_channel], 0x00);
     outportb (0xd8,0xff);	//reset master flip-flop
 
     /* Send the specified mode to the DMA. */

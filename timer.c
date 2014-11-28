@@ -1,5 +1,5 @@
 /**
- * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  *
  * Copyright (C) 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
@@ -24,19 +24,19 @@ unsigned volatile g_timer_ticks = 0;
 
 void isr_timer(uint32_t irq, struct context *ctx)
 {
-  g_timer_ticks++;
-//  sys_putchar('.');
+    g_timer_ticks++;
+    //sys_putchar('.');
 
-  if(g_task_running != NULL) {
-    if(g_task_running->tid == 0) {
-      g_resched = 1;
-    } else {
-      --g_task_running->timeslice;
+    if(g_task_running != NULL) {
+        if(g_task_running->tid == 0) {
+            g_resched = 1;
+        } else {
+            --g_task_running->timeslice;
 
-      if(g_task_running->timeslice <= 0) {
-        g_resched = 1;
-        g_task_running->timeslice = DEFAULT_TIMESLICE;
-      }
+            if(g_task_running->timeslice <= 0) {
+                g_resched = 1;
+                g_task_running->timeslice = DEFAULT_TIMESLICE;
+            }
+        }
     }
-  }
 }

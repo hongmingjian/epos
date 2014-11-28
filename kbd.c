@@ -1,5 +1,5 @@
 /*
- * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  */
 /*
  * http://flint.cs.yale.edu/cs422/doc/art-of-asm/pdf/CH20.PDF
@@ -24,16 +24,16 @@
 #define	ENTRIES(a)	(sizeof(a)/sizeof(a[0]))
 
 typedef struct STATE
-	{
-	int	ins	;
-	int	rshift	;
-	int	lshift	;
-	int	alt	;
-	int	ctrl	;
-	int	caps	;
-	int	scrl	;
-	int	num	;
-	} __attribute__((packed)) STATE ;
+{
+    int	ins;
+    int	rshift;
+    int	lshift;
+    int	alt;
+    int	ctrl;
+    int	caps;
+    int	scrl;
+    int	num;
+} __attribute__((packed)) STATE ;
 
 PRIVATE STATE state ; /* Initialized to all FALSE by loader */
 
@@ -47,8 +47,8 @@ PRIVATE STATE state ; /* Initialized to all FALSE by loader */
 /* not put the character into the type ahead buffer.        */
 /* -------------------------------------------------------- */
 PRIVATE uint16_t scan_ascii[][8] =
-	{
-        /* norm,  shft,   ctrl,    alt,    num,   caps,   shcap,  shnum */
+{
+       /* norm,  shft,   ctrl,    alt,    num,   caps,   shcap,  shnum */
 /*--*/	{0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000},
 /*ESC*/	{0x011B, 0x011B, 0x011B, 0x011B, 0x011B, 0x011B, 0x011B, 0x011B},
 /*1 !*/	{0x0231, 0x0221, 0x0000, 0x7800, 0x0231, 0x0231, 0x0231, 0x0321},
@@ -138,77 +138,77 @@ PRIVATE uint16_t scan_ascii[][8] =
 /*--*/	{0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000},
 /*F11*/	{0x5700, 0x0000, 0x0000, 0x0000, 0x5700, 0x5700, 0x0000, 0x0000},
 /*F12*/	{0x5800, 0x0000, 0x0000, 0x0000, 0x5800, 0x5800, 0x0000, 0x0000}
-	} ;
+} ;
 
 PRIVATE uint16_t kbd_translate(uint8_t scan)
-	{
-	if (scan == 0xE0 || scan == 0xE1)	return 0x0000 ; /* ignore */
-	if (scan & 0x80)					return scan << 8 ; /* KeyUp */
-	if (scan >= ENTRIES(scan_ascii))	return 0x0000 ; /* ignore */
+{
+    if (scan == 0xE0 || scan == 0xE1)	return 0x0000 ; /* ignore */
+    if (scan & 0x80)					return scan << 8 ; /* KeyUp */
+    if (scan >= ENTRIES(scan_ascii))	return 0x0000 ; /* ignore */
 
-	if (state.alt)	return scan_ascii[scan][3] ;
-	if (state.ctrl)	return scan_ascii[scan][2] ;
-	if (scan >= 0x47)
-		{
-		if (state.num)
-			{
-			if (state.lshift || state.rshift)
-				{
-				return scan_ascii[scan][7] ;
-				}
-			return scan_ascii[scan][4] ;
-			}
-		}
+    if (state.alt)	return scan_ascii[scan][3] ;
+    if (state.ctrl)	return scan_ascii[scan][2] ;
+    if (scan >= 0x47)
+    {
+        if (state.num)
+        {
+            if (state.lshift || state.rshift)
+            {
+                return scan_ascii[scan][7] ;
+            }
+            return scan_ascii[scan][4] ;
+        }
+    }
 
-	else if (state.caps)
-		{
-		if (state.lshift || state.rshift)
-			{
-			return scan_ascii[scan][6] ;
-			}
-		return scan_ascii[scan][5] ;
-		}
+    else if (state.caps)
+    {
+        if (state.lshift || state.rshift)
+        {
+            return scan_ascii[scan][6] ;
+        }
+        return scan_ascii[scan][5] ;
+    }
 
-	if (state.lshift || state.rshift)
-		{
-		return scan_ascii[scan][1] ;
-		}
+    if (state.lshift || state.rshift)
+    {
+        return scan_ascii[scan][1] ;
+    }
 
-	return scan_ascii[scan][0] ;
-	}
+    return scan_ascii[scan][0] ;
+}
 
 PRIVATE int kbd_set_state(uint8_t scan)
 {
-	switch (scan)
-		{
-		case 0x36: state.rshift = TRUE  ; break ;
-		case 0xB6: state.rshift = FALSE ; break ;
+    switch (scan)
+    {
+    case 0x36: state.rshift = TRUE  ; break ;
+    case 0xB6: state.rshift = FALSE ; break ;
 
-		case 0x2A: state.lshift = TRUE  ; break ;
-		case 0xAA: state.lshift = FALSE ; break ;
+    case 0x2A: state.lshift = TRUE  ; break ;
+    case 0xAA: state.lshift = FALSE ; break ;
 
-		case 0x38: state.alt    = TRUE  ; break ;
-		case 0xB8: state.alt	= FALSE ; break ;
+    case 0x38: state.alt    = TRUE  ; break ;
+    case 0xB8: state.alt	= FALSE ; break ;
 
-		case 0x1D: state.ctrl	= TRUE  ; break ;
-		case 0x9D: state.ctrl	= FALSE ; break ;
+    case 0x1D: state.ctrl	= TRUE  ; break ;
+    case 0x9D: state.ctrl	= FALSE ; break ;
 
-		case 0x3A: state.caps = !state.caps ;
-		case 0xBA: break ;
+    case 0x3A: state.caps = !state.caps ;
+    case 0xBA: break ;
 
-		case 0x46: state.scrl = !state.scrl ;
-		case 0xC6: break ;
+    case 0x46: state.scrl = !state.scrl ;
+    case 0xC6: break ;
 
-		case 0x45: state.num  = !state.num  ;
-		case 0xC5: break ;
+    case 0x45: state.num  = !state.num  ;
+    case 0xC5: break ;
 
-		case 0x52: state.ins  = !state.ins  ;
-		case 0xD2: break ;
+    case 0x52: state.ins  = !state.ins  ;
+    case 0xD2: break ;
 
-		default:   return FALSE ;
-		}
+    default:   return FALSE ;
+    }
 
-	return TRUE ;
+    return TRUE ;
 }
 
 #define PORT_KBD_STS 0x64
@@ -221,38 +221,38 @@ static struct wait_queue *wq_kbd = NULL;
 
 void isr_keyboard(uint32_t irq, struct context *ctx)
 {
-  /*Does user press a key?*/
-  if(inportb(PORT_KBD_STS) & KBD_STS_RDY) {
-    uint8_t scan;
-    uint16_t ascii;
+    /*Does user press a key?*/
+    if(inportb(PORT_KBD_STS) & KBD_STS_RDY) {
+        uint8_t scan;
+        uint16_t ascii;
 
-    /*Yes, read it in*/
-    scan = inportb(PORT_KBD_DAT);
+        /*Yes, read it in*/
+        scan = inportb(PORT_KBD_DAT);
 
-    /*Is it a modifier?*/
-    if(kbd_set_state(scan))
-      return;
+        /*Is it a modifier?*/
+        if(kbd_set_state(scan))
+            return;
 
-    /*No, translate it*/
-    if((ascii = kbd_translate(scan)) == 0)
-      return;
+        /*No, translate it*/
+        if((ascii = kbd_translate(scan)) == 0)
+            return;
 
-    /*Put the data into the buffer*/
-    buf_kbd = ascii;
+        /*Put the data into the buffer*/
+        buf_kbd = ascii;
 
-    /*Wake up the task waiting for keyboard input*/
-    wake_up(&wq_kbd, 1);
-  }
+        /*Wake up the task waiting for keyboard input*/
+        wake_up(&wq_kbd, 1);
+    }
 }
 
 int sys_getchar()
 {
-  uint32_t flags;
+    uint32_t flags;
 
-  /*Wait for the keyboard interrupt*/
-  save_flags_cli(flags);
-  sleep_on(&wq_kbd);
-  restore_flags(flags);
+    /*Wait for the keyboard interrupt*/
+    save_flags_cli(flags);
+    sleep_on(&wq_kbd);
+    restore_flags(flags);
 
-  return buf_kbd;
+    return buf_kbd;
 }

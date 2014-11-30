@@ -615,7 +615,7 @@ static int vm86mon(struct vm86_context *vm86ctx)
                 uint32_t ecx = rep ? vm86ctx->ecx : 1;
 
                 while(ecx) {
-                    *(uint8_t *)LADDR(vm86ctx->es, vm86ctx->edi/*XXX*/) = 
+                    *(uint8_t *)LADDR(vm86ctx->es, vm86ctx->edi/*XXX*/) =
                         inportb(LOWORD(vm86ctx->edx));
                     ecx--;
                     vm86ctx->edi += (vm86ctx->eflags & 0x400)?-1:1;

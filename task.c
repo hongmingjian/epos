@@ -36,7 +36,7 @@ void schedule()
         if(select == g_task_running)
             break;
         if((select->tid != 0) &&
-                (select->state == TASK_STATE_READY))
+           (select->state == TASK_STATE_READY))
             break;
     } while(1);
 
@@ -141,7 +141,7 @@ struct tcb* get_task(int tid)
 }
 
 struct tcb *sys_task_create(void *tos,
-        void (*func)(void *pv), void *pv)
+                            void (*func)(void *pv), void *pv)
 {
     static int tid = 0;
     struct tcb *new;

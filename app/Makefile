@@ -34,7 +34,7 @@ CFLAGS=	-fno-builtin -ffreestanding -fno-stack-check \
 	-mno-stack-arg-probe -O #-fno-stack-protector #-Wall
 LDFLAGS=-nostdlib -nostartfiles -Wl,-Map,$(PROG).map 
 
-OBJS=	crt0.o syscall-stub.o utils.o vm86.o tlsf.o \
+OBJS=	crt0.o syscall-wrapper.o utils.o vm86.o tlsf.o \
       snprintf.o math.o graphics.o main.o
 
 $(PROG).out: $(OBJS)

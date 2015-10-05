@@ -6,15 +6,6 @@
 
 #include "../global.h"
 
-typedef uint32_t COLORREF;
-
-#define getRValue(c) ((uint8_t)(c))
-#define getGValue(c) ((uint8_t)(((uint16_t)(c))>>8))
-#define getBValue(c) ((uint8_t)((c)>>16))
-#define RGB(r,g,b) ((COLORREF)((uint8_t)(r)|\
-                               ((uint8_t)(g) << 8)|\
-                               ((uint8_t)(b) << 16)))
-
 struct ModeInfoBlock {
     uint16_t ModeAttributes;
     uint8_t  WinAAttributes;
@@ -27,12 +18,12 @@ struct ModeInfoBlock {
     uint16_t BytesPerScanLine;
 
     // Mandatory information for VBE 1.2 and above
-    uint16_t XResolution;
-    uint16_t YResolution;
+    uint16_t XResolution; //水平分辨率
+    uint16_t YResolution; //垂直分辨率
     uint8_t  XCharSize;
     uint8_t  YCharSize;
     uint8_t  NumberOfPlanes;
-    uint8_t  BitsPerPixel;
+    uint8_t  BitsPerPixel; //像素位数
     uint8_t  NumberOfBanks;
     uint8_t  MemoryModel;
     uint8_t  BankSize;
@@ -71,13 +62,42 @@ struct ModeInfoBlock {
     uint8_t reserved4[190];
 } __attribute__ ((gcc_struct, packed));
 
+/**
+ * 进入图形模式后，这个全局变量记录了当前图形模式
+ * 的各种信息，请参考上面的ModeInfoBlock
+ */
 extern struct ModeInfoBlock g_mib;
 
+/**
+ * 列出系统支持的图形模式，包括分辨率和像素位数
+ *
+ * 注意：该函数只能在文本模式下面运行！
+ ×       否则，看不到任何输出！
+ *
+ */
 int listGraphicsModes();
 
+/**
+ * 进入由mode指定的图形模式
+ */
 int initGraphics(int mode);
+
+/**
+ * 退出图形模式，回到文本模式
+ */
 int exitGraphics();
 
+typedef uint32_t COLORREF;
+#define getRValue(c) ((uint8_t)(c))
+#define getGValue(c) ((uint8_t)(((uint16_t)(c))>>8))
+#define getBValue(c) ((uint8_t)((c)>>16))
+#define RGB(r,g,b) ((COLORREF)((uint8_t)(r)|\
+                               ((uint8_t)(g) << 8)|\
+                               ((uint8_t)(b) << 16)))
+
+/**
+ * 进入图形模式后，用于在屏幕位置(x,y)以颜色cr打点
+ */
 void setPixel(int x, int y, COLORREF cr);
 
 #endif /*_GRAPHICS_H*/

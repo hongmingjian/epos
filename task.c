@@ -26,6 +26,11 @@ struct tcb *g_task_running;
 struct tcb *task0;
 struct tcb *g_task_own_fpu;
 
+/**
+ * CPU调度器函数，这里只实现了轮转调度算法
+ *
+ * 注意：该函数的执行不能被中断
+ */
 void schedule()
 {
     struct tcb *select = g_task_running;
@@ -52,6 +57,11 @@ void schedule()
     switch_to(select);
 }
 
+/**
+ * 把当前线程切换为等待状态，等待在*head队列中
+ *
+ * 注意：该函数的执行不能被中断
+ */
 void sleep_on(struct wait_queue **head)
 {
     struct wait_queue wait;
@@ -79,6 +89,12 @@ void sleep_on(struct wait_queue **head)
     }
 }
 
+/**
+ * 唤醒n个等待在*head队列中的线程。
+ * 如果n<0，唤醒队列中的所有线程
+ *
+ * 注意：该函数的执行不能被中断
+ */
 void wake_up(struct wait_queue **head, int n)
 {
     struct wait_queue *p;
@@ -140,6 +156,11 @@ struct tcb* get_task(int tid)
     return tsk;
 }
 
+/**
+ * 系统调用task_create的执行函数
+ *
+ * 创建一个新的线程，该线程执行func函数，并向新线程传递参数pv
+ */
 struct tcb *sys_task_create(void *tos,
                             void (*func)(void *pv), void *pv)
 {
@@ -186,6 +207,11 @@ struct tcb *sys_task_create(void *tos,
     return new;
 }
 
+/**
+ * 系统调用task_exit的执行函数
+ *
+ * 结束当前线程，code_exit是它的退出代码
+ */
 void sys_task_exit(int code_exit)
 {
     uint32_t flags;
@@ -203,6 +229,12 @@ void sys_task_exit(int code_exit)
     schedule();
 }
 
+/**
+ * 系统调用task_wait的执行函数
+ *
+ * 当前线程等待线程tid结束执行。
+ * 如果pcode_exit不是NULL，用于保存线程tid的退出代码
+ */
 int sys_task_wait(int tid, int *pcode_exit)
 {
     uint32_t flags;
@@ -241,11 +273,21 @@ int sys_task_wait(int tid, int *pcode_exit)
     return 0;
 }
 
+/**
+ * 系统调用task_getid的执行函数
+ *
+ * 获取当前线程的tid
+ */
 int sys_task_getid()
 {
     return (g_task_running==NULL)?-1:g_task_running->tid;
 }
 
+/**
+ * 系统调用task_yield的执行函数
+ *
+ * 当前线程主动放弃CPU，让调度器调度其他线程运行
+ */
 void sys_task_yield()
 {
     uint32_t flags;
@@ -254,6 +296,9 @@ void sys_task_yield()
     restore_flags(flags);
 }
 
+/**
+ * 初始化多线程子系统
+ */
 void init_task()
 {
     g_resched = 0;
@@ -261,5 +306,8 @@ void init_task()
     g_task_head = NULL;
     g_task_own_fpu = NULL;
 
-    task0 = sys_task_create(NULL, NULL/*filled by run_as_task0*/, NULL);
+    /*
+     * 创建线程task0，即系统空闲线程
+     */
+    task0 = sys_task_create(NULL, NULL/*task0执行的函数将由run_as_task0填充*/, NULL);
 }

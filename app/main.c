@@ -6,7 +6,7 @@
 #include "math.h"
 #include "graphics.h"
 
-///////////////////HELPERS///////////////////////
+///////////////////辅助函数///////////////////////
 #include "../tlsf/tlsf.h"
 extern char end[];
 void *malloc(size_t bytes)
@@ -48,8 +48,11 @@ void __main()
     unsigned __n=(n); \
     while(__n--); \
 } while(0);
-///////////////////HELPERS///////////////////////
+///////////////////辅助函数///////////////////////
 
+/**
+ * 这个系统第一个运行在用户模式的线程所执行的函数
+ */
 void main(void *pv)
 {
     printf("task #%d: I'm the first user task(pv=0x%08x)!\r\n",

@@ -22,13 +22,24 @@
 
 #include "machdep.h"
 
+/*中断向量表*/
 extern void (*g_intr_vector[])(uint32_t irq, struct context *ctx);
+
+/*让中断控制器打开某个中断*/
 void disable_irq(uint32_t irq);
+
+/*让中断控制器关闭某个中断*/
 void enable_irq(uint32_t irq);
 
+/*定时器以HZ的频率中断CPU*/
 #define HZ   100
+
+/*记录系统启动以来，定时器中断的次数*/
 extern unsigned volatile g_timer_ticks;
+
+/*定时器的中断处理程序*/
 void isr_timer(uint32_t irq, struct context *ctx);
+
 struct tm {
     int tm_sec;         /* seconds */
     int tm_min;         /* minutes */
@@ -41,10 +52,16 @@ struct tm {
     int tm_isdst;       /* daylight saving time */
 };
 time_t mktime(struct tm * tm);
+
+/*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
 extern time_t g_startup_time;
 
+/*键盘的中断处理程序*/
 void isr_keyboard(uint32_t irq, struct context *ctx);
 
+/**
+ * 线程控制块
+ */
 struct tcb {
     /*hardcoded*/
     uint32_t        kstack;/*saved top of the kernel stack for this task*/
@@ -55,14 +72,14 @@ struct tcb {
 #define TASK_STATE_READY     1
 #define TASK_STATE_ZOMBIE    2
 
-    int         timeslice;
+    int         timeslice;      //时间片
 #define DEFAULT_TIMESLICE 4
 
-    int          code_exit;
-    struct wait_queue *wq_exit;
+    int          code_exit;     //保存该线程的退出代码
+    struct wait_queue *wq_exit; //等待该线程退出的队列
 
     struct tcb     *next;
-    struct x87      fpu;
+    struct x87      fpu;        //数学协处理器的寄存器
 };
 
 extern struct tcb *g_task_running;

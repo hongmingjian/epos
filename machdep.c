@@ -26,6 +26,9 @@
 #define IRQ_SLAVE 0x04
 #define ICU_SLAVEID 2
 #define ICU_IMR_OFFSET  1 /* IO_ICU{1,2} + 1 */
+/**
+ * 初始化i8259中断控制器
+ */
 static void init_i8259(uint8_t idt_offset)
 {
     outportb(IO_ICU1, 0x11);//ICW1
@@ -43,6 +46,9 @@ static void init_i8259(uint8_t idt_offset)
     outportb(IO_ICU2, 0x0a); //OCW3
 }
 
+/**
+ * 初始化i8253定时器
+ */
 static void init_i8253(uint32_t freq)
 {
     uint16_t latch = 1193182/freq;
@@ -51,6 +57,9 @@ static void init_i8253(uint32_t freq)
     outportb(0x40, (latch&0xff00)>>16);
 }
 
+/**
+ * 让中断控制器打开某个中断
+ */
 void enable_irq(uint32_t irq)
 {
     uint8_t val;
@@ -64,6 +73,9 @@ void enable_irq(uint32_t irq)
     }
 }
 
+/**
+ * 让中断控制器关闭某个中断
+ */
 void disable_irq(uint32_t irq)
 {
     uint8_t val;
@@ -77,6 +89,9 @@ void disable_irq(uint32_t irq)
     }
 }
 
+/**
+ * 把CPU从当前线程切换去运行线程new，即上下文切换（Context switch）
+ */
 void switch_to(struct tcb *new)
 {
     __asm__ __volatile__ (
@@ -365,6 +380,11 @@ static void init_idt()
     lidt(&rd);
 }
 
+/**
+ * 系统调用putchar的执行函数
+ *
+ * 往屏幕上的当前光标位置打印一个字符，相应地移动光标的位置
+ */
 int sys_putchar(int c)
 {
     unsigned char *SCREEN_BASE = (char *)(KERNBASE+0xB8000);
@@ -372,6 +392,9 @@ int sys_putchar(int c)
 
     uint32_t flags;
 
+    /*
+     * 读取当前光标位置
+     */
     save_flags_cli(flags);
     outportb(0x3d4, 0x0e);
     curpos = inportb(0x3d5);
@@ -382,10 +405,10 @@ int sys_putchar(int c)
     restore_flags(flags);
 
     switch(c) {
-    case '\n':
+    case '\n'://换行，只是换行而已
         curpos = (curpos/160)*160 + 160;
         break;
-    case '\r':
+    case '\r'://回车，这是回车而已
         curpos = (curpos/160)*160;
         break;
     case '\t':
@@ -401,6 +424,9 @@ int sys_putchar(int c)
         break;
     }
 
+    /*
+     * 滚动屏幕
+     */
     if(curpos >= 160*25) {
         for(i = 0; i < 160*24; i++) {
             SCREEN_BASE[i] = SCREEN_BASE[i+160];
@@ -412,6 +438,9 @@ int sys_putchar(int c)
         curpos -= 160;
     }
 
+    /*
+     * 保存当前光标位置
+     */
     save_flags_cli(flags);
     curpos >>= 1;
     outportb(0x3d4, 0x0f);
@@ -423,6 +452,10 @@ int sys_putchar(int c)
     return c;
 }
 
+/**
+ * 系统调用beep的执行函数
+ * 让蜂鸣器以频率freq发声，如果freq=0表示关闭蜂鸣器
+ */
 void sys_beep(int freq)
 {
     if(freq <= 0)
@@ -768,6 +801,9 @@ static int vm86mon(struct vm86_context *vm86ctx)
     return eaten;
 }
 
+/**
+ * CPU异常处理程序，ctx保存了发生异常时CPU各个寄存器的值
+ */
 int exception(struct context *ctx)
 {
     switch(ctx->exception) {
@@ -837,6 +873,9 @@ int exception(struct context *ctx)
     while(1);
 }
 
+/**
+ * 系统调用分发函数，ctx保存了进入内核前CPU各个寄存器的值
+ */
 void syscall(struct context *ctx)
 {
     //printk("task #%d syscalling #%d.\r\n", sys_task_getid(), ctx->eax);
@@ -908,6 +947,9 @@ void syscall(struct context *ctx)
     }
 }
 
+/**
+ * 初始化分页子系统
+ */
 static uint32_t init_paging(uint32_t physfree)
 {
     uint32_t i;
@@ -952,6 +994,9 @@ static uint32_t init_paging(uint32_t physfree)
     return physfree;
 }
 
+/**
+ * 初始化物理内存
+ */
 static void init_ram(multiboot_memory_map_t *mmap,
         uint32_t size,
         uint32_t physfree)

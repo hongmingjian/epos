@@ -40,7 +40,7 @@ LDFLAGS=-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 OBJS=	entry.o machdep.o printk.o vsprintf.o \
 	task.o kbd.o timer.o mktime.o sem.o  \
 	kmalloc.o dosfs.o page.o startup.o ide.o \
-	floppy.o pe.o utils.o tlsf/tlsf.o
+	floppy.o pci.o pe.o utils.o tlsf/tlsf.o
 
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)

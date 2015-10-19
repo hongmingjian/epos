@@ -124,6 +124,10 @@ void start_user_task()
     printk("Done\r\n");
 #endif
 
+    printk("task #%d: Initializing PCI controller...", sys_task_getid());
+    pci_init();
+    printk("Done\r\n");
+
     {
         uint32_t pstart;
         uint8_t scratch[SECTOR_SIZE];

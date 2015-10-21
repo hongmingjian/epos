@@ -1,5 +1,5 @@
-romimage: file=../Bochs/BIOS-bochs-latest 
-vgaromimage: file=../Bochs/VGABIOS-lgpl-latest
+romimage: file=$BXSHARE/BIOS-bochs-latest
+vgaromimage: file=$BXSHARE/VGABIOS-lgpl-latest
 display_library: win32, options="gui_debug"
 
 memory: guest=4, host=256

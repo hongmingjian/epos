@@ -62,7 +62,7 @@ static void pci_device_read_config(struct pci_device_conf *conf,
 {
 	uint32_t *p = (uint32_t *)conf;
 	uint32_t reg;
-	for(reg = 0; reg < 0x40; reg++) {
+	for(reg = 0; reg < 0x40; reg+=4) {
 		*p=pci_read(PCI_CONF_ADDR(bus, slot, func, reg));
 		p++;
 	}

@@ -231,7 +231,7 @@ int e1000_init()
 	if(baddr == -1)
 		return -1;
 	uint32_t bsize = pci_get_bar_size(E1000_VENDOR_ID, E1000_DEVICE_ID);
-	g_e1000.irq = 9;//pci_get_intr_line(E1000_VENDOR_ID, E1000_DEVICE_ID);
+	g_e1000.irq = pci_get_intr_line(E1000_VENDOR_ID, E1000_DEVICE_ID);
 
 	g_e1000.mmio_addr = g_kern_cur_addr;
 	g_kern_cur_addr += bsize;
@@ -240,7 +240,7 @@ int e1000_init()
 
 	printk("E1000: On-board memory 0x%08x mapped to 0x%08x(%d pages)\r\n",
 	       vtop(g_e1000.mmio_addr), g_e1000.mmio_addr, PAGE_ROUNDUP(bsize) >> PAGE_SHIFT);
-	printk("E1000: IRQ=0x%08x\r\n", pci_get_intr_line(E1000_VENDOR_ID, E1000_DEVICE_ID));
+	printk("E1000: IRQ=0x%08x\r\n", g_e1000.irq);
 
 	e1000_reg_write(REG_CTRL, CTRL_RST);
     for(i=0;i < 20000;i++)

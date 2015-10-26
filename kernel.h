@@ -166,4 +166,13 @@ int         sys_task_wait(int tid, int *pcode_exit);
 int         sys_task_getid();
 void        sys_task_yield();
 
+uint8_t pci_get_intr_line(uint16_t vendor, uint16_t product);
+uint32_t pci_get_bar_size(uint16_t vendor, uint16_t product);
+uint32_t pci_get_bar_addr(uint16_t vendor, uint16_t product);
+void pci_init();
+
+void e1000_send(uint8_t *pkt, uint32_t length);
+int e1000_init();
+void e1000_getmac(uint8_t mac[]);
+
 #endif /*_KERNEL_H*/

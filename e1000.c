@@ -131,19 +131,6 @@ static uint16_t e1000_eeprom_read(uint32_t mmio_addr, uint8_t index){
 	return (uint16_t)(result >> EEPROM_DATA_SHIFT);
 }
 
-void e1000_getmac(uint8_t mac[])
-{
-	uint16_t tmp = e1000_eeprom_read(g_e1000.mmio_addr, EE_MAC_ADDR_0);
-	mac[0] = LOBYTE(tmp);
-	mac[1] = HIBYTE(tmp);
-	tmp = e1000_eeprom_read(g_e1000.mmio_addr, EE_MAC_ADDR_1);
-	mac[2] = LOBYTE(tmp);
-	mac[3] = HIBYTE(tmp);
-	tmp = e1000_eeprom_read(g_e1000.mmio_addr, EE_MAC_ADDR_2);
-	mac[4] = LOBYTE(tmp);
-	mac[5] = HIBYTE(tmp);
-}
-
 static void e1000_init_txbuf(int n)
 {
 	int i;
@@ -223,6 +210,19 @@ static void isr_e1000(uint32_t irq, struct context *ctx)
 	}
 }
 
+void e1000_getmac(uint8_t mac[])
+{
+	uint16_t tmp = e1000_eeprom_read(g_e1000.mmio_addr, EE_MAC_ADDR_0);
+	mac[0] = LOBYTE(tmp);
+	mac[1] = HIBYTE(tmp);
+	tmp = e1000_eeprom_read(g_e1000.mmio_addr, EE_MAC_ADDR_1);
+	mac[2] = LOBYTE(tmp);
+	mac[3] = HIBYTE(tmp);
+	tmp = e1000_eeprom_read(g_e1000.mmio_addr, EE_MAC_ADDR_2);
+	mac[4] = LOBYTE(tmp);
+	mac[5] = HIBYTE(tmp);
+}
+
 int e1000_init()
 {
 	int i;
@@ -237,10 +237,10 @@ int e1000_init()
 	g_kern_cur_addr += bsize;
 
 	pmap(g_e1000.mmio_addr, baddr, PAGE_ROUNDUP(bsize) >> PAGE_SHIFT, PTE_V | PTE_W | (1<<4) | (1<<3));
-#if VERBOSE
-	printk("E1000: On-board memory 0x%08x mapped to 0x%08x(%d pages)\r\n", vtop(g_e1000.mmio_addr), g_e1000.mmio_addr, PAGE_ROUNDUP(bsize) >> PAGE_SHIFT);
+
+	printk("E1000: On-board memory 0x%08x mapped to 0x%08x(%d pages)\r\n",
+	       vtop(g_e1000.mmio_addr), g_e1000.mmio_addr, PAGE_ROUNDUP(bsize) >> PAGE_SHIFT);
 	printk("E1000: IRQ=0x%08x\r\n", pci_get_intr_line(E1000_VENDOR_ID, E1000_DEVICE_ID));
-#endif
 
 	e1000_reg_write(REG_CTRL, CTRL_RST);
     for(i=0;i < 20000;i++)
@@ -249,11 +249,9 @@ int e1000_init()
 	e1000_reg_write(REG_CTRL, CTRL_SLU | CTRL_ASDE);
 
 	e1000_getmac(&g_e1000.mac[0]);
-#if VERBOSE
 	printk("E1000: MAC address: %02X:%02X:%02X:%02X:%02X:%02X\r\n",
 	       g_e1000.mac[0], g_e1000.mac[1], g_e1000.mac[2],
 		   g_e1000.mac[3], g_e1000.mac[4], g_e1000.mac[5]);
-#endif
 
 	e1000_reg_write(REG_RAL+0,  *(uint32_t *)(&g_e1000.mac[0]));
 	e1000_reg_write(REG_RAH+0, (*(uint16_t *)(&g_e1000.mac[4]))|RAH_AV);

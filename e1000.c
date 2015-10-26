@@ -32,12 +32,6 @@ struct tdesc{
 	volatile uint16_t special;
 }__attribute__((packed));
 
-//eeprom register
-#define EE_MAC_ADDR_0 0X00
-#define EE_MAC_ADDR_1 0X01
-#define EE_MAC_ADDR_2 0x02
-
-//controller register
 #define REG_CTRL	0x0000	//Device Control
 	#define CTRL_SLU		(1<<6)
 	#define CTRL_ASDE       (1<<5)
@@ -45,6 +39,9 @@ struct tdesc{
 #define REG_STATUS	0x0008	//Device Status
 #define REG_EECD	0x0010	//EEPROM Control
 #define REG_EERD	0x0014	//EEPROM Read
+	#define EE_MAC_ADDR_0 0x00
+	#define EE_MAC_ADDR_1 0x01
+	#define EE_MAC_ADDR_2 0x02
 #define REG_ICR		0x00c0	//Interrupt Cause Read
 #define REG_IMS		0x00d0	//Interrupt Mask Set/Read
 	#define IMS_LSC		(1<<2) //Link Status Change
@@ -52,20 +49,17 @@ struct tdesc{
 	#define IMS_TXDW     1
 	#define IMS_TXQE    (1<<1)
 #define REG_IMC		0x00d8	//Interrupt Mask Clear
-
 #define REG_RCTL	0x0100	//Receive Control
 	#define RCTL_EN			(1<<1)	//receive enable
 	#define RCTL_MPE        (1<<4)  //Multicast Promiscuous Enabled
 #define REG_RDBAL	0x2800	//Receive Descriptor Base Low
 #define REG_RDBAH	0x2804	//Receive Descriptor Base High
 #define REG_RDLEN	0x2808	//Receive Descriptor Length
-#define REG_RDH		0x2818	//Receive Descriptor Head
-#define REG_RDT		0x2820	//Receive Descriptor Tail
-#define REG_RDTR	0x282c	//Receive Delay Timer
+#define REG_RDH		0x2810	//Receive Descriptor Head
+#define REG_RDT		0x2818	//Receive Descriptor Tail
 #define REG_RAL     0x5400  //Receive Address Low
 #define REG_RAH     0x5404  //Receive Address High
 	#define RAH_AV        (1<<31)  //Address Valid
-
 #define REG_TCTL	0x0400	//Transmit Control
 	#define TCTL_EN			(1<<1)	//transmit enable
 	#define TCTL_PSP		(1<<3)	//pad short packets
@@ -76,7 +70,6 @@ struct tdesc{
 #define REG_TDLEN	0x3808	//Transmit Descriptor Length
 #define REG_TDH		0x3810	//Transmit Descriptor Head
 #define REG_TDT		0x3818	//Transmit Descriptor Tail
-#define REG_MTA		0x5200	//Multicast Table Array
 
 #define E1000_DEVICE_ID 0x100e
 #define E1000_VENDOR_ID 0x8086
@@ -186,36 +179,34 @@ static void e1000_init_rxbuf(int n)
 	e1000_reg_write(REG_RDBAH, 0);
 	e1000_reg_write(REG_RDLEN, sizeof(struct rdesc)*g_e1000.rx_desc_cnt);
 	e1000_reg_write(REG_RDH, 0);
-	e1000_reg_write(REG_RDT, g_e1000.rx_desc_cnt);
+	e1000_reg_write(REG_RDT, 0);
 }
 
 static void e1000_recv()
 {
 	uint32_t tail = e1000_reg_read(REG_RDT);
-	while(1) {
-		tail = tail % g_e1000.rx_desc_cnt;
-
-		if(g_e1000.rx_desc_ring[tail].status & RXD_STA_DD == 0)
-			break;
+	while(g_e1000.rx_desc_ring[tail].status & RXD_STA_DD) {
 
 		uint8_t *buf = &g_e1000.rx_buf_ring[tail*PACKET_BUF_SIZE];
 		uint16_t length = g_e1000.rx_desc_ring[tail].length;
 
 		if(0) {
-		 int i;
-		 printk("rx_tail : %d", tail);
+			int i;
+			printk("rx_tail : %d", tail);
 
-		 for (i = 0; i < length; i++){
-			 if(i%16==0)
-				 printk("\r\n");
-			 printk("%02x ", buf[i]);
-		 }
-		 printk("\r\n");
+			for (i = 0; i < length; i++){
+				if(i%16==0)
+					printk("\r\n");
+				printk("%02x ", buf[i]);
+			}
+			printk("\r\n");
 		}
 
 		g_e1000.rx_desc_ring[tail].status = 0;
+
+		tail = (tail+1) % g_e1000.rx_desc_cnt;
+
 		e1000_reg_write(REG_RDT, tail);
-		tail++;
 	}
 }
 

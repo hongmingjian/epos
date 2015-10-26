@@ -45,6 +45,7 @@ void *krealloc(void *oldptr, size_t bytes)
 
     return ptr;
 }
+
 void kfree(void *ptr)
 {
     uint32_t flags;
@@ -52,6 +53,21 @@ void kfree(void *ptr)
     save_flags_cli(flags);
     free_ex(ptr, g_kern_mem_pool);
     restore_flags(flags);
+}
+
+void *aligned_kmalloc(size_t bytes, size_t align)
+{
+    void *mem = kmalloc(bytes+align-1+sizeof(void*));
+	if(mem == NULL)
+		return mem;
+    uint32_t ptr = ((size_t)((char*)mem+sizeof(void*)+align-1)) & ~ (align-1);
+	((void**)ptr)[-1] = mem;
+    return (void *)ptr;
+}
+
+void aligned_kfree(void *ptr)
+{
+    kfree(((void**)ptr)[-1]);
 }
 
 void init_kmalloc(void *mem, size_t bytes)

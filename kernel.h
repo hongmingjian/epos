@@ -124,11 +124,14 @@ extern uint8_t   end;
 extern uint32_t *PT;
 extern uint32_t *PTD;
 #define vtopte(va) (PT+((va)>>PAGE_SHIFT))
+#define vtop(va) ((*vtopte(va))&(~PAGE_MASK)|((va)&PAGE_MASK))
 
 void  init_kmalloc(void *mem, size_t bytes);
 void *kmalloc(size_t bytes);
 void *krealloc(void *oldptr, size_t size);
 void  kfree(void *ptr);
+void *aligned_kmalloc(size_t bytes, size_t align);
+void  aligned_kfree(void *ptr);
 
 #define RAM_ZONE_LEN (2 * 8)
 extern uint32_t g_ram_zone[RAM_ZONE_LEN];

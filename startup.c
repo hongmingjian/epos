@@ -128,6 +128,64 @@ void start_user_task()
     pci_init();
     printk("Done\r\n");
 
+	if(1) {
+		int e1000_init();
+		void e1000_send(uint8_t *pkt, uint32_t length);
+		void e1000_getmac(uint8_t *mac);
+
+		struct ETH_HEADER {
+			uint8_t rmac[6];
+			uint8_t smac[6];
+			uint16_t type;
+		} __attribute__((packed));
+
+		struct ARP_PACKET {
+			struct ETH_HEADER eth;
+			uint16_t hw_type;
+			uint16_t proto_type;
+			uint8_t hw_len;
+			uint8_t proto_len;
+			uint16_t op;
+			uint8_t smac[6];
+			uint8_t sip[4];
+			uint8_t dmac[6];
+			uint8_t dip[4];
+		} __attribute__((packed));
+
+		uint8_t maddr[6];
+		e1000_init();
+
+		struct ARP_PACKET arp;
+		int i;
+
+		memset(&arp, 0, sizeof(arp));
+
+		for (i = 0; i < 6; i++){
+			arp.eth.rmac[i] = 0xff;
+		}
+
+		e1000_getmac(&arp.eth.smac[0]);
+		arp.eth.type = htons(0x0806);
+		arp.hw_type = htons(1);
+		arp.proto_type = htons(0x0800);
+		arp.hw_len = 6;
+		arp.proto_len = 4;
+		arp.op = htons(1);
+		e1000_getmac(&arp.smac[0]);
+
+		arp.sip[0] = 0xc0;//192
+		arp.sip[1] = 0xa8;//168
+		arp.sip[2] = 0x1;//1
+		arp.sip[3] = 0x22;//34
+
+		arp.dip[0] = 0xc0;//192
+		arp.dip[1] = 0xa8;//168
+		arp.dip[2] = 0x1;//1
+		arp.dip[3] = 0x1;//1
+
+		e1000_send((uint8_t *)&arp, sizeof(arp));
+	}
+
     {
         uint32_t pstart;
         uint8_t scratch[SECTOR_SIZE];

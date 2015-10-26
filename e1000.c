@@ -204,6 +204,7 @@ static void e1000_recv()
 		if(0) {
 		 int i;
 		 printk("rx_tail : %d", tail);
+
 		 for (i = 0; i < length; i++){
 			 if(i%16==0)
 				 printk("\r\n");
@@ -276,7 +277,6 @@ int e1000_init()
     e1000_reg_write(REG_IMS, IMS_LSC|IMS_RXT0);
 
     g_intr_vector[g_e1000.irq] = isr_e1000;
-	enable_irq(2);
     enable_irq(g_e1000.irq);
 
 	return 0;

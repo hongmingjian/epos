@@ -44,6 +44,10 @@ static void init_i8259(uint8_t idt_offset)
     outportb(IO_ICU2+ICU_IMR_OFFSET,1); //ICW4
     outportb(IO_ICU2+ICU_IMR_OFFSET, 0xff); //OCW1
     outportb(IO_ICU2, 0x0a); //OCW3
+
+    //打开ICU2中断
+    outportb(IO_ICU1+ICU_IMR_OFFSET,
+	         inportb(IO_ICU1+ICU_IMR_OFFSET) & (~(1<<2)));
 }
 
 /**

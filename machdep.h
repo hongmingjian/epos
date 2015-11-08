@@ -137,6 +137,9 @@ struct context {
             ); \
 } while(0)
 
+void isr_timer(uint32_t irq, struct context *ctx);
+void isr_keyboard(uint32_t irq, struct context *ctx);
+
 void init_machdep(uint32_t mbi, uint32_t physfree);
 void sys_beep(int freq);
 
@@ -166,5 +169,26 @@ struct vm86_context {
     uint16_t  gs; uint16_t  : 16;/*84*/
 };
 void sys_vm86(struct vm86_context *vm86ctx);
+void init_vm86();
+int  vm86_emulate(struct vm86_context *vm86ctx);
+
+#if USE_FLOPPY
+void     init_floppy();
+uint8_t *floppy_read_sector (uint32_t lba);
+int      floppy_write_sector (size_t lba, uint8_t *buffer);
+#else
+void ide_init(uint16_t bus);
+void ide_read_sector(uint16_t bus, uint8_t slave, uint32_t lba, uint8_t *buf);
+void ide_write_sector(uint16_t bus, uint8_t slave, uint32_t lba, uint8_t *buf);
+#endif
+
+uint8_t  pci_get_intr_line(uint16_t vendor, uint16_t product);
+uint32_t pci_get_bar_size(uint16_t vendor, uint16_t product);
+uint32_t pci_get_bar_addr(uint16_t vendor, uint16_t product);
+void     pci_init();
+
+void e1000_send(uint8_t *pkt, uint32_t length);
+int  e1000_init();
+void e1000_getmac(uint8_t mac[]);
 
 #endif /*_MACHDEP_H*/

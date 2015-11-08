@@ -130,8 +130,8 @@ uint32_t page_alloc(int npages, uint32_t user)
 void page_free(uint32_t va, int npages)
 {
     uint32_t size = npages * PAGE_SIZE;
-	if(npages <= 0)
-		return;
+    if(npages <= 0)
+        return;
 
     struct vmzone *q = NULL, *p = kvmzone;
     if(va < USER_MAX_ADDR)
@@ -219,11 +219,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
             return -1;
         }
 
-        if (vaddr < USER_MAX_ADDR) {
-            code |= PTE_U;
-        }
-        if((vaddr >= (uint32_t)vtopte(USER_MIN_ADDR)) &&
--          (vaddr <  (uint32_t)vtopte(USER_MAX_ADDR))) {
+        if (vaddr < KERN_MIN_ADDR) {
             code |= PTE_U;
         }
 

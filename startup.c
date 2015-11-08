@@ -35,6 +35,7 @@ uint32_t *PT  = (uint32_t *)USER_MAX_ADDR,
         outportb(0x70, 0x80|addr); \
         inportb(0x71); \
         })
+
 /*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
 time_t g_startup_time;
 
@@ -206,7 +207,7 @@ void start_user_task()
 
         /* XXX - 为第一个用户线程准备一个堆，大小64MiB */
         page_alloc_in_addr(end, 64*1024*1024/PAGE_SIZE);
-        
+
         /* XXX - 为第一个用户线程准备栈，大小1MiB */
         page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE);
         if(sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678) == NULL)
@@ -248,10 +249,9 @@ void cstart(uint32_t magic, uint32_t mbi)
                 );
 
         /*
-         * The kernel has been relocated to the linked address. The identity
-         * mapping is unmapped.
+         * 内核已经被重定位到链接地址，取消恒等映射
          */
-        for(i = 1; i < NR_KERN_PAGETABLE; i++)
+        for(i = 0; i < NR_KERN_PAGETABLE; i++)
             PTD[i] = 0;
 
         /*清空TLB*/
@@ -273,6 +273,10 @@ void cstart(uint32_t magic, uint32_t mbi)
      */
     init_kmalloc((uint8_t *)page_alloc(1024, 0), 1024 * PAGE_SIZE);
 
+    /*
+     * 初始化8086模拟器，以访问显卡的BIOS，即VBE(VESA BIOS Extensions)
+     */
+    init_vm86();
 
     /*
      * 保存计算机启动的时间，即自1970-01-01 00:00:00 +0000 (UTC)以来的秒数

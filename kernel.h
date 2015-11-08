@@ -37,8 +37,7 @@ void enable_irq(uint32_t irq);
 /*记录系统启动以来，定时器中断的次数*/
 extern unsigned volatile g_timer_ticks;
 
-/*定时器的中断处理程序*/
-void isr_timer(uint32_t irq, struct context *ctx);
+
 
 struct tm {
     int tm_sec;         /* seconds */
@@ -55,9 +54,6 @@ time_t mktime(struct tm * tm);
 
 /*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
 extern time_t g_startup_time;
-
-/*键盘的中断处理程序*/
-void isr_keyboard(uint32_t irq, struct context *ctx);
 
 /**
  * 线程控制块
@@ -138,16 +134,6 @@ extern uint32_t g_ram_zone[RAM_ZONE_LEN];
 
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code);
 
-#if USE_FLOPPY
-void     init_floppy();
-uint8_t *floppy_read_sector (uint32_t lba);
-int      floppy_write_sector (size_t lba, uint8_t *buffer);
-#else
-void ide_init(uint16_t bus);
-void ide_read_sector(uint16_t bus, uint8_t slave, uint32_t lba, uint8_t *buf);
-void ide_write_sector(uint16_t bus, uint8_t slave, uint32_t lba, uint8_t *buf);
-#endif
-
 #include "dosfs.h"
 uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end);
 
@@ -172,14 +158,5 @@ void     init_frame();
 uint32_t frame_alloc(uint32_t npages);
 uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t npages);
 void     frame_free(uint32_t paddr, uint32_t npages);
-
-uint8_t  pci_get_intr_line(uint16_t vendor, uint16_t product);
-uint32_t pci_get_bar_size(uint16_t vendor, uint16_t product);
-uint32_t pci_get_bar_addr(uint16_t vendor, uint16_t product);
-void     pci_init();
-
-void e1000_send(uint8_t *pkt, uint32_t length);
-int  e1000_init();
-void e1000_getmac(uint8_t mac[]);
 
 #endif /*_KERNEL_H*/

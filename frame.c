@@ -76,7 +76,7 @@ void frame_free(uint32_t paddr, uint32_t npages)
         if(paddr >= pmzone[z].base &&
            paddr <  pmzone[z].base+pmzone[z].limit) {
             uint32_t idx = (paddr - pmzone[z].base) / PAGE_SIZE;
-            /* XXX - 确认之前不是空闲的
+            /* XXX - 确认之前是否空闲
             if(bitmap_any(pmzone[z].bitmap, idx, npages))
                 return;*/
             bitmap_set_multiple(pmzone[z].bitmap, idx, npages, 0);

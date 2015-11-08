@@ -30,16 +30,6 @@ uint32_t g_ram_zone[RAM_ZONE_LEN];
 uint32_t *PT  = (uint32_t *)USER_MAX_ADDR,
          *PTD = (uint32_t *)KERN_MIN_ADDR;
 
-uint32_t g_kern_cur_addr;
-uint32_t g_kern_end_addr;
-
-uint8_t *g_frame_freemap;
-uint32_t g_frame_count;
-
-uint8_t *g_kern_heap_base;
-uint32_t g_kern_heap_size;
-
-
 #define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
 #define CMOS_READ(addr) ({ \
         outportb(0x70, 0x80|addr); \
@@ -111,7 +101,7 @@ uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
 void start_user_task()
 {
     char *filename="a.out";
-    uint32_t entry;
+    uint32_t entry, end;
 
 #if USE_FLOPPY
     printk("task #%d: Initializing floppy disk controller...",
@@ -129,9 +119,6 @@ void start_user_task()
     printk("Done\r\n");
 
 	if(1) {
-		int e1000_init();
-		void e1000_send(uint8_t *pkt, uint32_t length);
-		void e1000_getmac(uint8_t *mac);
 
 		struct ETH_HEADER {
 			uint8_t rmac[6];
@@ -210,18 +197,18 @@ void start_user_task()
     }
 
     printk("task #%d: Loading %s...", sys_task_getid(), filename);
-    entry = load_pe(&g_volinfo, filename);
+    entry = load_pe(&g_volinfo, filename, &end);
 
     if(entry) {
         printk("Done\r\n");
 
-        {
-            int i;
-            for(i = 1; i < 5/*XXX*/; i++)
-                *vtopte(PAGE_TRUNCATE(entry)+i*PAGE_SIZE*1024) = 0;
-        }
-
         printk("task #%d: Creating first user task...", sys_task_getid());
+
+        /* XXX - 为第一个用户线程准备一个堆，大小64MiB */
+        page_alloc_in_addr(end, 64*1024*1024/PAGE_SIZE);
+        
+        /* XXX - 为第一个用户线程准备栈，大小1MiB */
+        page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE);
         if(sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678) == NULL)
             printk("Failed\r\n");
         else {
@@ -242,12 +229,6 @@ void cstart(uint32_t magic, uint32_t mbi)
     printk("Welcome to EPOS\r\n");
     printk("Copyright (C) 2005-2013 MingJian Hong<hongmingjian@gmail.com>\r\n");
     printk("All rights reserved.\r\n\r\n");
-
-    g_kern_cur_addr=KERNBASE+PAGE_ROUNDUP( R((uint32_t)(&end)) );
-    g_kern_end_addr=KERNBASE+NR_KERN_PAGETABLE*PAGE_SIZE*1024;
-
-    //printk("g_kern_cur_addr=0x%08x, g_kern_end_addr=0x%08x\r\n",
-    //       g_kern_cur_addr, g_kern_end_addr);
 
     if(1) {
         uint32_t i;
@@ -278,49 +259,20 @@ void cstart(uint32_t magic, uint32_t mbi)
     }
 
     /*
-     * Reserve the address space for the freemap, which is used
-     * to manage the free physical memory.
-     *
-     * The freemap is then mapped to the top of the physical memory.
+     * 初始化地址空间
      */
-    if(1) {
-        uint32_t size;
-        uint32_t i, vaddr, paddr;
-
-        size = (g_ram_zone[1/*XXX*/] - g_ram_zone[0/*XXX*/]) >> PAGE_SHIFT;
-        size = PAGE_ROUNDUP(size);
-        g_frame_freemap = (uint8_t *)g_kern_cur_addr;
-        g_kern_cur_addr += size;
-
-        g_ram_zone[1/*XXX*/] -= size;
-
-        vaddr = (uint32_t)g_frame_freemap;
-        paddr = g_ram_zone[1];
-        for(i =0 ;i < (size>>PAGE_SHIFT); i++) {
-            *vtopte(vaddr)=paddr|PTE_V|PTE_W;
-            vaddr += PAGE_SIZE;
-            paddr += PAGE_SIZE;
-        }
-        memset(g_frame_freemap, 0, size);
-
-        g_frame_count = (g_ram_zone[1]-g_ram_zone[0])>>PAGE_SHIFT;
-
-        printk("Available memory: 0x%08x - 0x%08x (%d pages)\r\n\r\n",
-                g_ram_zone[0], g_ram_zone[1], g_frame_count);
-
-        //printk("g_frame_freemap=0x%08x\r\n", g_frame_freemap);
-        //printk("g_frame_count=%d\r\n", g_frame_count);
-    }
+    init_page();
 
     /*
-     * 初始化内核堆，为使用kmalloc/kfree做准备.
+     * 初始化物理内存管理器
      */
-    if(1) {
-        g_kern_heap_base = (uint8_t *)g_kern_cur_addr;
-        g_kern_heap_size = 1024 * PAGE_SIZE;
-        g_kern_cur_addr += g_kern_heap_size;
-        init_kmalloc(g_kern_heap_base, g_kern_heap_size);
-    }
+    init_frame();
+
+    /*
+     * 初始化内核堆，大小为4MiB，由kmalloc/kfree管理.
+     */
+    init_kmalloc((uint8_t *)page_alloc(1024, 0), 1024 * PAGE_SIZE);
+
 
     /*
      * 保存计算机启动的时间，即自1970-01-01 00:00:00 +0000 (UTC)以来的秒数

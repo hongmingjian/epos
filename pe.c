@@ -132,7 +132,7 @@ typedef struct _IMAGE_SECTION_HEADER {
     DWORD Characteristics;
 } IMAGE_SECTION_HEADER, *PIMAGE_SECTION_HEADER;
 
-uint32_t load_pe(VOLINFO *pvi, char *filename)
+uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end)
 {
     char scratch[SECTOR_SIZE];
     FILEINFO fi;
@@ -190,6 +190,7 @@ uint32_t load_pe(VOLINFO *pvi, char *filename)
             return 0;
         }
 
+        uint32_t va, npages;
         pinh = (PIMAGE_NT_HEADERS)buffer;
         pish = (PIMAGE_SECTION_HEADER)(pinh + 1);
         for(i = 0; i < pinh->FileHeader.NumberOfSections; i++, pish++) {
@@ -197,18 +198,43 @@ uint32_t load_pe(VOLINFO *pvi, char *filename)
             if(pish->Name[0] == '/')
                 continue;
 
+            /*pish->Name[IMAGE_SIZEOF_SHORT_NAME-1] = 0;
+            printk("task #%d: %s@0x%08x:%d -> 0x%08x:%d\r\n",
+                   sys_task_getid(), pish->Name, pish->PointerToRawData,
+                   pish->SizeOfRawData,
+                   pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
+                   pish->Misc.VirtualSize);*/
+
             if(pish->PointerToRawData) {
+                npages = PAGE_ROUNDUP(pish->SizeOfRawData)/PAGE_SIZE;
+                va = page_alloc_in_addr(pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
+                                        npages);
+                if(va != pinh->OptionalHeader.ImageBase+pish->VirtualAddress) {
+                    printk("task #%d: Address 0x%08x of %d pages has already been used!\r\n",
+                           sys_task_getid(),
+                           pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
+                           npages);
+                    return 0;
+                }
+
                 DFS_Seek(&fi, pish->PointerToRawData, scratch);
                 DFS_ReadFile(&fi, scratch,
                              (void *)(pinh->OptionalHeader.ImageBase+
                                       pish->VirtualAddress),
                              &read, pish->SizeOfRawData);
-                //pish->Name[IMAGE_SIZEOF_SHORT_NAME-1] = 0;
-                //printk("task #%d: %s@0x%08x:%d -> 0x%08x, %d bytes read\r\n",
-                //       sys_task_getid(), pish->Name, pish->PointerToRawData,
-                //       pish->SizeOfRawData,
-                //       pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
-                //       read);
+            } else {
+                if(pish->Misc.VirtualSize) {
+                    npages = PAGE_ROUNDUP(pish->Misc.VirtualSize)/PAGE_SIZE;
+                    va = page_alloc_in_addr(pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
+                                            npages);
+                    if(va != pinh->OptionalHeader.ImageBase+pish->VirtualAddress) {
+                        printk("task #%d: Address 0x%08x of %d pages has already been used!\r\n",
+                               sys_task_getid(),
+                               pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
+                               npages);
+                        return 0;
+                    }
+                }
             }
 
             if(pish->Misc.VirtualSize > pish->SizeOfRawData) {
@@ -221,6 +247,9 @@ uint32_t load_pe(VOLINFO *pvi, char *filename)
         }
 
         kfree(buffer);
+
+        if(end != NULL)
+            *end = va + npages * PAGE_SIZE;
 
         return (pinh->OptionalHeader.ImageBase+
                 pinh->OptionalHeader.AddressOfEntryPoint);

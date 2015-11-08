@@ -136,18 +136,12 @@ void  aligned_kfree(void *ptr);
 #define RAM_ZONE_LEN (2 * 8)
 extern uint32_t g_ram_zone[RAM_ZONE_LEN];
 
-extern uint32_t g_kern_cur_addr;
-extern uint32_t g_kern_end_addr;
-extern uint8_t *g_frame_freemap;
-extern uint32_t g_frame_count;
-extern uint8_t *g_kern_heap_base;
-extern uint32_t g_kern_heap_size;
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code);
 
 #if USE_FLOPPY
-void init_floppy();
+void     init_floppy();
 uint8_t *floppy_read_sector (uint32_t lba);
-int floppy_write_sector (size_t lba, uint8_t *buffer);
+int      floppy_write_sector (size_t lba, uint8_t *buffer);
 #else
 void ide_init(uint16_t bus);
 void ide_read_sector(uint16_t bus, uint8_t slave, uint32_t lba, uint8_t *buf);
@@ -155,7 +149,7 @@ void ide_write_sector(uint16_t bus, uint8_t slave, uint32_t lba, uint8_t *buf);
 #endif
 
 #include "dosfs.h"
-uint32_t load_pe(VOLINFO *pvi, char *filename);
+uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end);
 
 int     sys_putchar(int c);
 int     sys_getchar();
@@ -165,6 +159,19 @@ void        sys_task_exit(int code_exit);
 int         sys_task_wait(int tid, int *pcode_exit);
 int         sys_task_getid();
 void        sys_task_yield();
+
+void     init_page();
+uint32_t page_alloc(int npages, uint32_t user);
+uint32_t page_alloc_in_addr(uint32_t va, int npages);
+void     page_free(uint32_t va, int npages);
+int      page_check(uint32_t va);
+void     page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags);
+void     page_unmap(uint32_t vaddr, uint32_t npages);
+
+void     init_frame();
+uint32_t frame_alloc(uint32_t npages);
+uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t npages);
+void     frame_free(uint32_t paddr, uint32_t npages);
 
 uint8_t  pci_get_intr_line(uint16_t vendor, uint16_t product);
 uint32_t pci_get_bar_size(uint16_t vendor, uint16_t product);

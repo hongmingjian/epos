@@ -50,11 +50,15 @@ typedef          char   int8_t;
 typedef unsigned short uint16_t;
 typedef          short  int16_t;
 typedef unsigned int   uint32_t;
+#define UINT32_MAX 4294967295U
+
 typedef          int    int32_t;
 typedef          long long  int64_t;
 typedef unsigned long long uint64_t;
 
 typedef unsigned int    size_t;
+#define SIZE_MAX UINT32_MAX
+
 typedef          int    ssize_t;
 typedef          long   time_t;
 typedef          long   clock_t;

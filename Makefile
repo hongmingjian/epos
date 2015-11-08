@@ -29,7 +29,7 @@ PROG=		eposkrnl
 
 all: $(PROG).bin
 
-CFLAGS=	-DUSE_FLOPPY=0 -DVERBOSE=1 \
+CFLAGS=	-DUSE_FLOPPY=0 -DVERBOSE=0 \
 	-O -fomit-frame-pointer -fno-builtin \
 	-ffreestanding -mno-stack-arg-probe \
 	-mno-ms-bitfields -fleading-underscore \
@@ -40,7 +40,7 @@ LDFLAGS=-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 OBJS=	entry.o machdep.o printk.o vsprintf.o \
 	task.o kbd.o timer.o mktime.o sem.o  \
 	kmalloc.o dosfs.o page.o startup.o ide.o \
-	floppy.o pci.o pe.o utils.o tlsf/tlsf.o e1000.o
+	floppy.o pci.o pe.o utils.o tlsf/tlsf.o e1000.o frame.o bitmap.o
 
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)

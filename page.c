@@ -20,93 +20,187 @@
 #include "kernel.h"
 #include "dosfs.h"
 
-extern VOLINFO g_volinfo;
+struct vmzone {
+    uint32_t base;
+    uint32_t limit;
+    struct vmzone *next;
+};
 
-static char *g_swapfile_name="epos.swp";
+static struct vmzone km0;
+static struct vmzone *kvmzone;
 
-static struct swap_page {
-    uint32_t state; //0 - free,
-                    //1 - shadow, means that this page lives both memory
-                    //    and swap file
-                    //2 - used, means that this page only lives swap file
-    uint32_t vaddr;
-} g_swap_pages[4096];/*XXX - The size of swap file is 4096 pages(16MiB)*/
+static struct vmzone um0;
+static struct vmzone *uvmzone;
 
-static uint32_t g_max_victim = USER_MIN_ADDR+0x1400000;
-static uint32_t g_min_victim = USER_MIN_ADDR;
-static uint32_t g_cur_victim = USER_MIN_ADDR+0x1400000;
-
-static
-uint32_t get_swap_page(uint32_t state)
+void init_page()
 {
-    int i;
-    for(i = 0; i < __countof(g_swap_pages); i++)
-        if(g_swap_pages[i].state == state)
-            return i;
-    return -1;
+    km0.base = PAGE_ROUNDUP( (uint32_t)(&end) );
+    km0.limit = KERN_MAX_ADDR-km0.base;
+    km0.next = NULL;
+    kvmzone = &km0;
+
+    um0.base = USER_MIN_ADDR;
+    um0.limit = USER_MAX_ADDR-um0.base;
+    um0.next = NULL;
+    uvmzone = &um0;
 }
 
-static
-uint32_t find_swap_page(uint32_t vaddr)
+uint32_t page_alloc_in_addr(uint32_t va, int npages)
 {
-    int i;
+    uint32_t size = npages * PAGE_SIZE;
+    if(npages <= 0)
+        return SIZE_MAX;
 
-    vaddr = PAGE_TRUNCATE(vaddr);
+    struct vmzone *p = kvmzone;
+    if(va < USER_MAX_ADDR)
+        p = uvmzone;
 
-    for(i = 0; i < __countof(g_swap_pages); i++)
-        if((g_swap_pages[i].state > 0) &&
-           (g_swap_pages[i].vaddr == vaddr))
-            return i;
+    for(; p != NULL; p = p->next) {
+        if(va >= p->base &&
+           va <  p->base + p->limit &&
+           va + size >  p->base &&
+           va + size <= p->base+p->limit) {
+            break;
+       }
+   }
 
-    return -1;
+   if(p != NULL) {
+       if(va == p->base) {
+           p->base += size;
+           p->limit -= size;
+           return va;
+       }
+
+       if(va + size == p->base + p->limit) {
+           p->limit -= size;
+           return va;
+       }
+
+       struct vmzone *x = (struct vmzone *)kmalloc(sizeof(struct vmzone));
+       x->base = va + size;
+       x->limit = p->limit-(x->base-p->base);
+       x->next = p->next;
+
+       p->limit = (va - p->base);
+       p->next = x;
+
+       return va;
+   }
+
+   return SIZE_MAX;
 }
 
-static
-int page_swap_out(uint32_t i)
+uint32_t page_alloc(int npages, uint32_t user)
 {
-    uint8_t scratch[SECTOR_SIZE];
-    FILEINFO fi;
-    uint32_t write;
+    uint32_t va = SIZE_MAX;
+    uint32_t size = npages * PAGE_SIZE;
+    if(npages <= 0)
+        return va;
 
-    g_swap_pages[i].vaddr = PAGE_TRUNCATE(g_swap_pages[i].vaddr);
+    struct vmzone *q = NULL, *p = kvmzone;
+    if(user)
+       p = uvmzone;
 
-    if(DFS_OK != DFS_OpenFile(&g_volinfo, g_swapfile_name,
-                              DFS_WRITE, scratch, &fi)) {
-        return -1;
+    while(p != NULL) {
+        if(p->limit >= size) {
+            va = p->base;
+            p->base += size;
+            p->limit -= size;
+            if(p->limit == 0) {
+                if(p != &km0 && p != &um0) {
+                    if(q == NULL) {
+                        if(user)
+                            uvmzone = p->next;
+                        else
+                            kvmzone = p->next;
+                    } else
+                        q->next = p->next;
+                    kfree(p);
+                }
+            }
+            return va;
+        }
+        q = p;
+        p = p->next;
     }
 
-    DFS_Seek(&fi, i*PAGE_SIZE, scratch);
-    if(fi.pointer != i*PAGE_SIZE) {
-        return -2;
-    }
-
-    DFS_WriteFile(&fi, scratch, (void *)(g_swap_pages[i].vaddr),
-                  &write, PAGE_SIZE);
-    return write-PAGE_SIZE;
+    return va;
 }
 
-static
-int page_swap_in(uint32_t i)
+void page_free(uint32_t va, int npages)
 {
-    uint8_t scratch[SECTOR_SIZE];
-    FILEINFO fi;
-    uint32_t read;
+    uint32_t size = npages * PAGE_SIZE;
+	if(npages <= 0)
+		return;
 
-    g_swap_pages[i].vaddr = PAGE_TRUNCATE(g_swap_pages[i].vaddr);
+    struct vmzone *q = NULL, *p = kvmzone;
+    if(va < USER_MAX_ADDR)
+        p = uvmzone;
 
-    if(DFS_OK != DFS_OpenFile(&g_volinfo, g_swapfile_name,
-                              DFS_READ, scratch, &fi)) {
-        return -1;
+    for(; p != NULL; q = p, p = p->next) {
+        if(va >  p->base + p->limit)
+            continue;
+        if(va == p->base + p->limit) {
+            p->limit += size;
+            return;
+        }
+
+        if(va + size == p->base) {
+            p->base = va;
+            p->limit += size;
+            return;
+        }
+        if(va + size < p->base)
+            break;
+    }
+    struct vmzone *x = (struct vmzone *)kmalloc(sizeof(struct vmzone));
+    x->base = va;
+    x->limit = size;
+    x->next = p;
+
+    if(p != NULL) {
+        if(q == NULL) {
+            if(va < USER_MAX_ADDR)
+                uvmzone = x;
+            else
+                kvmzone = x;
+        } else
+            q->next = x;
+    } else {
+        q->next = x;
+    }
+}
+
+int page_check(uint32_t va)
+{
+    struct vmzone *p = kvmzone;
+    if(va < USER_MAX_ADDR)
+        p = uvmzone;
+
+    for(; p != NULL; p = p->next) {
+        if(va >= p->base &&
+           va <  p->base + p->limit)
+            return 0;
     }
 
-    DFS_Seek(&fi, i*PAGE_SIZE, scratch);
-    if(fi.pointer != i*PAGE_SIZE) {
-        return -2;
-    }
+    return 1;
+}
 
-    DFS_ReadFile(&fi, scratch, (void *)(g_swap_pages[i].vaddr),
-                 &read, PAGE_SIZE);
-    return read-PAGE_SIZE;
+void page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags)
+{
+    for (; npages > 0; npages--){
+        *vtopte(vaddr) = paddr | flags;
+        vaddr += PAGE_SIZE;
+        paddr += PAGE_SIZE;
+    }
+}
+
+void page_unmap(uint32_t vaddr, uint32_t npages)
+{
+    for (; npages > 0; npages--){
+        *vtopte(vaddr) = 0;
+        vaddr += PAGE_SIZE;
+    }
 }
 
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
@@ -119,38 +213,27 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 
     if((code&PTE_V) == 0) {
         uint32_t paddr;
-        int i, found = 0;
 
-        if(code&PTE_U) {
-            if ((vaddr <  USER_MIN_ADDR) ||
-                (vaddr >= USER_MAX_ADDR)) {
-                printk("PF:Invalid memory access: 0x%08x(0x%01x)\r\n", vaddr, code);
-                return -1;
-            }
-        } else {
-            if ((vaddr >= USER_MIN_ADDR) &&
-                (vaddr <  USER_MAX_ADDR))
-                code |= PTE_U;
+        if(!page_check(vaddr)) {
+            printk("PF: Invalid memory access: 0x%08x(0x%01x)\r\n", vaddr, code);
+            return -1;
+        }
 
-            if((vaddr >= (uint32_t)vtopte(USER_MIN_ADDR)) &&
-               (vaddr <  (uint32_t)vtopte(USER_MAX_ADDR)))
-                code |= PTE_U;
+        if (vaddr < USER_MAX_ADDR) {
+            code |= PTE_U;
+        }
+        if((vaddr >= (uint32_t)vtopte(USER_MIN_ADDR)) &&
+-          (vaddr <  (uint32_t)vtopte(USER_MAX_ADDR))) {
+            code |= PTE_U;
         }
 
         /* Search for a free frame */
         save_flags_cli(flags);
-        for(i = 0; i < g_frame_count; i++) {
-            if(g_frame_freemap[i] == 0) {
-                found = 1;
-                g_frame_freemap[i] = 1;
-                break;
-            }
-        }
+        paddr = frame_alloc(1);
         restore_flags(flags);
 
-        if(found) {
+        if(paddr != SIZE_MAX) {
             /* Got one :), clear its data before returning */
-            paddr = g_ram_zone[0/*XXX*/]+(i<<PAGE_SHIFT);
             *vtopte(vaddr)=paddr|PTE_V|PTE_W|(code&PTE_U);
             memset(PAGE_TRUNCATE(vaddr), 0, PAGE_SIZE);
             invlpg(vaddr);
@@ -160,143 +243,14 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 #endif
 
             return 0;
-
-        } else {
-            uint32_t *pte, victim;
-
-            /*
-             * No free frame :(, search for a victim page using second-chance
-             * algorithm
-             */
-            save_flags_cli(flags);
-            do {
-                if(g_cur_victim < g_min_victim)
-                    g_cur_victim = g_max_victim;
-
-                g_cur_victim -= PAGE_SIZE;
-
-                pte = vtopte(g_cur_victim);
-                if((*pte) & PTE_V) {
-                    if((*pte) & PTE_A)
-                        *pte = (*pte) & (~PTE_A);
-                    else {
-                        break;
-                    }
-                }
-            } while(1);
-            victim = g_cur_victim;
-            restore_flags(flags);
-
-            pte = vtopte(victim);
-
-#if VERBOSE
-            printk("[0x%08x(0x%08x)", victim, *pte);
-#endif
-
-            /* Does the victim page have a shadow in the swap file? */
-            save_flags_cli(flags);
-            i = find_swap_page(victim);
-            if(i != (uint32_t)-1) {
-
-                /* Yes, mark it as used */
-                g_swap_pages[i].state = 2/*used*/;
-                restore_flags(flags);
-
-                /* Is the victim page a dirty one? */
-                if((*pte) & PTE_M) {
-
-                    /* Yes, page it out */
-                    page_swap_out(i);
-#if VERBOSE
-                    printk("*>0x%08x]", i*PAGE_SIZE);
-#endif
-                }
-#if VERBOSE
-                else
-                    printk("]");
-#endif
-            } else {
-
-                /*
-                 * No. Try to find an available page in the swap file to accommodate
-                 * the victim page.
-                 *
-                 * Here, we search for a shadow page first because the size of swap
-                 * file is very limited. If no shadow page is found, we try again to
-                 * find a free page.
-                 */
-                i = get_swap_page(1/*shadow*/);
-                if(i == (uint32_t)-1)
-                    i = get_swap_page(0/*free*/);
-
-                if(i != (uint32_t)-1) {
-
-                    /* Got it. Mark it as used */
-                    g_swap_pages[i].vaddr = victim;
-                    g_swap_pages[i].state = 2/*used*/;
-                    restore_flags(flags);
-
-                    page_swap_out(i);
-#if VERBOSE
-                    printk("+>0x%08x]", i*PAGE_SIZE);
-#endif
-                } else {
-                    restore_flags(flags);
-                    printk("No free swap space!\r\n");
-                    goto failed;
-                }
-            }
-
-            /*
-             * The physical address of the victim page is extracted
-             * and we map the fault page to it
-             */
-            paddr = PAGE_TRUNCATE(*pte);
-
-            save_flags_cli(flags);
-
-            *pte = 0;
-            invlpg(victim);
-
-            *vtopte(vaddr)=paddr|PTE_V|PTE_W|(code&PTE_U);
-            invlpg(vaddr);
-
-            /* Does the fault page have a shadow in the swap file? */
-            i = find_swap_page(vaddr);
-
-#if VERBOSE
-            printk("->0x%08x", *vtopte(vaddr));
-#endif
-
-            if(i != (uint32_t)-1) {
-
-                /* Yes, mark it as a shadow and page it in */
-                g_swap_pages[i].state = 1/*shadow*/;
-                restore_flags(flags);
-                page_swap_in(i);
-
-#if VERBOSE
-                printk("<-0x%08x\r\n", i*PAGE_SIZE);
-#endif
-            } else {
-
-                /*
-                 * No, we must clear the old data of the page before handing over
-                 * it to the fault page
-                 */
-                restore_flags(flags);
-                memset(PAGE_TRUNCATE(vaddr), 0, PAGE_SIZE);
-#if VERBOSE
-                printk("\r\n");
-#endif
-            }
         }
-
-        return 0;
     }
 
-failed:
-    printk("->  ????????\r\n");
+#if VERBOSE
+    printk("->????????\r\n");
+#else
+    printk("PF:0x%08x(0x%01x)->????????\r\n", vaddr, code);
+#endif
     return -1;
 }
 

@@ -76,14 +76,6 @@ struct tdesc{
 
 #define PACKET_BUF_SIZE	2048
 
-static __inline void pmap(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags){
-	for (npages; npages > 0; npages--){
-		*vtopte(vaddr) = paddr | flags;
-		vaddr += PAGE_SIZE;
-		paddr += PAGE_SIZE;
-	}
-}
-
 struct e1000_dev {
 	uint8_t mac[6];
 
@@ -233,14 +225,12 @@ int e1000_init()
 	uint32_t bsize = pci_get_bar_size(E1000_VENDOR_ID, E1000_DEVICE_ID);
 	g_e1000.irq = pci_get_intr_line(E1000_VENDOR_ID, E1000_DEVICE_ID);
 
-	g_e1000.mmio_addr = g_kern_cur_addr;
-	g_kern_cur_addr += bsize;
+	g_e1000.mmio_addr = page_alloc(PAGE_ROUNDUP(bsize)/PAGE_SIZE, 0);
+	page_map(g_e1000.mmio_addr, baddr, PAGE_ROUNDUP(bsize) >> PAGE_SHIFT, PTE_V | PTE_W);
 
-	pmap(g_e1000.mmio_addr, baddr, PAGE_ROUNDUP(bsize) >> PAGE_SHIFT, PTE_V | PTE_W | (1<<4) | (1<<3));
-
-	printk("E1000: On-board memory 0x%08x mapped to 0x%08x(%d pages)\r\n",
-	       vtop(g_e1000.mmio_addr), g_e1000.mmio_addr, PAGE_ROUNDUP(bsize) >> PAGE_SHIFT);
-	printk("E1000: IRQ=0x%08x\r\n", g_e1000.irq);
+	printk("E1000: On-board memory 0x%08x mapped to 0x%08x (%d pages)\r\n",
+	       vtop(g_e1000.mmio_addr), g_e1000.mmio_addr, PAGE_ROUNDUP(bsize)/PAGE_SIZE);
+	printk("E1000: IRQ=0x%02x\r\n", g_e1000.irq);
 
 	e1000_reg_write(REG_CTRL, CTRL_RST);
     for(i=0;i < 20000;i++)

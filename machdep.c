@@ -47,7 +47,7 @@ static void init_i8259(uint8_t idt_offset)
 
     //打开ICU2中断
     outportb(IO_ICU1+ICU_IMR_OFFSET,
-	         inportb(IO_ICU1+ICU_IMR_OFFSET) & (~(1<<2)));
+             inportb(IO_ICU1+ICU_IMR_OFFSET) & (~(1<<2)));
 }
 
 /**
@@ -391,7 +391,7 @@ static void init_idt()
  */
 int sys_putchar(int c)
 {
-    unsigned char *SCREEN_BASE = (char *)(KERNBASE+0xB8000);
+    unsigned char *SCREEN_BASE = (char *)(0xB8000);
     unsigned int curpos, i;
 
     uint32_t flags;
@@ -630,7 +630,7 @@ void syscall(struct context *ctx)
  */
 static uint32_t init_paging(uint32_t physfree)
 {
-    uint32_t i;
+    uint32_t i, x, y;
     uint32_t *pgdir, *pte;
 
     //分配页目录
@@ -638,22 +638,35 @@ static uint32_t init_paging(uint32_t physfree)
     physfree += PAGE_SIZE;
     memset(pgdir, 0, PAGE_SIZE);
 
-    //分配小页表，并填充页目录
-    for(i = 0; i < NR_KERN_PAGETABLE; i++) {
-        pgdir[i                       ]=                        //恒等映射
-        pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_W;   //映射到链接地址
-        pgdir[i] |= PTE_U;
+    x=(uint32_t)(pgdir)/(1024*PAGE_SIZE);
+    if(x < 1)
+        x=1;
 
+    //恒等映射
+    for(i = 0; i < x; i++) {
+        pgdir[i]=physfree|PTE_V|PTE_W;
         memset((void *)physfree, 0, PAGE_SIZE);
         physfree+=PAGE_SIZE;
     }
+    y = 0;
+    for(i = 0; i < x; i++) {
+        pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[i]));
+        for(; y < (uint32_t)(pgdir); y+=PAGE_SIZE)
+            pte[(y-i*1024*PAGE_SIZE)>>PAGE_SHIFT]=(y)|PTE_V|PTE_W;
+    }
 
-    //填充小页表
-    pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
-    for(i = 0; i < 256*PAGE_SIZE; i+=PAGE_SIZE)
-        pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_W|PTE_U;
-    for(     ; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
-        pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_W;
+    //映射到链接地址
+    for(i = 0; i < NR_KERN_PAGETABLE-x; i++) {
+        pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_W;
+        memset((void *)physfree, 0, PAGE_SIZE);
+        physfree+=PAGE_SIZE;
+    }
+    y=KERNBASE;
+    for(i = 0; i < NR_KERN_PAGETABLE-x; i++) {
+        pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[i+(KERNBASE>>PGDR_SHIFT)]));
+        for(; y < KERNBASE+((uint32_t)(pgdir)-0x100000); y+=PAGE_SIZE)
+            pte[(y-KERNBASE-i*1024*PAGE_SIZE)>>PAGE_SHIFT]=(y-KERNBASE+0x100000)|PTE_V|PTE_W;
+    }
 
     //映射页目录
     pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|PTE_V|PTE_W;
@@ -665,9 +678,9 @@ static uint32_t init_paging(uint32_t physfree)
             "movl %%cr0, %%eax\n\t"
             "orl  $0x80000000, %%eax\n\t"
             "movl %%eax, %%cr0\n\t"
-            //    "pushl $1f\n\t"
-            //    "ret\n\t"
-            //    "1:\n\t"
+            //"pushl $1f\n\t"
+            //"ret\n\t"
+            //"1:\n\t"
             :
             :"m"(pgdir)
             :"%eax"

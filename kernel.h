@@ -109,7 +109,7 @@ extern void *ret_from_syscall;
 #define USER_MIN_ADDR VADDR(1, 0)
 
 #define KERNBASE  VADDR(768, 0)
-#define R(x) ((x)-KERNBASE)
+#define R(x) ((x)-KERNBASE+0x100000)
 
 #define NR_KERN_PAGETABLE 20
 

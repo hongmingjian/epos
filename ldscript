@@ -20,7 +20,7 @@
 OUTPUT_FORMAT("pei-i386")
 ENTRY(_entry)
 SECTIONS {
-  . = (0xC0000000+0x100000);
+  . = 0xC0000000;
   .text : {
     *(.text)
   }

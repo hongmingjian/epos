@@ -170,6 +170,7 @@ struct vm86_context {
 };
 void sys_vm86(struct vm86_context *vm86ctx);
 void init_vm86();
+void exit_vm86();
 int  vm86_emulate(struct vm86_context *vm86ctx);
 
 #if USE_FLOPPY

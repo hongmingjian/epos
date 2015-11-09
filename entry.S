@@ -33,7 +33,7 @@
 #define KDSEL 0x10
 #define KCSEL 0x8
 
-#define R(foo) ((foo)-KERNBASE)
+#define R(foo) ((foo)-KERNBASE+0x100000)
 
 #define __ASSEMBLY__ 1
 #include "multiboot.h"

@@ -3,8 +3,12 @@
 
 void init_vm86()
 {
-    page_map(0xa0000, 0xa0000, (0x100000-0xa0000)/PAGE_SIZE, PTE_V|PTE_W|PTE_U);
     page_map(0, 0, 1, PTE_V|PTE_W|PTE_U);
+}
+
+void exit_vm86()
+{
+    page_unmap(0, 1);
 }
 
 #define LADDR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))

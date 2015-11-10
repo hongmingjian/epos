@@ -154,7 +154,7 @@ void start_user_task()
 void mi_startup()
 {
     printk("Welcome to EPOS\r\n");
-    printk("Copyright (C) 2005-2013 MingJian Hong<hongmingjian@gmail.com>\r\n");
+    printk("Copyright (C) 2005-2015 MingJian Hong<hongmingjian@gmail.com>\r\n");
     printk("All rights reserved.\r\n\r\n");
 
     /*
@@ -240,8 +240,9 @@ void mi_startup()
     init_task();
 
     /*
-     * task0是系统空闲线程，已经由init_task创建。这里用run_as_task0手工切换到task0运行。
-     * 由task0初始化其他子系统，并启动第一个用户线程，然后它将循环执行函数cpu_idle。
+     * task0是系统空闲线程，已经由init_task创建。
+     * 这里用run_as_task0手工切换到task0运行。
+     * 由task0启动第一个用户线程，然后它将循环执行函数cpu_idle。
      */
     run_as_task0();
     start_user_task();

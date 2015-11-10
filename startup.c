@@ -96,83 +96,13 @@ uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
 }
 
 /*
- * 这个函数被线程task0执行。它首先初始化软盘/硬盘，
- * 然后加载应用程序a.out，并创建了一个用户线程执行a.out中的代码
+ * 这个函数被线程task0执行。它加载应用程序a.out，
+ * 并创建了一个用户线程执行a.out中的main函数
  */
 void start_user_task()
 {
     char *filename="a.out";
     uint32_t entry, end;
-
-#if USE_FLOPPY
-    printk("task #%d: Initializing floppy disk controller...",
-            sys_task_getid());
-    init_floppy();
-    printk("Done\r\n");
-#else
-    printk("task #%d: Initializing IDE controller...", sys_task_getid());
-    ide_init(0x1f0);
-    printk("Done\r\n");
-#endif
-
-    printk("task #%d: Initializing PCI controller...", sys_task_getid());
-    pci_init();
-    printk("Done\r\n");
-
-    if(1) {
-
-        struct ETH_HEADER {
-            uint8_t rmac[6];
-            uint8_t smac[6];
-            uint16_t type;
-        } __attribute__((packed));
-
-        struct ARP_PACKET {
-            struct ETH_HEADER eth;
-            uint16_t hw_type;
-            uint16_t proto_type;
-            uint8_t hw_len;
-            uint8_t proto_len;
-            uint16_t op;
-            uint8_t smac[6];
-            uint8_t sip[4];
-            uint8_t dmac[6];
-            uint8_t dip[4];
-        } __attribute__((packed));
-
-        uint8_t maddr[6];
-        e1000_init();
-
-        struct ARP_PACKET arp;
-        int i;
-
-        memset(&arp, 0, sizeof(arp));
-
-        for (i = 0; i < 6; i++){
-            arp.eth.rmac[i] = 0xff;
-        }
-
-        e1000_getmac(&arp.eth.smac[0]);
-        arp.eth.type = htons(0x0806);
-        arp.hw_type = htons(1);
-        arp.proto_type = htons(0x0800);
-        arp.hw_len = 6;
-        arp.proto_len = 4;
-        arp.op = htons(1);
-        e1000_getmac(&arp.smac[0]);
-
-        arp.sip[0] = 0xc0;//192
-        arp.sip[1] = 0xa8;//168
-        arp.sip[2] = 0x1;//1
-        arp.sip[3] = 0x22;//34
-
-        arp.dip[0] = 0xc0;//192
-        arp.dip[1] = 0xa8;//168
-        arp.dip[2] = 0x1;//1
-        arp.dip[3] = 0x1;//1
-
-        e1000_send((uint8_t *)&arp, sizeof(arp));
-    }
 
     {
         uint32_t pstart;
@@ -220,49 +150,14 @@ void start_user_task()
         printk("Failed\r\n");
 }
 
-/*
- * 这个函数是内核的C语言入口，被entry.S调用
- */
-void cstart(uint32_t magic, uint32_t mbi)
+void mi_startup()
 {
-    init_machdep( mbi, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
-
-    if(1) {
-        uint32_t i;
-
-        /**
-         * XXX - machine-dependent should be elsewhere
-         */
-        __asm__ __volatile__ (
-                "addl %0,%%esp\n\t"
-                "addl %0,%%ebp\n\t"
-                "pushl $1f\n\t"
-                "ret\n\t"
-                "1:\n\t"
-                :
-                :"i"(KERNBASE-0x100000)
-                );
-
-        /*
-         * 内核已经被重定位到链接地址，取消恒等映射
-         */
-        for(i=0; i < PAGE_ROUNDUP( R((uint32_t)(&end)) ); i += PAGE_SIZE) {
-            *vtopte(i) = 0;
-        }
-
-        /*清空TLB*/
-        invltlb();
-
-        /*映射ROM BIOS区域*/
-        page_map(0xa0000, 0xa0000, (0x100000-0xa0000)/PAGE_SIZE, PTE_V|PTE_W|PTE_U);
-    }
-
     printk("Welcome to EPOS\r\n");
     printk("Copyright (C) 2005-2013 MingJian Hong<hongmingjian@gmail.com>\r\n");
     printk("All rights reserved.\r\n\r\n");
 
     /*
-     * 初始化地址空间
+     * 初始化虚拟地址空间
      */
     init_page();
 
@@ -276,10 +171,20 @@ void cstart(uint32_t magic, uint32_t mbi)
      */
     init_kmalloc((uint8_t *)page_alloc(1024, 0), 1024 * PAGE_SIZE);
 
-    /*
-     * 初始化8086模拟器，以访问显卡的BIOS，即VBE(VESA BIOS Extensions)
-     */
-    init_vm86();
+#if USE_FLOPPY
+    printk("Initializing floppy disk controller...");
+    init_floppy();        //初始化软盘控制器
+    printk("Done\r\n");
+#else
+    printk("Initializing IDE controller...");
+    ide_init(0x1f0);      //初始化IDE控制器
+    printk("Done\r\n");
+#endif
+    printk("Initializing PCI controller...");
+    pci_init();           //初始化PCI总线控制器
+    printk("Done\r\n");
+
+    e1000_init();         //初始化E1000网卡
 
     /*
      * 保存计算机启动的时间，即自1970-01-01 00:00:00 +0000 (UTC)以来的秒数

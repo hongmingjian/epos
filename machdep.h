@@ -140,7 +140,6 @@ struct context {
 void isr_timer(uint32_t irq, struct context *ctx);
 void isr_keyboard(uint32_t irq, struct context *ctx);
 
-void init_machdep(uint32_t mbi, uint32_t physfree);
 void sys_beep(int freq);
 
 struct vm86_context {

@@ -664,8 +664,8 @@ static uint32_t init_paging(uint32_t physfree)
     y=KERNBASE;
     for(i = 0; i < NR_KERN_PAGETABLE-x; i++) {
         pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[i+(KERNBASE>>PGDR_SHIFT)]));
-        for(; y < KERNBASE+((uint32_t)(pgdir)-0x100000); y+=PAGE_SIZE)
-            pte[(y-KERNBASE-i*1024*PAGE_SIZE)>>PAGE_SHIFT]=(y-KERNBASE+0x100000)|PTE_V|PTE_W;
+        for(; y < KERNBASE+((uint32_t)(pgdir)-LOAD_ADDR); y+=PAGE_SIZE)
+            pte[(y-KERNBASE-i*1024*PAGE_SIZE)>>PAGE_SHIFT]=(y-KERNBASE+LOAD_ADDR)|PTE_V|PTE_W;
     }
 
     //映射页目录
@@ -678,9 +678,6 @@ static uint32_t init_paging(uint32_t physfree)
             "movl %%cr0, %%eax\n\t"
             "orl  $0x80000000, %%eax\n\t"
             "movl %%eax, %%cr0\n\t"
-            //"pushl $1f\n\t"
-            //"ret\n\t"
-            //"1:\n\t"
             :
             :"m"(pgdir)
             :"%eax"
@@ -723,7 +720,10 @@ static void init_ram(multiboot_memory_map_t *mmap,
     g_ram_zone[n+1] = 0;
 }
 
-void init_machdep(uint32_t mbi, uint32_t physfree)
+/*
+ * 机器相关（Machine Dependent）的初始化
+ */
+static void md_startup(uint32_t mbi, uint32_t physfree)
 {
     physfree=init_paging(physfree);
 
@@ -736,4 +736,48 @@ void init_machdep(uint32_t mbi, uint32_t physfree)
 
     init_i8259(ICU_IDT_OFFSET);
     init_i8253(HZ);
+}
+
+/*
+ * 这个函数是内核的C语言入口，被entry.S调用
+ */
+void cstart(uint32_t magic, uint32_t mbi)
+{
+    uint32_t i;
+
+    /*机器相关（Machine Dependent）的初始化*/
+    md_startup( mbi, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
+
+    /*
+     * 分页已经打开，切换到虚拟地址运行
+     */
+    __asm__ __volatile__ (
+            "addl %0,%%esp\n\t"
+            "pushl $1f\n\t"
+            "ret\n\t"
+            "1:\n\t"
+            :
+            :"i"(KERNBASE-LOAD_ADDR)
+            );
+
+    /*
+     * 内核已经被重定位到链接地址，取消恒等映射
+     */
+    for(i = 0; i < PAGE_ROUNDUP( R((uint32_t)(&end)) ); i += PAGE_SIZE) {
+        *vtopte(i) = 0;
+    }
+
+    /*清空TLB*/
+    invltlb();
+
+    /*映射ROM BIOS区域*/
+    page_map(0xa0000, 0xa0000, (0x100000-0xa0000)/PAGE_SIZE, PTE_V|PTE_W|PTE_U);
+
+    /*
+     * 初始化8086模拟器，以访问显卡的BIOS，即VBE(VESA BIOS Extensions)
+     */
+    init_vm86();
+
+    /*机器无关（Machine Independent）的初始化*/
+    mi_startup();
 }

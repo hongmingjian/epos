@@ -108,8 +108,9 @@ extern void *ret_from_syscall;
 #define USER_MAX_ADDR VADDR(767, 0)
 #define USER_MIN_ADDR VADDR(1, 0)
 
+#define LOAD_ADDR 0x100000
 #define KERNBASE  VADDR(768, 0)
-#define R(x) ((x)-KERNBASE+0x100000)
+#define R(x) ((x)-KERNBASE+LOAD_ADDR)
 
 #define NR_KERN_PAGETABLE 20
 

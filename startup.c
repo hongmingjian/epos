@@ -1,7 +1,7 @@
 /**
  * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  *
- * Copyright (C) 2013 Hong MingJian<hongmingjian@gmail.com>
+ * Copyright (C) 2015 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
  *
  * This file is part of the EPOS.
@@ -24,22 +24,19 @@
 /*中断向量表*/
 void (*g_intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
 
+/*可用的物理内存区域*/
 uint32_t g_ram_zone[RAM_ZONE_LEN];
 
-/*The pointers to the page tables and page directory*/
-uint32_t *PT  = (uint32_t *)USER_MAX_ADDR,
-         *PTD = (uint32_t *)KERN_MIN_ADDR;
+uint32_t *PT  = (uint32_t *)USER_MAX_ADDR, //页表的指针
+         *PTD = (uint32_t *)KERN_MIN_ADDR; //页目录的指针
 
 #define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
 #define CMOS_READ(addr) ({ \
         outportb(0x70, 0x80|addr); \
         inportb(0x71); \
         })
-
 /*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
 time_t g_startup_time;
-
-VOLINFO g_volinfo;
 
 /*默认的中断处理程序*/
 void isr_default(uint32_t irq, struct context *ctx)
@@ -47,9 +44,10 @@ void isr_default(uint32_t irq, struct context *ctx)
     //printk("IRQ=0x%02x\r\n", irq);
 }
 
-/*
+/**
  * These are the interfaces required by the dosfs
  */
+VOLINFO g_volinfo;
 uint32_t DFS_ReadSector(uint8_t unit, uint8_t *buffer,
         uint32_t sector, uint32_t count)
 {
@@ -95,7 +93,7 @@ uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
     return 0;
 }
 
-/*
+/**
  * 这个函数被线程task0执行。它加载应用程序a.out，
  * 并创建了一个用户线程执行a.out中的main函数
  */
@@ -150,6 +148,9 @@ void start_user_task()
         printk("Failed\r\n");
 }
 
+/**
+ * 机器无关（Machine Independent）的初始化
+ */
 void mi_startup()
 {
     printk("Welcome to EPOS\r\n");

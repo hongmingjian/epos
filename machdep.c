@@ -412,7 +412,7 @@ int sys_putchar(int c)
     case '\n'://换行，只是换行而已
         curpos = (curpos/160)*160 + 160;
         break;
-    case '\r'://回车，这是回车而已
+    case '\r'://回车，只是回车而已
         curpos = (curpos/160)*160;
         break;
     case '\t':
@@ -633,16 +633,19 @@ static uint32_t init_paging(uint32_t physfree)
     uint32_t i, x, y;
     uint32_t *pgdir, *pte;
 
-    //分配页目录
+    /*
+     * 分配页目录
+     */
     pgdir=(uint32_t *)physfree;
     physfree += PAGE_SIZE;
     memset(pgdir, 0, PAGE_SIZE);
 
-    x=(uint32_t)(pgdir)/(1024*PAGE_SIZE);
+    /*
+     * 恒等映射，即映射虚拟地址[0, end]到物理地址[0, end]
+     */
+    x = (uint32_t)(pgdir)/(1024*PAGE_SIZE);
     if(x < 1)
-        x=1;
-
-    //恒等映射
+        x = 1;
     for(i = 0; i < x; i++) {
         pgdir[i]=physfree|PTE_V|PTE_W;
         memset((void *)physfree, 0, PAGE_SIZE);
@@ -655,23 +658,29 @@ static uint32_t init_paging(uint32_t physfree)
             pte[(y-i*1024*PAGE_SIZE)>>PAGE_SHIFT]=(y)|PTE_V|PTE_W;
     }
 
-    //映射到链接地址
+    /*
+     * 映射到链接地址，即映射虚拟地址[KERNBASE, ...]到物理地址[LOAD_ADDR, ...]
+     */
     for(i = 0; i < NR_KERN_PAGETABLE-x; i++) {
         pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_W;
         memset((void *)physfree, 0, PAGE_SIZE);
         physfree+=PAGE_SIZE;
     }
-    y=KERNBASE;
+    y = KERNBASE;
     for(i = 0; i < NR_KERN_PAGETABLE-x; i++) {
         pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[i+(KERNBASE>>PGDR_SHIFT)]));
         for(; y < KERNBASE+((uint32_t)(pgdir)-LOAD_ADDR); y+=PAGE_SIZE)
             pte[(y-KERNBASE-i*1024*PAGE_SIZE)>>PAGE_SHIFT]=(y-KERNBASE+LOAD_ADDR)|PTE_V|PTE_W;
     }
 
-    //映射页目录
+    /*
+     * 映射页目录及页表
+     */
     pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|PTE_V|PTE_W;
 
-    //打开分页
+    /*
+     * 打开分页
+     */
     __asm__ __volatile__ (
             "movl %0, %%eax\n\t"
             "movl %%eax, %%cr3\n\t"
@@ -720,7 +729,7 @@ static void init_ram(multiboot_memory_map_t *mmap,
     g_ram_zone[n+1] = 0;
 }
 
-/*
+/**
  * 机器相关（Machine Dependent）的初始化
  */
 static void md_startup(uint32_t mbi, uint32_t physfree)
@@ -738,14 +747,16 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
     init_i8253(HZ);
 }
 
-/*
+/**
  * 这个函数是内核的C语言入口，被entry.S调用
  */
 void cstart(uint32_t magic, uint32_t mbi)
 {
     uint32_t i;
 
-    /*机器相关（Machine Dependent）的初始化*/
+    /*
+     * 机器相关（Machine Dependent）的初始化
+     */
     md_startup( mbi, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
 
     /*
@@ -770,7 +781,9 @@ void cstart(uint32_t magic, uint32_t mbi)
     /*清空TLB*/
     invltlb();
 
-    /*映射ROM BIOS区域*/
+    /*
+     * 映射ROM BIOS区域
+     */
     page_map(0xa0000, 0xa0000, (0x100000-0xa0000)/PAGE_SIZE, PTE_V|PTE_W|PTE_U);
 
     /*
@@ -778,6 +791,8 @@ void cstart(uint32_t magic, uint32_t mbi)
      */
     init_vm86();
 
-    /*机器无关（Machine Independent）的初始化*/
+    /*
+     * 机器无关（Machine Independent）的初始化
+     */
     mi_startup();
 }

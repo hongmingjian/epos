@@ -1,7 +1,7 @@
 /**
  * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  *
- * Copyright (C) 2013 Hong MingJian<hongmingjian@gmail.com>
+ * Copyright (C) 2015 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
  *
  * This file is part of the EPOS.

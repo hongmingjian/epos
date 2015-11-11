@@ -1,3 +1,22 @@
+/**
+ * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
+ *
+ * Copyright (C) 2015 Hong MingJian<hongmingjian@gmail.com>
+ * All rights reserved.
+ *
+ * This file is part of the EPOS.
+ *
+ * Redistribution and use in source and binary forms are freely
+ * permitted provided that the above copyright notice and this
+ * paragraph and the following disclaimer are duplicated in all
+ * such forms.
+ *
+ * This software is provided "AS IS" and without any express or
+ * implied warranties, including, without limitation, the implied
+ * warranties of merchantability and fitness for a particular
+ * purpose.
+ *
+ */
 #include "kernel.h"
 #include "bitmap.h"
 
@@ -35,15 +54,19 @@ void init_frame()
     }
 }
 
-uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t npages)
+/**
+ * 在指定的物理地址pa分配nframes个连续帧
+ * 失败返回BITMAP_ERROR(=SIZE_MAX)，成功返回pa
+ */
+uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t nframes)
 {
     int z;
     for(z = 0; z < RAM_ZONE_LEN/2; z++) {
         if(pa >= pmzone[z].base &&
            pa <  pmzone[z].base + pmzone[z].limit) {
             uint32_t idx = (pa - pmzone[z].base) / PAGE_SIZE;
-            if(bitmap_none(pmzone[z].bitmap, idx, npages)) {
-                bitmap_set_multiple(pmzone[z].bitmap, idx, npages, 1);
+            if(bitmap_none(pmzone[z].bitmap, idx, nframes)) {
+                bitmap_set_multiple(pmzone[z].bitmap, idx, nframes, 1);
                 return pa;
             }
         }
@@ -51,15 +74,19 @@ uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t npages)
     return BITMAP_ERROR;
 }
 
-uint32_t frame_alloc(uint32_t npages)
+/**
+ * 分配nframes个连续的帧
+ * 失败返回BITMAP_ERROR(=SIZE_MAX)，成功返回帧的起始地址
+ */
+uint32_t frame_alloc(uint32_t nframes)
 {
     int z;
     for(z = 0; z < RAM_ZONE_LEN/2; z++) {
         if(pmzone[z].limit == 0)
             break;
-        uint32_t idx = bitmap_scan(pmzone[z].bitmap, 0, npages, 0);
+        uint32_t idx = bitmap_scan(pmzone[z].bitmap, 0, nframes, 0);
         if(idx != BITMAP_ERROR) {
-            bitmap_set_multiple(pmzone[z].bitmap, idx, npages, 1);
+            bitmap_set_multiple(pmzone[z].bitmap, idx, nframes, 1);
             return pmzone[z].base + idx * PAGE_SIZE;
         }
     }
@@ -67,7 +94,10 @@ uint32_t frame_alloc(uint32_t npages)
     return BITMAP_ERROR;
 }
 
-void frame_free(uint32_t paddr, uint32_t npages)
+/**
+ * 释放frame_alloc所分配的帧
+ */
+void frame_free(uint32_t paddr, uint32_t nframes)
 {
     uint32_t z;
     for(z = 0; z < RAM_ZONE_LEN/2; z++) {
@@ -77,9 +107,9 @@ void frame_free(uint32_t paddr, uint32_t npages)
            paddr <  pmzone[z].base+pmzone[z].limit) {
             uint32_t idx = (paddr - pmzone[z].base) / PAGE_SIZE;
             /* XXX - 确认之前是否空闲
-            if(bitmap_any(pmzone[z].bitmap, idx, npages))
+            if(bitmap_any(pmzone[z].bitmap, idx, nframes))
                 return;*/
-            bitmap_set_multiple(pmzone[z].bitmap, idx, npages, 0);
+            bitmap_set_multiple(pmzone[z].bitmap, idx, nframes, 0);
             return;
         }
     }

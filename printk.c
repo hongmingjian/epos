@@ -3,7 +3,7 @@
 
 int printk(const char *fmt,...)
 {
-  char buf[1024];
+  char buf[256];
   va_list args;
   int i, j;
 

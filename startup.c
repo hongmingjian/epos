@@ -30,14 +30,6 @@ uint32_t g_ram_zone[RAM_ZONE_LEN];
 uint32_t *PT  = (uint32_t *)USER_MAX_ADDR, //页表的指针
          *PTD = (uint32_t *)KERN_MIN_ADDR; //页目录的指针
 
-#define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
-#define CMOS_READ(addr) ({ \
-        outportb(0x70, 0x80|addr); \
-        inportb(0x71); \
-        })
-/*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
-time_t g_startup_time;
-
 /*默认的中断处理程序*/
 void isr_default(uint32_t irq, struct context *ctx)
 {
@@ -94,14 +86,16 @@ uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
 }
 
 /**
- * 这个函数被线程task0执行。它加载应用程序a.out，
- * 并创建了一个用户线程执行a.out中的main函数
+ * 这个函数被线程task0执行，负责启动第一个用户级线程。
  */
 void start_user_task()
 {
     char *filename="a.out";
-    uint32_t entry, end;
+    uint32_t entry, _end;
 
+    /*
+     * 初始化FAT文件系统
+     */
     {
         uint32_t pstart;
         uint8_t scratch[SECTOR_SIZE];
@@ -125,27 +119,33 @@ void start_user_task()
         printk("Done\r\n");
     }
 
-    printk("task #%d: Loading %s...", sys_task_getid(), filename);
-    entry = load_pe(&g_volinfo, filename, &end);
+    /*
+     * 加载a.out，并创建第一个用户级线程执行a.out中的main函数
+     */
+    {
+        printk("task #%d: Loading %s...", sys_task_getid(), filename);
+        entry = load_pe(&g_volinfo, filename, &_end);
 
-    if(entry) {
-        printk("Done\r\n");
-
-        printk("task #%d: Creating first user task...", sys_task_getid());
-
-        /* XXX - 为第一个用户线程准备一个堆，大小64MiB */
-        page_alloc_in_addr(end, 64*1024*1024/PAGE_SIZE);
-
-        /* XXX - 为第一个用户线程准备栈，大小1MiB */
-        page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE);
-        if(sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678) == NULL)
-            printk("Failed\r\n");
-        else {
+        if(entry) {
             printk("Done\r\n");
-        }
 
-    } else
-        printk("Failed\r\n");
+            printk("task #%d: Creating first user task...", sys_task_getid());
+
+            /* XXX - 为第一个用户级线程准备一个堆，大小64MiB */
+            page_alloc_in_addr(_end, 64*1024*1024/PAGE_SIZE);
+
+            /* XXX - 为第一个用户级线程准备栈，大小1MiB */
+            page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE);
+            if(sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678) == NULL)
+                printk("Failed\r\n");
+            else {
+                printk("Done\r\n");
+            }
+
+
+        } else
+            printk("Failed\r\n");
+    }
 }
 
 /**
@@ -157,10 +157,25 @@ void mi_startup()
     printk("Copyright (C) 2005-2015 MingJian Hong<hongmingjian@gmail.com>\r\n");
     printk("All rights reserved.\r\n\r\n");
 
+    {
+        /*安装默认的中断处理程序*/
+        uint32_t i;
+        for(i = 0; i < NR_IRQ; i++)
+            g_intr_vector[i]=isr_default;
+
+        /*安装定时器的中断处理程序*/
+        g_intr_vector[IRQ_TIMER] = isr_timer;
+        enable_irq(IRQ_TIMER);
+
+        /*安装键盘的中断处理程序*/
+        g_intr_vector[IRQ_KEYBOARD] = isr_keyboard;
+        enable_irq(IRQ_KEYBOARD);
+    }
+
     /*
      * 初始化虚拟地址空间
      */
-    init_page();
+    init_vmspace();
 
     /*
      * 初始化物理内存管理器
@@ -186,53 +201,6 @@ void mi_startup()
     printk("Done\r\n");
 
     e1000_init();         //初始化E1000网卡
-
-    /*
-     * 保存计算机启动的时间，即自1970-01-01 00:00:00 +0000 (UTC)以来的秒数
-     */
-    if(1) {
-        struct tm time;
-
-        do {
-            time.tm_sec  = CMOS_READ(0);
-            time.tm_min  = CMOS_READ(2);
-            time.tm_hour = CMOS_READ(4);
-            time.tm_mday = CMOS_READ(7);
-            time.tm_mon  = CMOS_READ(8);
-            time.tm_year = CMOS_READ(9);
-        } while (time.tm_sec != CMOS_READ(0));
-        BCD_TO_BIN(time.tm_sec);
-        BCD_TO_BIN(time.tm_min);
-        BCD_TO_BIN(time.tm_hour);
-        BCD_TO_BIN(time.tm_mday);
-        BCD_TO_BIN(time.tm_mon);
-        BCD_TO_BIN(time.tm_year);
-
-        time.tm_mon--;
-        if((time.tm_year+1900) < 1970)
-            time.tm_year += 100;
-
-        g_startup_time = mktime(&time);
-    }
-
-    /*
-     * 初始化中断向量表
-     */
-    if(1) {
-
-        /*安装默认的中断处理程序*/
-        uint32_t i;
-        for(i = 0; i < NR_IRQ; i++)
-            g_intr_vector[i]=isr_default;
-
-        /*安装定时器的中断处理程序*/
-        g_intr_vector[IRQ_TIMER] = isr_timer;
-        enable_irq(IRQ_TIMER);
-
-        /*安装键盘的中断处理程序*/
-        g_intr_vector[IRQ_KEYBOARD] = isr_keyboard;
-        enable_irq(IRQ_KEYBOARD);
-    }
 
     /*
      * 初始化多线程子系统

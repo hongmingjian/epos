@@ -21,6 +21,14 @@
 #include "syscall-nr.h"
 #include "multiboot.h"
 
+#define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
+#define CMOS_READ(addr) ({ \
+        outportb(0x70, 0x80|addr); \
+        inportb(0x71); \
+        })
+/*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
+time_t g_startup_time;
+
 #define IO_ICU1  0x20  /* 8259A Interrupt Controller #1 */
 #define IO_ICU2  0xA0  /* 8259A Interrupt Controller #2 */
 #define IRQ_SLAVE 0x04
@@ -641,13 +649,13 @@ static uint32_t init_paging(uint32_t physfree)
     memset(pgdir, 0, PAGE_SIZE);
 
     /*
-     * 恒等映射，即映射虚拟地址[0, end]到物理地址[0, end]
+     * 恒等映射，即映射虚拟地址[0, R(&end)]到物理地址[0, R(&end)]
      */
     x = (uint32_t)(pgdir)/(1024*PAGE_SIZE);
     if(x < 1)
         x = 1;
     for(i = 0; i < x; i++) {
-        pgdir[i]=physfree|PTE_V|PTE_W;
+        pgdir[i]=physfree|PTE_V|PTE_W|PTE_U;
         memset((void *)physfree, 0, PAGE_SIZE);
         physfree+=PAGE_SIZE;
     }
@@ -655,11 +663,11 @@ static uint32_t init_paging(uint32_t physfree)
     for(i = 0; i < x; i++) {
         pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[i]));
         for(; y < (uint32_t)(pgdir); y+=PAGE_SIZE)
-            pte[(y-i*1024*PAGE_SIZE)>>PAGE_SHIFT]=(y)|PTE_V|PTE_W;
+            pte[(y-i*1024*PAGE_SIZE)/PAGE_SIZE]=(y)|PTE_V|PTE_W;
     }
 
     /*
-     * 映射到链接地址，即映射虚拟地址[KERNBASE, ...]到物理地址[LOAD_ADDR, ...]
+     * 映射到链接地址，即映射虚拟地址[KERNBASE, &end]到物理地址[LOAD_ADDR, R(&end)]
      */
     for(i = 0; i < NR_KERN_PAGETABLE-x; i++) {
         pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_W;
@@ -670,7 +678,7 @@ static uint32_t init_paging(uint32_t physfree)
     for(i = 0; i < NR_KERN_PAGETABLE-x; i++) {
         pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[i+(KERNBASE>>PGDR_SHIFT)]));
         for(; y < KERNBASE+((uint32_t)(pgdir)-LOAD_ADDR); y+=PAGE_SIZE)
-            pte[(y-KERNBASE-i*1024*PAGE_SIZE)>>PAGE_SHIFT]=(y-KERNBASE+LOAD_ADDR)|PTE_V|PTE_W;
+            pte[(y-KERNBASE-i*1024*PAGE_SIZE)/PAGE_SIZE]=(y-KERNBASE+LOAD_ADDR)|PTE_V|PTE_W;
     }
 
     /*
@@ -752,18 +760,19 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
  */
 void cstart(uint32_t magic, uint32_t mbi)
 {
-    uint32_t i;
+    uint32_t i, _end = PAGE_ROUNDUP(R((uint32_t)(&end)));
 
     /*
      * 机器相关（Machine Dependent）的初始化
      */
-    md_startup( mbi, PAGE_ROUNDUP( R((uint32_t)(&end)) ) );
+    md_startup(mbi, _end);
 
     /*
      * 分页已经打开，切换到虚拟地址运行
      */
     __asm__ __volatile__ (
             "addl %0,%%esp\n\t"
+            "addl %0,%%ebp\n\t"
             "pushl $1f\n\t"
             "ret\n\t"
             "1:\n\t"
@@ -774,7 +783,7 @@ void cstart(uint32_t magic, uint32_t mbi)
     /*
      * 内核已经被重定位到链接地址，取消恒等映射
      */
-    for(i = 0; i < PAGE_ROUNDUP( R((uint32_t)(&end)) ); i += PAGE_SIZE) {
+    for(i = 0; i < _end; i += PAGE_SIZE) {
         *vtopte(i) = 0;
     }
 
@@ -782,14 +791,45 @@ void cstart(uint32_t magic, uint32_t mbi)
     invltlb();
 
     /*
-     * 映射ROM BIOS区域
+     * 映射640KiB-1MiB区域
      */
-    page_map(0xa0000, 0xa0000, (0x100000-0xa0000)/PAGE_SIZE, PTE_V|PTE_W|PTE_U);
+    page_map(0xa0000, 0xa0000, 16, PTE_V|PTE_W|PTE_U);// 64K 图形模式显存
+    page_map(0xb8000, 0xb8000,  1, PTE_V|PTE_W      );//  4K 彩色文本模式显存
+    page_map(0xc0000, 0xc0000, 16, PTE_V|      PTE_U);// 64K VGA BIOS
+    page_map(0xf0000, 0xf0000, 16, PTE_V|      PTE_U);// 64K ROM BIOS
 
     /*
-     * 初始化8086模拟器，以访问显卡的BIOS，即VBE(VESA BIOS Extensions)
+     * 初始化8086模拟器，以调用ROM BIOS的功能
      */
     init_vm86();
+
+    /*
+     * 从CMOS读取计算机启动的时间，即自1970-01-01 00:00:00 +0000 (UTC)以来的秒数
+     */
+    {
+        struct tm time;
+
+        do {
+            time.tm_sec  = CMOS_READ(0);
+            time.tm_min  = CMOS_READ(2);
+            time.tm_hour = CMOS_READ(4);
+            time.tm_mday = CMOS_READ(7);
+            time.tm_mon  = CMOS_READ(8);
+            time.tm_year = CMOS_READ(9);
+        } while (time.tm_sec != CMOS_READ(0));
+        BCD_TO_BIN(time.tm_sec);
+        BCD_TO_BIN(time.tm_min);
+        BCD_TO_BIN(time.tm_hour);
+        BCD_TO_BIN(time.tm_mday);
+        BCD_TO_BIN(time.tm_mon);
+        BCD_TO_BIN(time.tm_year);
+
+        time.tm_mon--;
+        if((time.tm_year + 1900) < 1970)
+            time.tm_year += 100;
+
+        g_startup_time = mktime(&time);
+    }
 
     /*
      * 机器无关（Machine Independent）的初始化

@@ -147,7 +147,7 @@ int         sys_task_wait(int tid, int *pcode_exit);
 int         sys_task_getid();
 void        sys_task_yield();
 
-void     init_page();
+void     init_vmspace();
 uint32_t page_alloc(int npages, uint32_t user);
 uint32_t page_alloc_in_addr(uint32_t va, int npages);
 void     page_free(uint32_t va, int npages);

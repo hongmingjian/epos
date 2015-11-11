@@ -32,7 +32,7 @@ static struct vmzone *kvmzone;
 static struct vmzone um0;
 static struct vmzone *uvmzone;
 
-void init_page()
+void init_vmspace()
 {
     km0.base = PAGE_ROUNDUP( (uint32_t)(&end) );
     km0.limit = KERN_MAX_ADDR-km0.base;
@@ -45,6 +45,10 @@ void init_page()
     uvmzone = &um0;
 }
 
+/**
+ * 在指定的虚拟地址va，分配npages个连续页面
+ * 失败返回SIZE_MAX，成功返回va
+ */
 uint32_t page_alloc_in_addr(uint32_t va, int npages)
 {
     uint32_t size = npages * PAGE_SIZE;
@@ -90,6 +94,10 @@ uint32_t page_alloc_in_addr(uint32_t va, int npages)
    return SIZE_MAX;
 }
 
+/**
+ * 在地址空间中分配npages个连续页面，返回页面所在的起始地址
+ * user是0表示在内核空间中分配，否则在用户空间中分配
+ */
 uint32_t page_alloc(int npages, uint32_t user)
 {
     uint32_t va = SIZE_MAX;
@@ -127,6 +135,10 @@ uint32_t page_alloc(int npages, uint32_t user)
     return va;
 }
 
+/**
+ * 释放page_alloc所分配的页面
+ *
+ */
 void page_free(uint32_t va, int npages)
 {
     uint32_t size = npages * PAGE_SIZE;
@@ -171,6 +183,10 @@ void page_free(uint32_t va, int npages)
     }
 }
 
+/**
+ * 检查地址是否合法
+ * 合法返回1，否则返回0
+ */
 int page_check(uint32_t va)
 {
     struct vmzone *p = kvmzone;
@@ -186,6 +202,10 @@ int page_check(uint32_t va)
     return 1;
 }
 
+/**
+ * 把从vaddr开始的虚拟地址，映射到paddr开始的物理地址。
+ * 共映射npages页面，把PTE的标志位设为flags
+ */
 void page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags)
 {
     for (; npages > 0; npages--){
@@ -195,6 +215,9 @@ void page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags)
     }
 }
 
+/**
+ * 取消page_map的所做的映射
+ */
 void page_unmap(uint32_t vaddr, uint32_t npages)
 {
     for (; npages > 0; npages--){
@@ -203,6 +226,10 @@ void page_unmap(uint32_t vaddr, uint32_t npages)
     }
 }
 
+/**
+ * page fault处理函数。
+ * 特别注意：此时系统的中断处于打开状态
+ */
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 {
     uint32_t flags;
@@ -211,26 +238,28 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     printk("PF:0x%08x(0x%01x)", vaddr, code);
 #endif
 
-    if((code&PTE_V) == 0) {
+    if((code & PTE_V) == 0) {
         uint32_t paddr;
 
+        /*检查地址是否合法*/
         if(!page_check(vaddr)) {
             printk("PF: Invalid memory access: 0x%08x(0x%01x)\r\n", vaddr, code);
             return -1;
         }
 
+        /*只要访问用户的地址空间，都代表用户模式访问*/
         if (vaddr < KERN_MIN_ADDR) {
             code |= PTE_U;
         }
 
-        /* Search for a free frame */
+        /*搜索空闲帧*/
         save_flags_cli(flags);
         paddr = frame_alloc(1);
         restore_flags(flags);
 
         if(paddr != SIZE_MAX) {
-            /* Got one :), clear its data before returning */
-            *vtopte(vaddr)=paddr|PTE_V|PTE_W|(code&PTE_U);
+            /*找到空闲帧*/
+            *vtopte(vaddr) = paddr|PTE_V|PTE_W|(code&PTE_U);
             memset(PAGE_TRUNCATE(vaddr), 0, PAGE_SIZE);
             invlpg(vaddr);
 

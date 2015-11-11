@@ -72,7 +72,7 @@ extern struct ModeInfoBlock g_mib;
  * 列出系统支持的图形模式，包括分辨率和像素位数
  *
  * 注意：该函数只能在文本模式下面运行！
- ×       否则，看不到任何输出！
+ *       否则，看不到任何输出！
  *
  */
 int listGraphicsModes();

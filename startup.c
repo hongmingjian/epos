@@ -131,7 +131,7 @@ void start_user_task()
 
             printk("task #%d: Creating first user task...", sys_task_getid());
 
-            /* XXX - 为第一个用户级线程准备一个堆，大小64MiB */
+            /* XXX - 为用户准备一个堆，大小64MiB */
             page_alloc_in_addr(_end, 64*1024*1024/PAGE_SIZE);
 
             /* XXX - 为第一个用户级线程准备栈，大小1MiB */

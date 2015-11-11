@@ -23,8 +23,11 @@
 struct vmzone {
     uint32_t base;
     uint32_t limit;
+    uint32_t protect;
     struct vmzone *next;
 };
+
+static uint32_t flags;
 
 static struct vmzone km0;
 static struct vmzone *kvmzone;
@@ -59,6 +62,7 @@ uint32_t page_alloc_in_addr(uint32_t va, int npages)
     if(va < USER_MAX_ADDR)
         p = uvmzone;
 
+    save_flags_cli(flags);
     for(; p != NULL; p = p->next) {
         if(va >= p->base &&
            va <  p->base + p->limit &&
@@ -72,11 +76,13 @@ uint32_t page_alloc_in_addr(uint32_t va, int npages)
        if(va == p->base) {
            p->base += size;
            p->limit -= size;
+           restore_flags(flags);
            return va;
        }
 
        if(va + size == p->base + p->limit) {
            p->limit -= size;
+           restore_flags(flags);
            return va;
        }
 
@@ -88,9 +94,11 @@ uint32_t page_alloc_in_addr(uint32_t va, int npages)
        p->limit = (va - p->base);
        p->next = x;
 
+       restore_flags(flags);
        return va;
    }
 
+   restore_flags(flags);
    return SIZE_MAX;
 }
 
@@ -109,6 +117,7 @@ uint32_t page_alloc(int npages, uint32_t user)
     if(user)
        p = uvmzone;
 
+    save_flags_cli(flags);
     while(p != NULL) {
         if(p->limit >= size) {
             va = p->base;
@@ -126,12 +135,14 @@ uint32_t page_alloc(int npages, uint32_t user)
                     kfree(p);
                 }
             }
+            restore_flags(flags);
             return va;
         }
         q = p;
         p = p->next;
     }
 
+    restore_flags(flags);
     return va;
 }
 
@@ -149,17 +160,20 @@ void page_free(uint32_t va, int npages)
     if(va < USER_MAX_ADDR)
         p = uvmzone;
 
+    save_flags_cli(flags);
     for(; p != NULL; q = p, p = p->next) {
         if(va >  p->base + p->limit)
             continue;
         if(va == p->base + p->limit) {
             p->limit += size;
+            restore_flags(flags);
             return;
         }
 
         if(va + size == p->base) {
             p->base = va;
             p->limit += size;
+            restore_flags(flags);
             return;
         }
         if(va + size < p->base)
@@ -181,6 +195,7 @@ void page_free(uint32_t va, int npages)
     } else {
         q->next = x;
     }
+    restore_flags(flags);
 }
 
 /**
@@ -193,12 +208,15 @@ int page_check(uint32_t va)
     if(va < USER_MAX_ADDR)
         p = uvmzone;
 
+    save_flags_cli(flags);
     for(; p != NULL; p = p->next) {
         if(va >= p->base &&
-           va <  p->base + p->limit)
+           va <  p->base + p->limit) {
+            restore_flags(flags);
             return 0;
+        }
     }
-
+    restore_flags(flags);
     return 1;
 }
 
@@ -253,9 +271,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
         }
 
         /*搜索空闲帧*/
-        save_flags_cli(flags);
         paddr = frame_alloc(1);
-        restore_flags(flags);
 
         if(paddr != SIZE_MAX) {
             /*找到空闲帧*/

@@ -793,13 +793,12 @@ void cstart(uint32_t magic, uint32_t mbi)
     /*
      * 映射640KiB-1MiB区域
      */
-    page_map(0xa0000, 0xa0000, 16, PTE_V|PTE_W|PTE_U);// 64K 图形模式显存
-    page_map(0xb8000, 0xb8000,  1, PTE_V|PTE_W      );//  4K 彩色文本模式显存
+    page_map(0xa0000, 0xa0000, 32, PTE_V|PTE_W|PTE_U);//128K 显存
     page_map(0xc0000, 0xc0000, 16, PTE_V|      PTE_U);// 64K VGA BIOS
     page_map(0xf0000, 0xf0000, 16, PTE_V|      PTE_U);// 64K ROM BIOS
 
     /*
-     * 初始化8086模拟器，以调用ROM BIOS的功能
+     * 初始化8086模拟器，以调用ROM/VGA BIOS的功能
      */
     init_vm86();
 

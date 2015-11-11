@@ -26,6 +26,8 @@ static struct pmzone {
  struct bitmap *bitmap;
 } pmzone[RAM_ZONE_LEN/2];
 
+static uint32_t flags;
+
 void init_frame()
 {
     int i, z = 0;
@@ -61,16 +63,21 @@ void init_frame()
 uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t nframes)
 {
     int z;
+
+    save_flags_cli(flags);
     for(z = 0; z < RAM_ZONE_LEN/2; z++) {
         if(pa >= pmzone[z].base &&
            pa <  pmzone[z].base + pmzone[z].limit) {
             uint32_t idx = (pa - pmzone[z].base) / PAGE_SIZE;
             if(bitmap_none(pmzone[z].bitmap, idx, nframes)) {
                 bitmap_set_multiple(pmzone[z].bitmap, idx, nframes, 1);
+                restore_flags(flags);
                 return pa;
             }
         }
     }
+    restore_flags(flags);
+
     return BITMAP_ERROR;
 }
 
@@ -81,15 +88,19 @@ uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t nframes)
 uint32_t frame_alloc(uint32_t nframes)
 {
     int z;
+
+    save_flags_cli(flags);
     for(z = 0; z < RAM_ZONE_LEN/2; z++) {
         if(pmzone[z].limit == 0)
             break;
         uint32_t idx = bitmap_scan(pmzone[z].bitmap, 0, nframes, 0);
         if(idx != BITMAP_ERROR) {
             bitmap_set_multiple(pmzone[z].bitmap, idx, nframes, 1);
+            restore_flags(flags);
             return pmzone[z].base + idx * PAGE_SIZE;
         }
     }
+    restore_flags(flags);
 
     return BITMAP_ERROR;
 }
@@ -100,6 +111,8 @@ uint32_t frame_alloc(uint32_t nframes)
 void frame_free(uint32_t paddr, uint32_t nframes)
 {
     uint32_t z;
+
+    save_flags_cli(flags);
     for(z = 0; z < RAM_ZONE_LEN/2; z++) {
         if(pmzone[z].limit == 0)
             break;
@@ -107,12 +120,16 @@ void frame_free(uint32_t paddr, uint32_t nframes)
            paddr <  pmzone[z].base+pmzone[z].limit) {
             uint32_t idx = (paddr - pmzone[z].base) / PAGE_SIZE;
             /* XXX - 确认之前是否空闲
-            if(bitmap_any(pmzone[z].bitmap, idx, nframes))
-                return;*/
+            if(bitmap_any(pmzone[z].bitmap, idx, nframes)) {
+                restore_flags(flags);
+                return;
+            }*/
             bitmap_set_multiple(pmzone[z].bitmap, idx, nframes, 0);
+            restore_flags(flags);
             return;
         }
     }
+    restore_flags(flags);
 }
 
 

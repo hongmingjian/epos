@@ -20,14 +20,31 @@
 #include "kernel.h"
 #include "dosfs.h"
 
+struct pvmap {
+    uint32_t paddr;
+    struct _vaddr {
+        uint32_t pgdir;
+        uint32_t vaddr;
+        struct _vaddr *next;
+    } vaddrs;
+    struct pvmap *next;
+};
+
+struct vsmap {
+    uint32_t pgdir;
+    uint32_t vaddr;
+    uint32_t length;
+    uint32_t fd;
+    uint32_t offset;
+    struct vsmap *next;
+};
+
 struct vmzone {
     uint32_t base;
     uint32_t limit;
     uint32_t protect;
     struct vmzone *next;
 };
-
-static uint32_t flags;
 
 static struct vmzone km0;
 static struct vmzone *kvmzone;
@@ -54,6 +71,7 @@ void init_vmspace()
  */
 uint32_t page_alloc_in_addr(uint32_t va, int npages)
 {
+    uint32_t flags;
     uint32_t size = npages * PAGE_SIZE;
     if(npages <= 0)
         return SIZE_MAX;
@@ -108,6 +126,7 @@ uint32_t page_alloc_in_addr(uint32_t va, int npages)
  */
 uint32_t page_alloc(int npages, uint32_t user)
 {
+    uint32_t flags;
     uint32_t va = SIZE_MAX;
     uint32_t size = npages * PAGE_SIZE;
     if(npages <= 0)
@@ -152,6 +171,7 @@ uint32_t page_alloc(int npages, uint32_t user)
  */
 void page_free(uint32_t va, int npages)
 {
+    uint32_t flags;
     uint32_t size = npages * PAGE_SIZE;
     if(npages <= 0)
         return;
@@ -204,6 +224,7 @@ void page_free(uint32_t va, int npages)
  */
 int page_check(uint32_t va)
 {
+    uint32_t flags;
     struct vmzone *p = kvmzone;
     if(va < USER_MAX_ADDR)
         p = uvmzone;

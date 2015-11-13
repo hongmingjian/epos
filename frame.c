@@ -26,8 +26,6 @@ static struct pmzone {
  struct bitmap *bitmap;
 } pmzone[RAM_ZONE_LEN/2];
 
-static uint32_t flags;
-
 void init_frame()
 {
     int i, z = 0;
@@ -63,6 +61,7 @@ void init_frame()
 uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t nframes)
 {
     int z;
+    uint32_t flags;
 
     save_flags_cli(flags);
     for(z = 0; z < RAM_ZONE_LEN/2; z++) {
@@ -88,6 +87,7 @@ uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t nframes)
 uint32_t frame_alloc(uint32_t nframes)
 {
     int z;
+    uint32_t flags;
 
     save_flags_cli(flags);
     for(z = 0; z < RAM_ZONE_LEN/2; z++) {
@@ -111,6 +111,7 @@ uint32_t frame_alloc(uint32_t nframes)
 void frame_free(uint32_t paddr, uint32_t nframes)
 {
     uint32_t z;
+    uint32_t flags;
 
     save_flags_cli(flags);
     for(z = 0; z < RAM_ZONE_LEN/2; z++) {

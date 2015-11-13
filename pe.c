@@ -129,6 +129,14 @@ typedef struct _IMAGE_SECTION_HEADER {
     DWORD PointerToLinenumbers;
     WORD  NumberOfRelocations;
     WORD  NumberOfLinenumbers;
+
+    /*
+     * 0x20000000 This section is executable.
+     * 0x80000000 The section is writeable.
+     *            If this flag isn't set in an EXE's section,
+     *            the loader should mark the memory mapped pages
+     *            as read-only or execute-only.
+     */
     DWORD Characteristics;
 } IMAGE_SECTION_HEADER, *PIMAGE_SECTION_HEADER;
 

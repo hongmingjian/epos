@@ -183,9 +183,9 @@ void mi_startup()
     init_frame();
 
     /*
-     * 初始化内核堆，大小为4MiB，由kmalloc/kfree管理.
+     * 初始化内核堆，大小为64MiB，由kmalloc/kfree管理.
      */
-    init_kmalloc((uint8_t *)page_alloc(1024, 0), 1024 * PAGE_SIZE);
+    init_kmalloc((uint8_t *)page_alloc(16*1024, 0), 16*1024*PAGE_SIZE);
 
 #if USE_FLOPPY
     printk("Initializing floppy disk controller...");

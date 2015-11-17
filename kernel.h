@@ -147,15 +147,15 @@ int         sys_task_wait(int tid, int *pcode_exit);
 int         sys_task_getid();
 void        sys_task_yield();
 
-void     init_vmspace();
+void     init_vmspace(uint32_t brk);
 uint32_t page_alloc(int npages, uint32_t user);
 uint32_t page_alloc_in_addr(uint32_t va, int npages);
-void     page_free(uint32_t va, int npages);
+int      page_free(uint32_t va, int npages);
 int      page_check(uint32_t va);
 void     page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags);
 void     page_unmap(uint32_t vaddr, uint32_t npages);
 
-void     init_frame();
+uint32_t init_frame(uint32_t brk);
 uint32_t frame_alloc(uint32_t npages);
 uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t npages);
 void     frame_free(uint32_t paddr, uint32_t npages);

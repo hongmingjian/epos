@@ -153,6 +153,8 @@ void start_user_task()
  */
 void mi_startup()
 {
+    uint32_t brk;
+
     printk("Welcome to EPOS\r\n");
     printk("Copyright (C) 2005-2015 MingJian Hong<hongmingjian@gmail.com>\r\n");
     printk("All rights reserved.\r\n\r\n");
@@ -173,19 +175,20 @@ void mi_startup()
     }
 
     /*
-     * 初始化虚拟地址空间
-     */
-    init_vmspace();
-
-    /*
      * 初始化物理内存管理器
      */
-    init_frame();
+    brk = PAGE_ROUNDUP( (uint32_t)(&end) );
+    brk = init_frame(brk);
 
     /*
-     * 初始化内核堆，大小为64MiB，由kmalloc/kfree管理.
+     * 初始化虚拟地址空间，为内核堆预留4MiB的地址空间
      */
-    init_kmalloc((uint8_t *)page_alloc(16*1024, 0), 16*1024*PAGE_SIZE);
+    init_vmspace(brk+1024*PAGE_SIZE);
+
+    /*
+     * 初始化内核堆，大小为4MiB，由kmalloc/kfree管理.
+     */
+    init_kmalloc((uint8_t *)brk, 1024*PAGE_SIZE);
 
 #if USE_FLOPPY
     printk("Initializing floppy disk controller...");

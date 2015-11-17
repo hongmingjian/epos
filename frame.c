@@ -26,7 +26,7 @@ static struct pmzone {
  struct bitmap *bitmap;
 } pmzone[RAM_ZONE_LEN/2];
 
-void init_frame()
+uint32_t init_frame(uint32_t brk)
 {
     int i, z = 0;
 
@@ -45,13 +45,16 @@ void init_frame()
             continue;
 
         printk("RAM: 0x%08x - 0x%08x (%d frames)\r\n",
-                pmzone[z].base, pmzone[z].base+pmzone[z].limit, pmzone[z].limit/PAGE_SIZE);
+                pmzone[z].base, pmzone[z].base+pmzone[z].limit,
+                pmzone[z].limit/PAGE_SIZE);
 
-        uint32_t vaddr=page_alloc(size / PAGE_SIZE, 0);
-        page_map(vaddr, paddr, size/PAGE_SIZE, PTE_V|PTE_W);
-        pmzone[z].bitmap=bitmap_create_in_buf(bit_cnt, (void *)vaddr, 0);
+        page_map(brk, paddr, size/PAGE_SIZE, PTE_V|PTE_W);
+        pmzone[z].bitmap=bitmap_create_in_buf(bit_cnt, (void *)brk, 0);
+        brk += size;
         z++;
     }
+
+    return brk;
 }
 
 /**

@@ -51,7 +51,6 @@ static struct vmzone *kvmzone;
 
 static struct vmzone *uvmzone;
 
-#if 1
 void init_vmspace(uint32_t brk)
 {
     km0.base = USER_MAX_ADDR;
@@ -76,7 +75,7 @@ uint32_t page_alloc_in_addr(uint32_t va, int npages)
         return SIZE_MAX;
 
     /*必须在[USER_MIN_ADDR, KERN_MAX_ADDR)之间*/
-    if(va < USER_MIN_ADDR ||
+    if(va <  USER_MIN_ADDR ||
        va >= KERN_MAX_ADDR ||
        va + size > KERN_MAX_ADDR)
         return SIZE_MAX;
@@ -188,7 +187,7 @@ uint32_t page_alloc(int npages, uint32_t user)
 }
 
 /**
- * 释放page_alloc所分配的页面
+ * 释放page_alloc/page_alloc_in_addr所分配的页面
  *
  */
 int page_free(uint32_t va, int npages)
@@ -197,6 +196,8 @@ int page_free(uint32_t va, int npages)
     uint32_t size = npages * PAGE_SIZE;
     if(npages <= 0)
         return -1;
+
+    /*不能释放km0*/
     if(va == USER_MAX_ADDR)
         return -1;
 
@@ -224,7 +225,7 @@ int page_free(uint32_t va, int npages)
 }
 
 /**
- * 检查地址是否合法
+ * 检查虚拟地址是否合法
  * 合法返回1，否则返回0
  */
 int page_check(uint32_t va)
@@ -248,199 +249,6 @@ int page_check(uint32_t va)
     return 0;
 
 }
-/////////////////////////////////////////////////////////////////////////
-#else
-static struct vmzone um0;
-void init_vmspace()
-{
-    km0.base = PAGE_ROUNDUP( (uint32_t)(&end) );
-    km0.limit = KERN_MAX_ADDR-km0.base;
-    km0.next = NULL;
-    kvmzone = &km0;
-
-    um0.base = USER_MIN_ADDR;
-    um0.limit = USER_MAX_ADDR-um0.base;
-    um0.next = NULL;
-    uvmzone = &um0;
-}
-
-/**
- * 在指定的虚拟地址va，分配npages个连续页面
- * 失败返回SIZE_MAX，成功返回va
- */
-uint32_t page_alloc_in_addr(uint32_t va, int npages)
-{
-    uint32_t flags;
-    uint32_t size = npages * PAGE_SIZE;
-    if(npages <= 0)
-        return SIZE_MAX;
-
-    struct vmzone *p = kvmzone;
-    if(va < USER_MAX_ADDR)
-        p = uvmzone;
-
-    save_flags_cli(flags);
-    for(; p != NULL; p = p->next) {
-        if(va >= p->base &&
-           va <  p->base + p->limit &&
-           va + size >  p->base &&
-           va + size <= p->base+p->limit) {
-            break;
-       }
-   }
-
-   if(p != NULL) {
-       if(va == p->base) {
-           p->base += size;
-           p->limit -= size;
-           restore_flags(flags);
-           return va;
-       }
-
-       if(va + size == p->base + p->limit) {
-           p->limit -= size;
-           restore_flags(flags);
-           return va;
-       }
-
-       struct vmzone *x = (struct vmzone *)kmalloc(sizeof(struct vmzone));
-       x->base = va + size;
-       x->limit = p->limit-(x->base-p->base);
-       x->next = p->next;
-
-       p->limit = (va - p->base);
-       p->next = x;
-
-       restore_flags(flags);
-       return va;
-   }
-
-   restore_flags(flags);
-   return SIZE_MAX;
-}
-
-/**
- * 在地址空间中分配npages个连续页面，返回页面所在的起始地址
- * user是0表示在内核空间中分配，否则在用户空间中分配
- */
-uint32_t page_alloc(int npages, uint32_t user)
-{
-    uint32_t flags;
-    uint32_t va = SIZE_MAX;
-    uint32_t size = npages * PAGE_SIZE;
-    if(npages <= 0)
-        return va;
-
-    struct vmzone *q = NULL, *p = kvmzone;
-    if(user)
-       p = uvmzone;
-
-    save_flags_cli(flags);
-    while(p != NULL) {
-        if(p->limit >= size) {
-            va = p->base;
-            p->base += size;
-            p->limit -= size;
-            if(p->limit == 0) {
-                if(p != &km0 && p != &um0) {
-                    if(q == NULL) {
-                        if(user)
-                            uvmzone = p->next;
-                        else
-                            kvmzone = p->next;
-                    } else
-                        q->next = p->next;
-                    kfree(p);
-                }
-            }
-            restore_flags(flags);
-            return va;
-        }
-        q = p;
-        p = p->next;
-    }
-
-    restore_flags(flags);
-    return va;
-}
-
-/**
- * 释放page_alloc所分配的页面
- *
- */
-int page_free(uint32_t va, int npages)
-{
-    uint32_t flags;
-    uint32_t size = npages * PAGE_SIZE;
-    if(npages <= 0)
-        return -1;
-
-    struct vmzone *q = NULL, *p = kvmzone;
-    if(va < USER_MAX_ADDR)
-        p = uvmzone;
-
-    save_flags_cli(flags);
-    for(; p != NULL; q = p, p = p->next) {
-        if(va >  p->base + p->limit)
-            continue;
-        if(va == p->base + p->limit) {
-            p->limit += size;
-            restore_flags(flags);
-            return;
-        }
-
-        if(va + size == p->base) {
-            p->base = va;
-            p->limit += size;
-            restore_flags(flags);
-            return;
-        }
-        if(va + size < p->base)
-            break;
-    }
-    struct vmzone *x = (struct vmzone *)kmalloc(sizeof(struct vmzone));
-    x->base = va;
-    x->limit = size;
-    x->next = p;
-
-    if(p != NULL) {
-        if(q == NULL) {
-            if(va < USER_MAX_ADDR)
-                uvmzone = x;
-            else
-                kvmzone = x;
-        } else
-            q->next = x;
-    } else {
-        q->next = x;
-    }
-    restore_flags(flags);
-    return 0;
-}
-
-/**
- * 检查地址是否合法
- * 合法返回1，否则返回0
- */
-int page_check(uint32_t va)
-{
-    uint32_t flags;
-    struct vmzone *p = kvmzone;
-    if(va < USER_MAX_ADDR)
-        p = uvmzone;
-
-    save_flags_cli(flags);
-    for(; p != NULL; p = p->next) {
-        if(va >= p->base &&
-           va <  p->base + p->limit) {
-            restore_flags(flags);
-            return 0;
-        }
-    }
-    restore_flags(flags);
-    return 1;
-}
-#endif
 
 /**
  * 把从vaddr开始的虚拟地址，映射到paddr开始的物理地址。

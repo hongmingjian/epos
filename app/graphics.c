@@ -35,7 +35,7 @@ struct ModeInfoBlock g_mib;
 static int getVBEInfo(struct VBEInfoBlock *pvib)
 {
     char *VbeSignature;
-    struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+    struct vm86_context vm86ctx = {.ss = 0x0000, .esp = 0x1000};
     vm86ctx.eax=0x4f00;
     vm86ctx.es=0x0070;
     vm86ctx.edi=0x0000;
@@ -53,7 +53,7 @@ static int getVBEInfo(struct VBEInfoBlock *pvib)
 
 static int getModeInfo(int mode, struct ModeInfoBlock *pmib)
 {
-    struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+    struct vm86_context vm86ctx = {.ss = 0x0000, .esp = 0x1000};
     vm86ctx.eax=0x4f01;
     vm86ctx.ecx=mode;
     vm86ctx.es =0x0090;
@@ -67,7 +67,7 @@ static int getModeInfo(int mode, struct ModeInfoBlock *pmib)
 
 static int getVBEMode()
 {
-    struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+    struct vm86_context vm86ctx = {.ss = 0x0000, .esp = 0x1000};
     vm86ctx.eax=0x4f03;
     vm86call(1, 0x10, &vm86ctx);
     if(LOWORD(vm86ctx.eax) != 0x4f)
@@ -77,7 +77,7 @@ static int getVBEMode()
 
 static int setVBEMode(int mode)
 {
-    struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+    struct vm86_context vm86ctx = {.ss = 0x0000, .esp = 0x1000};
     vm86ctx.eax=0x4f02;
     vm86ctx.ebx=mode;
     vm86call(1, 0x10, &vm86ctx);
@@ -88,7 +88,7 @@ static int setVBEMode(int mode)
 
 static int switchBank(int bank)
 {
-    struct vm86_context vm86ctx = {.ss = 0x9000, .esp = 0x0000};
+    struct vm86_context vm86ctx = {.ss = 0x0000, .esp = 0x1000};
 
     if(bank == currBank)
         return 0;

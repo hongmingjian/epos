@@ -721,9 +721,15 @@ static void init_ram(multiboot_memory_map_t *mmap,
             g_ram_zone[n  ] = PAGE_TRUNCATE(mmap->addr&0xffffffff);
             g_ram_zone[n+1] = PAGE_TRUNCATE(g_ram_zone[n]+(mmap->len&0xffffffff));
 
+            /*扣除内核所占的物理内存*/
             if((physfree >  g_ram_zone[n  ]) &&
                (physfree <= g_ram_zone[n+1]))
                 g_ram_zone[n]=physfree;
+
+            /*为8086模式保留0-4KiB的物理内存*/
+            if((PAGE_SIZE >  g_ram_zone[n  ]) &&
+               (PAGE_SIZE <= g_ram_zone[n+1]))
+                g_ram_zone[n]=PAGE_SIZE;
 
             if(g_ram_zone[n+1] >= g_ram_zone[n] + PAGE_SIZE) {
                 n += 2;
@@ -794,8 +800,9 @@ void cstart(uint32_t magic, uint32_t mbi)
      * 映射640KiB-1MiB区域
      */
     page_map(0xa0000, 0xa0000, 32, PTE_V|PTE_W|PTE_U);//128K 显存
-    page_map(0xc0000, 0xc0000, 16, PTE_V|      PTE_U);// 64K VGA BIOS
-    page_map(0xf0000, 0xf0000, 16, PTE_V|      PTE_U);// 64K ROM BIOS
+    page_map(0xc0000, 0xc0000, 16, PTE_V|      PTE_U);// 64K Video ROM BIOS
+    page_map(0xe0000, 0xe0000, 16, PTE_V|PTE_W|PTE_U);// 64K UMA (for Qemu)
+    page_map(0xf0000, 0xf0000, 16, PTE_V|      PTE_U);// 64K System ROM BIOS
 
     /*
      * 初始化8086模拟器，以调用ROM/VGA BIOS的功能

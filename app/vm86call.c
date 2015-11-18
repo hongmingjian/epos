@@ -30,8 +30,9 @@ int vm86call(int fintr, uint32_t n, struct vm86_context *vm86ctx)
     *(uint8_t *)LADDR(ret_cs, ret_ip) = 0xf4/*HLT*/;
 
     sp = LOWORD(vm86ctx->esp);
-    if(fintr)
+    if(fintr) {
         sp -= 2; *(uint16_t *)LADDR(vm86ctx->ss, sp) = 0;
+    }
     sp -= 2; *(uint16_t *)LADDR(vm86ctx->ss, sp) = ret_cs;
     sp -= 2; *(uint16_t *)LADDR(vm86ctx->ss, sp) = ret_ip;
 

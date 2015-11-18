@@ -74,7 +74,11 @@ uint32_t page_alloc_in_addr(uint32_t va, int npages)
         return SIZE_MAX;
     if(va & PAGE_MASK)
         return SIZE_MAX;
-    if(va < USER_MIN_ADDR)
+
+    /*必须在[USER_MIN_ADDR, KERN_MAX_ADDR)之间*/
+    if(va < USER_MIN_ADDR ||
+       va >= KERN_MAX_ADDR ||
+       va + size > KERN_MAX_ADDR)
         return SIZE_MAX;
 
     save_flags_cli(flags);
@@ -134,21 +138,20 @@ uint32_t page_alloc(int npages, uint32_t user)
     save_flags_cli(flags);
 
     struct vmzone *p = kvmzone, *q = NULL;
-    uint32_t va = p->base+p->limit;
-    q = p, p = p->next;
     if(user) {
         p = uvmzone;
-        if(p == NULL)
-            va = USER_MIN_ADDR;
-        else {
-            va = p->base+p->limit;
-            q = p, p = p->next;
-        }
+    }
+
+    uint32_t va;
+    if(p == NULL)
+        va = USER_MIN_ADDR;
+    else {
+        va = p->base+p->limit;
+        q = p, p = p->next;
     }
 
     for(; p != NULL; q = p, p = p->next) {
-        if(va < p->base &&
-           va + size <= p->base)
+        if(va + size <= p->base)
             break;
         va = p->base+p->limit;
     }
@@ -210,8 +213,8 @@ int page_free(uint32_t va, int npages)
             } else {
                 q->next = p->next;
             }
-            kfree(p);
             restore_flags(flags);
+            kfree(p);
             return 0;
         }
     }

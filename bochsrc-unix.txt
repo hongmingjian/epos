@@ -3,5 +3,6 @@ display_library: x
 
 memory: guest=4, host=256
 
+pci: enabled=1, chipset=i440fx, slot1=pcivga
 ata0-master: type=disk,path="hd.img",mode=flat,cylinders=65,heads=16,spt=63
 boot: disk

@@ -1,7 +1,7 @@
 /**
  * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  *
- * Copyright (C) 2013 Hong MingJian<hongmingjian@gmail.com>
+ * Copyright (C) 2015 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
  *
  * This file is part of the EPOS.
@@ -17,22 +17,9 @@
  * purpose.
  *
  */
-#ifndef _SYSCALLNR_H
-#define _SYSCALLNR_H
+#ifndef _IOCTL_H
+#define _IOCTL_H
 
-#define SYSCALL_task_exit     1
-#define SYSCALL_task_create   2
-#define SYSCALL_task_getid    3
-#define SYSCALL_task_yield    4
-#define SYSCALL_task_wait     5
+#define SIOCGIFHWADDR   0x8927
 
-#define SYSCALL_beep          6
-#define SYSCALL_vm86          182
-#define SYSCALL_recv          183
-#define SYSCALL_send          184
-#define SYSCALL_ioctl         185
-
-#define SYSCALL_putchar       1000
-#define SYSCALL_getchar       1001
-
-#endif /*_SYSCALLNR_H*/
+#endif /*_IOCTL_H*/

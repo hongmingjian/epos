@@ -20,6 +20,7 @@
 #include "kernel.h"
 #include "syscall-nr.h"
 #include "multiboot.h"
+#include "ioctl.h"
 
 #define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
 #define CMOS_READ(addr) ({ \
@@ -625,6 +626,37 @@ void syscall(struct context *ctx)
         break;
     case SYSCALL_getchar:
         ctx->eax = sys_getchar();
+        break;
+    case SYSCALL_recv:
+        {
+            int sockfd = *( int *)(ctx->esp+4);
+            void *buf = *( uint8_t **)(ctx->esp+8);
+            size_t len = *( size_t *)(ctx->esp+12);
+            int flags = *( int *)(ctx->esp+16);
+            ctx->eax = sys_recv(sockfd, buf, len, flags);
+        }
+        break;
+    case SYSCALL_send:
+        {
+            int sockfd = *( int *)(ctx->esp+4);
+            void *buf = *( uint8_t **)(ctx->esp+8);
+            size_t len = *( size_t *)(ctx->esp+12);
+            int flags = *( int *)(ctx->esp+16);
+            e1000_send(buf, len);
+            ctx->eax = len;
+        }
+        break;
+    case SYSCALL_ioctl:
+        {
+            ctx->eax = -1;
+            int fd = *( int *)(ctx->esp+4);
+            uint32_t req = *( uint32_t *)(ctx->esp+8);
+            uint8_t *pv = *( uint8_t **)(ctx->esp+12);
+            if(req == SIOCGIFHWADDR) {
+                e1000_getmac(pv);
+                ctx->eax = 6;
+            }
+        }
         break;
     default:
         printk("syscall #%d not implemented.\r\n", ctx->eax);

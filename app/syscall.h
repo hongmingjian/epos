@@ -2,6 +2,7 @@
 #define _SYSCALL_H
 
 #include "../global.h"
+#include "../ioctl.h"
 
 int task_exit(int code_exit);
 int task_create(void *tos, void (*func)(void *pv), void *pv);
@@ -39,5 +40,9 @@ struct vm86_context {
   uint16_t  gs; uint16_t  : 16;/*84*/
 } __attribute__ ((gcc_struct, packed));
 int vm86(struct vm86_context *vm86ctx);
+
+int     ioctl(int fd, uint32_t req, void *pv);
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 
 #endif /*_SYSCALL_H*/

@@ -76,6 +76,9 @@ struct tdesc{
 
 #define PACKET_BUF_SIZE	2048
 
+/*等待网络数据包的线程队列*/
+static struct wait_queue *wq_nic = NULL;
+
 struct e1000_dev {
 	uint8_t mac[6];
 
@@ -198,7 +201,8 @@ static void isr_e1000(uint32_t irq, struct context *ctx)
 	}
 
 	if(icr & IMS_RXT0) {
-		e1000_recv();
+		//e1000_recv();
+		wake_up(&wq_nic, 1);
 	}
 }
 
@@ -289,4 +293,35 @@ void e1000_send(uint8_t *pkt, uint32_t length)
 		;
 }
 
+ssize_t sys_recv(int sockfd, void *buf, size_t len, int flags)
+{
+    uint32_t _flags;
 
+    while(1) {
+		/*在队列wq_nic上等待数据包到来*/
+		save_flags_cli(_flags);
+		sleep_on(&wq_nic);
+		restore_flags(_flags);
+
+		/*从网卡读取数据包*/
+		uint32_t tail = e1000_reg_read(REG_RDT);
+		if(g_e1000.rx_desc_ring[tail].status & RXD_STA_DD) {
+
+			uint8_t *_buf = &g_e1000.rx_buf_ring[tail*PACKET_BUF_SIZE];
+			uint16_t _len = g_e1000.rx_desc_ring[tail].length;
+
+			len = min(len, _len);
+			memcpy(buf, _buf, len);
+
+			g_e1000.rx_desc_ring[tail].status = 0;
+
+			tail = (tail+1) % g_e1000.rx_desc_cnt;
+
+			e1000_reg_write(REG_RDT, tail);
+
+			break;
+		}
+    }
+
+    return len;
+}

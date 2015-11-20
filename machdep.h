@@ -190,5 +190,6 @@ void     pci_init();
 void e1000_send(uint8_t *pkt, uint32_t length);
 int  e1000_init();
 void e1000_getmac(uint8_t mac[]);
+ssize_t sys_recv(int sockfd, void *buf, size_t len, int flags);
 
 #endif /*_MACHDEP_H*/

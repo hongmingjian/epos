@@ -5,7 +5,7 @@
 #define PCI_CONFIG_DATA      0xCFC
 #define PCI_BAR_0            0x10
 
-struct pci_device_conf {
+struct pci_device_header {
 	uint16_t vendor_id;
 	uint16_t product_id;
 	uint16_t command;
@@ -18,8 +18,13 @@ struct pci_device_conf {
 	uint8_t latency_timer;
 	uint8_t header_type;
 	uint8_t bist;
+} __attribute__((packed));
 
-	//if header_type&7f == 0
+// Standard Header
+//  header_type&7f == 0
+struct pci_device_std {
+	struct pci_device_header hdr;
+
 	uint32_t bars[6];
 	uint32_t reserved[2];
 	uint32_t romaddr;
@@ -41,7 +46,7 @@ struct pci_device_conf {
 
 struct pci_device {
 	uint32_t bsf;//bus, slot, func
-	struct pci_device_conf conf;
+	struct pci_device_std conf;
 };
 
 static int nr_pci_device = 0;
@@ -57,7 +62,7 @@ static void pci_write(uint32_t addr, uint32_t data){
 	outportl(PCI_CONFIG_DATA, data);
 }
 
-static void pci_device_read_config(struct pci_device_conf *conf,
+static void pci_device_read_config(struct pci_device_std *conf,
                                    uint32_t bus, uint32_t slot, uint32_t func)
 {
 	uint32_t *p = (uint32_t *)conf;
@@ -70,32 +75,40 @@ static void pci_device_read_config(struct pci_device_conf *conf,
 
 static void pci_bus_scan(uint32_t bus)
 {
-	struct pci_device_conf yyy;
+	struct pci_device_std yyy;
 	uint32_t slot, func;
 
 	for(slot = 0; slot < 0x20; slot++){
 		pci_device_read_config(&yyy, bus, slot, 0);
 
-		if(yyy.vendor_id == 0xFFFF)
+		if(yyy.hdr.vendor_id == 0xFFFF)
+			continue;
+
+		/*XXX - 忽略PCI-to-PCI/CardBus bridge*/
+		if(yyy.hdr.header_type & 0x7f)
 			continue;
 #if VERBOSE
 		printk("PCI: bus %d slot %d func %d, VID=0x%04x PID=0x%04x\r\n",
-               bus, slot, 0, yyy.vendor_id, yyy.product_id);
+				bus, slot, 0, yyy.hdr.vendor_id, yyy.hdr.product_id);
 #endif
 		pci_devices[nr_pci_device].bsf = MAKE_BSF(bus, slot, 0);
 		pci_devices[nr_pci_device].conf = yyy;
 		nr_pci_device++;
 
-		if((yyy.header_type & 0x80) != 0) {
+		if((yyy.hdr.header_type & 0x80) != 0) {
 			//This device has multiple functions
 			for(func = 1; func < 8; func++) {
 				pci_device_read_config(&yyy, bus, slot, func);
 
-				if(yyy.vendor_id == 0xFFFF)
+				if(yyy.hdr.vendor_id == 0xFFFF)
+					continue;
+
+				/*XXX - 忽略PCI-to-PCI/CardBus bridge*/
+				if(yyy.hdr.header_type & 0x7f)
 					continue;
 #if VERBOSE
 				printk("     bus %d slot %d func %d, VID=0x%04x PID=0x%04x\r\n",
-                       bus, slot, func, yyy.vendor_id, yyy.product_id);
+						bus, slot, func, yyy.hdr.vendor_id, yyy.hdr.product_id);
 #endif
 				pci_devices[nr_pci_device].bsf = MAKE_BSF(bus, slot, func);
 				pci_devices[nr_pci_device].conf = yyy;
@@ -106,30 +119,51 @@ static void pci_bus_scan(uint32_t bus)
 	}
 }
 
-static uint32_t _pci_get_bar_addr(uint32_t bus, uint32_t slot)
-{
-	return pci_read(PCI_CONF_ADDR(bus, slot, 0, PCI_BAR_0));
-}
-
-static uint32_t _pci_get_bar_size(uint32_t bus, uint32_t slot)
-{
-	uint32_t old = _pci_get_bar_addr(bus, slot);
-	outportl(PCI_CONFIG_DATA, 0xFFFFFFFF);
-	uint32_t size = inportl(PCI_CONFIG_DATA);
-	outportl(PCI_CONFIG_DATA, old);
-	return (~size)+1;
-}
-
 static struct pci_device *get_device(uint16_t vendor, uint16_t product)
 {
 	int i;
 	for(i = 0; i < nr_pci_device; i++) {
-		if(pci_devices[i].conf.vendor_id  == vendor &&
-           pci_devices[i].conf.product_id == product)
+		if(pci_devices[i].conf.hdr.vendor_id  == vendor &&
+           pci_devices[i].conf.hdr.product_id == product)
 			return &pci_devices[i];
 	}
 
 	return NULL;
+}
+
+uint32_t pci_get_bar_addr(uint16_t vendor, uint16_t product/*, uint32_t index*/)
+{
+	struct pci_device *dev = get_device(vendor, product);
+	if(dev != NULL) {
+		return (dev->conf.bars[0/*index*/]) & (~0xf);
+	}
+	return -1;
+}
+
+uint32_t pci_get_bar_size(uint16_t vendor, uint16_t product/*, uint32_t index*/)
+{
+	struct pci_device *dev = get_device(vendor, product);
+	if(dev != NULL) {
+		uint32_t addr = PCI_CONF_ADDR(GET_BUS(dev->bsf),
+									  GET_SLOT(dev->bsf),
+									  GET_FUNC(dev->bsf),
+									  PCI_BAR_0/*+index*4*/);
+		uint32_t old = pci_read(addr);
+		pci_write(addr, 0xFFFFFFFF);
+		uint32_t size = pci_read(addr);
+		pci_write(addr, old);
+		return ~(size & (~0xf)) + 1;
+	}
+	return -1;
+}
+
+uint8_t pci_get_intr_line(uint16_t vendor, uint16_t product)
+{
+	struct pci_device *dev = get_device(vendor, product);
+	if(dev != NULL)
+		return dev->conf.intr_line;
+
+	return 0xff;
 }
 
 void pci_init()
@@ -143,31 +177,4 @@ void pci_init()
 
 		pci_bus_scan(bus);
 	}
-}
-
-uint32_t pci_get_bar_addr(uint16_t vendor, uint16_t product)
-{
-	struct pci_device *dev = get_device(vendor, product);
-	if(dev != NULL)
-		return _pci_get_bar_addr(GET_BUS(dev->bsf), GET_SLOT(dev->bsf));
-
-	return -1;
-}
-
-uint32_t pci_get_bar_size(uint16_t vendor, uint16_t product)
-{
-	struct pci_device *dev = get_device(vendor, product);
-	if(dev != NULL)
-		return _pci_get_bar_size(GET_BUS(dev->bsf), GET_SLOT(dev->bsf));
-
-	return -1;
-}
-
-uint8_t pci_get_intr_line(uint16_t vendor, uint16_t product)
-{
-	struct pci_device *dev = get_device(vendor, product);
-	if(dev != NULL)
-		return dev->conf.intr_line;
-
-	return 0xff;
 }

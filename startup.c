@@ -138,11 +138,6 @@ void start_user_task()
             page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE);
             if(sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678) == NULL)
                 printk("Failed\r\n");
-            else {
-                printk("Done\r\n");
-            }
-
-
         } else
             printk("Failed\r\n");
     }

@@ -250,11 +250,11 @@ int e1000_init()
 	e1000_reg_write(REG_RAL+0,  *(uint32_t *)(&g_e1000.mac[0]));
 	e1000_reg_write(REG_RAH+0, (*(uint16_t *)(&g_e1000.mac[4]))|RAH_AV);
 
-	e1000_init_txbuf(8);
+	e1000_init_txbuf(4);
 	e1000_reg_write(REG_TCTL,
 		TCTL_EN | TCTL_PSP | (0xf << TCTL_CT_SHIFT) | (0x40 << TCTL_COLD_SHIFT));
 
-	e1000_init_rxbuf(8);
+	e1000_init_rxbuf(16);
 	e1000_reg_write(REG_RCTL, RCTL_EN|RCTL_MPE);
     e1000_reg_write(REG_IMC, 0xffff);
     e1000_reg_write(REG_IMS, IMS_LSC|IMS_RXT0);
@@ -297,31 +297,29 @@ ssize_t sys_recv(int sockfd, void *buf, size_t len, int flags)
 {
     uint32_t _flags;
 
-    while(1) {
-		/*在队列wq_nic上等待数据包到来*/
-		save_flags_cli(_flags);
-		sleep_on(&wq_nic);
-		restore_flags(_flags);
+	/*在队列wq_nic上等待数据包到来*/
+	save_flags_cli(_flags);
+	sleep_on(&wq_nic);
+	restore_flags(_flags);
 
-		/*从网卡读取数据包*/
-		uint32_t tail = e1000_reg_read(REG_RDT);
-		if(g_e1000.rx_desc_ring[tail].status & RXD_STA_DD) {
+	/*从网卡读取数据包*/
+	uint32_t tail = e1000_reg_read(REG_RDT);
+	if(g_e1000.rx_desc_ring[tail].status & RXD_STA_DD) {
 
-			uint8_t *_buf = &g_e1000.rx_buf_ring[tail*PACKET_BUF_SIZE];
-			uint16_t _len = g_e1000.rx_desc_ring[tail].length;
+		uint8_t *_buf = &g_e1000.rx_buf_ring[tail*PACKET_BUF_SIZE];
+		uint16_t _len = g_e1000.rx_desc_ring[tail].length;
 
-			len = min(len, _len);
-			memcpy(buf, _buf, len);
+		len = min(len, _len);
+		memcpy(buf, _buf, len);
 
-			g_e1000.rx_desc_ring[tail].status = 0;
+		g_e1000.rx_desc_ring[tail].status = 0;
 
-			tail = (tail+1) % g_e1000.rx_desc_cnt;
+		tail = (tail+1) % g_e1000.rx_desc_cnt;
 
-			e1000_reg_write(REG_RDT, tail);
+		e1000_reg_write(REG_RDT, tail);
 
-			break;
-		}
-    }
+		return len;
+	}
 
-    return len;
+    return -1;
 }

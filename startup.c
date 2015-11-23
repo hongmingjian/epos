@@ -93,6 +93,21 @@ void start_user_task()
     char *filename="a.out";
     uint32_t entry, _end;
 
+#if USE_FLOPPY
+    printk("task #%d: Initializing floppy disk controller...", sys_task_getid());
+    init_floppy();        //初始化软盘控制器
+    printk("Done\r\n");
+#else
+    printk("task #%d: Initializing IDE controller...", sys_task_getid());
+    ide_init(0x1f0);      //初始化IDE控制器
+    printk("Done\r\n");
+#endif
+    printk("task #%d: Initializing PCI controller...", sys_task_getid());
+    pci_init();           //初始化PCI总线控制器
+    printk("Done\r\n");
+
+    e1000_init();         //初始化E1000网卡
+
     /*
      * 初始化FAT文件系统
      */
@@ -184,21 +199,6 @@ void mi_startup()
      * 初始化内核堆，大小为4MiB，由kmalloc/kfree管理.
      */
     init_kmalloc((uint8_t *)brk, 1024*PAGE_SIZE);
-
-#if USE_FLOPPY
-    printk("Initializing floppy disk controller...");
-    init_floppy();        //初始化软盘控制器
-    printk("Done\r\n");
-#else
-    printk("Initializing IDE controller...");
-    ide_init(0x1f0);      //初始化IDE控制器
-    printk("Done\r\n");
-#endif
-    printk("Initializing PCI controller...");
-    pci_init();           //初始化PCI总线控制器
-    printk("Done\r\n");
-
-    e1000_init();         //初始化E1000网卡
 
     /*
      * 初始化多线程子系统

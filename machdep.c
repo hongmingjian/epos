@@ -415,7 +415,7 @@ int sys_putchar(int c)
     outportb(0x3d4, 0x0f);
     curpos += inportb(0x3d5);
     curpos <<= 1;
-    restore_flags(flags);
+//    restore_flags(flags);
 
     switch(c) {
     case '\n'://换行，只是换行而已
@@ -454,7 +454,7 @@ int sys_putchar(int c)
     /*
      * 保存当前光标位置
      */
-    save_flags_cli(flags);
+//    save_flags_cli(flags);
     curpos >>= 1;
     outportb(0x3d4, 0x0f);
     outportb(0x3d5, curpos & 0x0ff);

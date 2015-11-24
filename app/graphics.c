@@ -37,8 +37,13 @@ static int getVBEInfo(struct VBEInfoBlock *pvib)
     char *VbeSignature;
     struct vm86_context vm86ctx = {.ss = 0x0000, .esp = 0x1000};
     vm86ctx.eax=0x4f00;
-    vm86ctx.es=0x0070;
-    vm86ctx.edi=0x0000;
+
+    /*
+     * vm86call用了0x534处的一个字节，用0x536（而不是0x535）是为了两字节对齐
+     */
+    vm86ctx.es =0x0050;
+    vm86ctx.edi=0x0036;
+
     VbeSignature = (char *)LADDR(vm86ctx.es, LOWORD(vm86ctx.edi));
     VbeSignature[0]='V'; VbeSignature[1]='B';
     VbeSignature[2]='E'; VbeSignature[3]='2';
@@ -48,6 +53,7 @@ static int getVBEInfo(struct VBEInfoBlock *pvib)
     }
 
     *pvib = *(struct VBEInfoBlock *)LADDR(vm86ctx.es, LOWORD(vm86ctx.edi));
+
     return 0;
 }
 
@@ -56,8 +62,13 @@ static int getModeInfo(int mode, struct ModeInfoBlock *pmib)
     struct vm86_context vm86ctx = {.ss = 0x0000, .esp = 0x1000};
     vm86ctx.eax=0x4f01;
     vm86ctx.ecx=mode;
-    vm86ctx.es =0x0090;
-    vm86ctx.edi=0x0000;
+
+    /*
+     * getVBEInfo用了0x200字节
+     */
+    vm86ctx.es =0x0070;
+    vm86ctx.edi=0x0036;
+
     vm86call(1, 0x10, &vm86ctx);
     if(LOWORD(vm86ctx.eax) != 0x4f)
         return -1;

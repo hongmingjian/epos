@@ -26,8 +26,11 @@ int vm86call(int fintr, uint32_t n, struct vm86_context *vm86ctx)
 {
     int fStop = 0, res = 0;
     uint16_t ip, sp;
-    uint16_t ret_cs = 0, ret_ip = 0x600;/*XXX*/
-    *(uint8_t *)LADDR(ret_cs, ret_ip) = 0xf4/*HLT*/;
+
+    /*http://stanislavs.org/helppc/bios_data_area.html*/
+    uint16_t ret_cs = 0x50, ret_ip = 0x34;
+
+    *(uint8_t *)LADDR(ret_cs, ret_ip) = 0xf4/*=HLT*/;
 
     sp = LOWORD(vm86ctx->esp);
     if(fintr) {

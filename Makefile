@@ -1,67 +1,28 @@
-ifeq ($(OS),Windows_NT)
-CROSS=
-else
-ifeq ($(shell uname -s),Linux)
-# For Ubuntu
-#CROSS=i586-mingw32msvc-
+all: hd.img
 
-# For ArchLinux
-#CROSS=i486-mingw32-
-endif
-ifeq ($(shell uname -s),Darwin)
-CROSS=i586-mingw32-
-endif
-endif
+SUBDIRS = kernel userapp
 
-CC=		$(CROSS)gcc
-AS=		$(CROSS)as
-LD=		$(CROSS)ld
-OBJCOPY=	$(CROSS)objcopy
-AR=		$(CROSS)ar
-STRIP=		$(CROSS)strip
-SIZE=		$(CROSS)size
-STRINGS=	$(CROSS)strings
-READELF=	$(CROSS)readelf
-RANLIB=		$(CROSS)ranlib
-NM=		$(CROSS)nm
+.PHONY: subdirs $(SUBDIRS)
+subdirs: $(SUBDIRS)
+$(SUBDIRS):
+	$(MAKE) -C $@
 
-PROG=		eposkrnl
-
-all: $(PROG).bin
-
-CFLAGS=	-DUSE_FLOPPY=0 -DVERBOSE=0 \
-	-O -fomit-frame-pointer -fno-builtin \
-	-ffreestanding -mno-stack-arg-probe \
-	-mno-ms-bitfields -fleading-underscore \
-	-fno-stack-check #-fno-stack-protector #-Wall
-
-LDFLAGS=-Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
-
-OBJS=	entry.o ide.o floppy.o e1000.o pci.o vm86.o \
-	kbd.o timer.o machdep.o task.o mktime.o sem.o \
-	page.o startup.o frame.o kmalloc.o dosfs.o \
-	pe.o printk.o vsprintf.o utils.o bitmap.o \
-	tlsf/tlsf.o
-
-$(PROG).bin: $(OBJS)
-	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
-	$(OBJCOPY) -S -O binary $(PROG).out $@
-
-hd.img: $(PROG).bin
+hd.img: subdirs
 ifeq ($(OS),Windows_NT)
 	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
-	imgcpy.exe $^ $@=C:\$^
+	imgcpy.exe kernel/eposkrnl.bin $@=C:\eposkrnl.bin
+	imgcpy.exe userapp/a.out $@=C:\a.out
 else
 ifeq ($(shell uname -s),Linux)
 	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
 	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
-	sudo cp $^ /mnt
+	sudo cp kernel/eposkrnl.bin userapp/a.out /mnt
 	sudo umount /mnt
 endif
 ifeq ($(shell uname -s),Darwin)
 	if [ ! -s $@ ]; then base64 -D $@.bz2.txt | bunzip2 >$@ ; fi
 	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
-	cp $^ /Volumes/EPOSDISK
+	cp kernel/eposkrnl.bin userapp/a.out /Volumes/EPOSDISK
 	hdiutil detach /Volumes/EPOSDISK
 endif
 endif
@@ -98,9 +59,6 @@ endif
 
 .PHONY: clean
 clean:
-	-$(RM)  *.o tlsf/*.o *.bin *.*~ $(PROG).out $(PROG).map hd.img
-	-$(RM) *.aux *.log *.out *.nav *.snm *.toc *.vrb *.lol
-
-epos.pdf: epos.tex
-	pdflatex epos
-	pdflatex epos
+	$(MAKE) -C kernel $@
+	$(MAKE) -C userapp $@
+	$(RM) hd.img

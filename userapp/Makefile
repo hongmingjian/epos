@@ -44,7 +44,7 @@ OBJS+=	../lib/stdlib.o ../lib/div.o \
 		../lib/tlsf/tlsf.o
 
 $(PROG).out: $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 .PHONY: clean
 clean:

@@ -135,7 +135,7 @@ uint32_t pci_get_bar_addr(uint16_t vendor, uint16_t product/*, uint32_t index*/)
 {
 	struct pci_device *dev = get_device(vendor, product);
 	if(dev != NULL) {
-		return (dev->conf.bars[0/*index*/]) & (~0xf);
+		return (dev->conf.bars[0/*+index*/]) & (~0xf);
 	}
 	return -1;
 }

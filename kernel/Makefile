@@ -48,7 +48,7 @@ OBJS+=	../lib/stdlib.o ../lib/div.o \
 		../lib/tlsf/tlsf.o
 
 $(PROG).bin: $(OBJS)
-	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
+	$(CC) $(LDFLAGS) -o $(PROG).out $^ $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
 
 .PHONY: clean

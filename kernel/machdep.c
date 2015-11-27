@@ -20,6 +20,7 @@
 #include <stddef.h>
 #include <syscall-nr.h>
 #include <ioctl.h>
+#include <sys/mman.h>
 
 #include "kernel.h"
 #include "multiboot.h"
@@ -615,6 +616,66 @@ void syscall(struct context *ctx)
             }
 
             ctx->eax = sys_task_wait(tid, pcode);
+        }
+        break;
+    case SYSCALL_reboot:
+        {
+            int howto = *(int *)(ctx->esp+4);
+            while(inportb(0x64) & 2)
+                ;
+            outportb(0x64, 0xFE);
+            ctx->eax = -1;
+        }
+        break;
+    case SYSCALL_mmap:
+        {
+            void *addr = *(void **)(ctx->esp+4);
+            size_t len = *(size_t *)(ctx->esp+8);
+            int prot = *(int *)(ctx->esp+12);
+            int flags = *(int *)(ctx->esp+16);
+            int fd = *(int *)(ctx->esp+20);
+            off_t offset = *(off_t *)(ctx->esp+24);
+            uint32_t size = PAGE_ROUNDUP(len);
+            uint32_t va = (uint32_t)addr;
+
+            ctx->eax = -1;
+            if((len == 0) || (va & PAGE_MASK))
+                break;
+
+            if(((flags & MAP_ANON) == 0) ||
+               ((flags & MAP_PRIVATE) == 0)) {
+                break;
+            } else {
+                if(flags & MAP_FIXED) {
+                    if(va <  USER_MIN_ADDR ||
+                       va >= USER_MAX_ADDR ||
+                       va + size > USER_MAX_ADDR) {
+                        break;
+                    }
+                    ctx->eax = page_alloc_in_addr(va, size/PAGE_SIZE);
+                } else {
+                    ctx->eax = page_alloc(size/PAGE_SIZE, 1);
+                }
+            }
+        }
+        break;
+    case SYSCALL_munmap:
+        {
+            void *addr = *(void **)(ctx->esp+4);
+            size_t len = *(size_t *)(ctx->esp+8);
+            uint32_t size = PAGE_ROUNDUP(len);
+            uint32_t va = (uint32_t)addr;
+
+            ctx->eax = -1;
+            if(len == 0)
+                break;
+
+            if(va <  USER_MIN_ADDR ||
+               va >= USER_MAX_ADDR ||
+               va + size > USER_MAX_ADDR) {
+                break;
+            }
+            ctx->eax = page_free(va, size/PAGE_SIZE);
         }
         break;
     case SYSCALL_beep:

@@ -1,5 +1,4 @@
 #include <stddef.h>
-#include <stdlib.h>
 #include "kernel.h"
 #include "cpu.h"
 
@@ -7,6 +6,13 @@
 #define HIWORD(l) ((uint16_t)(((uint32_t)(l) >> 16) & 0xFFFF))
 #define LOBYTE(w) ((uint8_t)(w))
 #define HIBYTE(w) ((uint8_t)(((uint16_t)(w) >> 8) & 0xFF))
+
+#ifndef max
+#define max(a,b) (((a) > (b)) ? (a) : (b))
+#endif
+#ifndef min
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+#endif
 
 struct rdesc{
 	volatile uint32_t paddrLo;

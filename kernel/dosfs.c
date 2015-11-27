@@ -9,9 +9,50 @@
 */
 
 #include <string.h>
-#include <stdlib.h>
 
 #include "dosfs.h"
+
+typedef struct _div_t {
+  int quot;
+  int rem;
+} div_t;
+
+typedef struct _ldiv_t {
+  long quot;
+  long rem;
+} ldiv_t;
+
+ldiv_t ldiv (long int numer, long int denom)
+{
+  ldiv_t result;
+
+  result.quot = numer / denom;
+  result.rem = numer % denom;
+
+  if (numer >= 0 && result.rem < 0)
+    {
+      ++result.quot;
+      result.rem -= denom;
+    }
+
+  return result;
+}
+
+div_t div(int numer, int denom)
+{
+  div_t result;
+
+  result.quot = numer / denom;
+  result.rem = numer % denom;
+
+  if (numer >= 0 && result.rem < 0)
+    {
+      ++result.quot;
+      result.rem -= denom;
+    }
+
+  return result;
+}
 
 /*
 	Get starting sector# of specified partition on drive #unit

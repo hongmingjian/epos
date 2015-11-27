@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdlib.h>
 
 /* Copyright (C) 1992, 1997 Free Software Foundation, Inc.
@@ -81,4 +82,54 @@ div (numer, denom)
     }
 
   return result;
+}
+
+/*
+ * http://en.wikipedia.org/wiki/Multiply-with-carry
+ */
+#define PHI 0x9e3779b9
+static uint32_t Q[4096], c = 362436;
+void srand(unsigned int seed)
+{
+    int i;
+
+    Q[0] = seed;
+    Q[1] = seed + PHI;
+    Q[2] = seed + PHI + PHI;
+
+    for (i = 3; i < 4096; i++)
+        Q[i] = Q[i - 3] ^ Q[i - 2] ^ PHI ^ i;
+}
+int random(void)
+{
+    uint64_t t, a = 18782LL;
+    static uint32_t i = 4095;
+    uint32_t x, r = 0xfffffffe;
+    i = (i + 1) & 4095;
+    t = a * Q[i] + c;
+    c = (t >> 32);
+    x = t + c;
+    if (x < c) {
+        x++;
+        c++;
+    }
+    return (Q[i] = r - x);
+}
+
+#include "../lib/tlsf/tlsf.h"
+void *malloc(size_t bytes)
+{
+    return tlsf_malloc(bytes);
+}
+void *calloc(size_t num, size_t size)
+{
+    return tlsf_calloc(num, size);
+}
+void *realloc(void *oldptr, size_t bytes)
+{
+    return tlsf_realloc(oldptr, bytes);
+}
+void free(void *ptr)
+{
+    tlsf_free(ptr);
 }

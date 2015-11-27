@@ -1,39 +1,30 @@
 /**
  * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  */
-#include <inttypes.h>
-#include "math.h"
+#include <stdint.h>
+#include <math.h>
 
-/*
- * http://en.wikipedia.org/wiki/Multiply-with-carry
- */
-#define PHI 0x9e3779b9
-static uint32_t Q[4096], c = 362436;
-void srand(uint32_t seed)
+double fabs(double x)
 {
-    int i;
-
-    Q[0] = seed;
-    Q[1] = seed + PHI;
-    Q[2] = seed + PHI + PHI;
-
-    for (i = 3; i < 4096; i++)
-        Q[i] = Q[i - 3] ^ Q[i - 2] ^ PHI ^ i;
+    if (x < 0)
+        x = -x;
+    return(x);
 }
-uint32_t random(void)
+
+double floor(double x)
 {
-    uint64_t t, a = 18782LL;
-    static uint32_t i = 4095;
-    uint32_t x, r = 0xfffffffe;
-    i = (i + 1) & 4095;
-    t = a * Q[i] + c;
-    c = (t >> 32);
-    x = t + c;
-    if (x < c) {
-        x++;
-        c++;
-    }
-    return (Q[i] = r - x);
+    return x < 0.f ? ((int)x - 1) : (int)x;
+}
+
+double ceil(double x)
+{
+    int ix = (int)x;
+    if((double)ix == x)
+        return ix;
+    if(x < 0.f)
+        return ix;
+    else
+        return ix+1;
 }
 
 double sin(double x)

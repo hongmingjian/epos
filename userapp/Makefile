@@ -30,18 +30,18 @@ PROG=	a
 .PHONY: all
 all: $(PROG).out
 
-ASFLAGS=-nostdinc -I../include
-CFLAGS=	 -nostdinc -I../include -fno-builtin \
+ASFLAGS=-nostdinc -I../include -Iinclude
+CFLAGS=	 -nostdinc -I../include -Iinclude -fno-builtin \
 	-ffreestanding -fno-stack-check \
 	-fleading-underscore -mno-ms-bitfields \
 	-mno-stack-arg-probe -O #-fno-stack-protector #-Wall
 LDFLAGS=-nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
-OBJS=	crt0.o syscall-wrapper.o vm86call.o \
-		math.o graphics.o main.o
-OBJS+=	../lib/stdlib.o ../lib/div.o \
-		../lib/string.o ../lib/snprintf.o \
-		../lib/tlsf/tlsf.o
+OBJS=	lib/crt0.o
+OBJS+=	vm86call.o graphics.o main.o
+OBJS+=	lib/math.o lib/stdio.o lib/stdlib.o lib/syscall-wrapper.o
+OBJS+=	../lib/div.o ../lib/string.o \
+		../lib/snprintf.o ../lib/tlsf/tlsf.o
 
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

@@ -3,38 +3,12 @@
  */
 #include <inttypes.h>
 #include <stddef.h>
-#include "syscall.h"
-#include "math.h"
+#include <math.h>
+#include <stdio.h>
+#include <sys/mman.h>
+#include <syscall.h>
+#include <netinet/in.h>
 #include "graphics.h"
- 
-///////////////////辅助函数///////////////////////
-#include "../lib/tlsf/tlsf.h"
-extern char end[];
-void *malloc(size_t bytes)
-{ return malloc_ex(bytes, end); }
-void *realloc(void *oldptr, size_t bytes)
-{ return realloc_ex(oldptr, bytes, end); }
-void free(void *ptr)
-{ free_ex(ptr, end); }
-
-#include <stdarg.h>
-int snprintf (char *str, size_t count, const char *fmt, ...);
-int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
-int printf(const char *fmt,...)
-{
-    char buf[1024];
-    va_list args;
-    int i, j;
-
-    va_start(args, fmt);
-    i=vsnprintf(buf,sizeof(buf), fmt, args);
-    va_end(args);
-
-    for(j = 0; j < i; j++)
-        putchar(buf[j]);
-
-    return i;
-}
 
 /**
  * GCC insists on __main
@@ -42,7 +16,8 @@ int printf(const char *fmt,...)
  */
 void __main()
 {
-    init_memory_pool(64*1024*1024, end);
+    void *heap_base = mmap(NULL, 64*1024*1024, 0, MAP_PRIVATE|MAP_ANON, -1, 0);
+    init_memory_pool(64*1024*1024, heap_base);
 }
 
 #define DELAY(n) do { \

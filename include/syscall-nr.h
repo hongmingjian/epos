@@ -25,8 +25,11 @@
 #define SYSCALL_task_getid    3
 #define SYSCALL_task_yield    4
 #define SYSCALL_task_wait     5
+#define SYSCALL_reboot        6
+#define SYSCALL_mmap          7
+#define SYSCALL_munmap        8
 
-#define SYSCALL_beep          6
+#define SYSCALL_beep          181
 #define SYSCALL_vm86          182
 #define SYSCALL_recv          183
 #define SYSCALL_send          184

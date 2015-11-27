@@ -43,9 +43,8 @@ OBJS=	entry.o ide.o floppy.o e1000.o pci.o vm86.o \
 	kbd.o timer.o machdep.o task.o mktime.o sem.o \
 	page.o startup.o frame.o kmalloc.o dosfs.o pe.o \
 	printk.o bitmap.o
-OBJS+=	../lib/stdlib.o ../lib/div.o \
-		../lib/string.o ../lib/snprintf.o \
-		../lib/tlsf/tlsf.o
+OBJS+=	../lib/div.o ../lib/string.o \
+		../lib/snprintf.o ../lib/tlsf/tlsf.o
 
 $(PROG).bin: $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $^ $(LIBS)

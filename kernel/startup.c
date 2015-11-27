@@ -146,9 +146,6 @@ void start_user_task()
 
             printk("task #%d: Creating first user task...", sys_task_getid());
 
-            /* XXX - 为用户准备一个堆，大小64MiB */
-            page_alloc_in_addr(_end, 64*1024*1024/PAGE_SIZE);
-
             /* XXX - 为第一个用户级线程准备栈，大小1MiB */
             page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE);
             if(sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678) == NULL)

@@ -910,6 +910,19 @@ void cstart(uint32_t magic, uint32_t mbi)
     init_vm86();
 
     /*
+     * 初始化数学协处理器
+     */
+    __asm__ __volatile__ (
+            "movl %%cr0, %%eax\n\t"
+            "orl  $0x20, %%eax\n\t"
+            "movl %%eax, %%cr0\n\t"
+            "fninit\n\t"
+            :
+            :
+            :"%eax"
+            );
+
+    /*
      * 从CMOS读取计算机启动的时间，即自1970-01-01 00:00:00 +0000 (UTC)以来的秒数
      */
     {

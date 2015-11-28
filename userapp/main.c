@@ -16,15 +16,10 @@
  */
 void __main()
 {
-    void *heap_base = mmap(NULL, 64*1024*1024, 0, MAP_PRIVATE|MAP_ANON, -1, 0);
-    init_memory_pool(64*1024*1024, heap_base);
+    size_t heap_size = 64*1024*1024;
+    void  *heap_base = mmap(NULL, heap_size, 0, MAP_PRIVATE|MAP_ANON, -1, 0);
+    init_memory_pool(heap_size, heap_base);
 }
-
-#define DELAY(n) do { \
-    unsigned __n=(n); \
-    while(__n--); \
-} while(0);
-///////////////////辅助函数///////////////////////
 
 /**
  * 第一个运行在用户模式的线程所执行的函数

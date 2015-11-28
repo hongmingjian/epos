@@ -639,7 +639,7 @@ void syscall(struct context *ctx)
             uint32_t va = (uint32_t)addr;
 
             ctx->eax = -1;
-            if((len == 0) || (va & PAGE_MASK))
+            if(len == 0)
                 break;
 
             if(((flags & MAP_ANON) == 0) ||
@@ -649,7 +649,8 @@ void syscall(struct context *ctx)
                 if(flags & MAP_FIXED) {
                     if(va <  USER_MIN_ADDR ||
                        va >= USER_MAX_ADDR ||
-                       va + size > USER_MAX_ADDR) {
+                       va + size > USER_MAX_ADDR ||
+                       (va & PAGE_MASK)) {
                         break;
                     }
                     ctx->eax = page_alloc_in_addr(va, size/PAGE_SIZE);

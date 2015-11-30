@@ -286,16 +286,19 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 {
     uint32_t flags, prot;
 
-    /*检查地址是否合法*/
-    prot = page_prot(vaddr);
-    if(prot == -1 || prot == VM_PROT_NONE) {
-        printk("PF: Invalid memory access: 0x%08x(0x%01x)\r\n", vaddr, code);
-        return -1;
-    }
-
 #if VERBOSE
     printk("PF:0x%08x(0x%01x)", vaddr, code);
 #endif
+
+    /*检查地址是否合法*/
+    prot = page_prot(vaddr);
+    if(prot == -1 || prot == VM_PROT_NONE) {
+#if !VERBOSE
+        printk("PF:0x%08x(0x%01x)", vaddr, code);
+#endif
+        printk("->ILLEGAL MEMORY ACCESS\r\n");
+        return -1;
+    }
 
     /*只要访问用户的地址空间，都代表用户模式访问*/
     if (vaddr < KERN_MIN_ADDR) {

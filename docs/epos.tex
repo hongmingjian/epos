@@ -46,35 +46,34 @@
 
 \lstlistoflistings
 
+\newpage
+\lstinputlisting[language={[gnu]make},label=Makefile,caption=Makefile]{../Makefile}
+\newpage
+\lstinputlisting[language={[gnu]make},label=Makefile.inc,caption=Makefile.inc]{../Makefile.inc}
 
 \newpage
-\lstinputlisting[label=entry.S,caption=entry.S]{entry.S}
+\lstinputlisting[label=include/syscall-nr.h,caption=include/syscall-nr.h]{../include/syscall-nr.h}
 
+\newpage
+\lstinputlisting[language={[gnu]make},label=kernel/Makefile,caption=kernel/Makefile]{../kernel/Makefile}
+\newpage
+\lstinputlisting[label=kernel/ldscript,caption=kernel/ldscript]{../kernel/ldscript}
+\newpage
+\lstinputlisting[label=kernel/entry.S,caption=kernel/entry.S]{../kernel/entry.S}
 \foreach \n in
-{machdep.c,startup.c,task.c,timer.c,kbd.c,page.c,pe.c,global.h,cpu.h,kernel.h,machdep.h,syscall-nr.h}{\newpage \lstinputlisting[language=C,label=\n,caption=\n]{\n}}
+{machdep.c,startup.c,task.c,page.c,frame.c,timer.c,kbd.c,cpu.h,kernel.h,machdep.h}{\newpage
+\lstinputlisting[language=C,label=kernel/\n,caption=kernel/\n]{../kernel/\n}}
 
 \newpage
-\lstinputlisting[label=ldscript,caption=ldscript]{ldscript}
-
+\lstinputlisting[language={[gnu]make},label=userapp/Makefile,caption=userapp/Makefile]{../userapp/Makefile}
 \newpage
-\lstinputlisting[language={[gnu]make},label=Makefile,caption=Makefile]{Makefile}
-
+\lstinputlisting[label=userapp/lib/crt0.S,caption=userapp/lib/crt0.S]{../userapp/lib/crt0.S}
 \newpage
-\lstinputlisting[label=app/crt0.S,caption=app/crt0.S]{app/crt0.S}
+\lstinputlisting[language=C,label=userapp/main.c,caption=userapp/main.c]{../userapp/main.c}
 \newpage
-\lstinputlisting[label=app/syscall-stub.S,caption=app/syscall-stub.S]{app/syscall-stub.S}
+\lstinputlisting[label=userapp/lib/syscall-wrapper.S,caption=userapp/lib/syscall-wrapper.S]{../userapp/lib/syscall-wrapper.S}
 \newpage
-\lstinputlisting[language=C,label=app/main.c,caption=app/main.c]{app/main.c}
-\newpage
-\lstinputlisting[language=C,label=app/graphics.c,caption=app/graphics.c]{app/graphics.c}
-\newpage
-\lstinputlisting[language=C,label=app/syscall.h,caption=app/syscall.h]{app/syscall.h}
-\newpage
-\lstinputlisting[language=C,label=app/math.h,caption=app/math.h]{app/math.h}
-\newpage
-\lstinputlisting[language=C,label=app/graphics.h,caption=app/graphics.h]{app/graphics.h}
-\newpage
-\lstinputlisting[language={[gnu]make},label=app/Makefile,caption=app/Makefile]{app/Makefile}
+\lstinputlisting[language=C,label=userapp/include/syscall.h,caption=userapp/include/syscall.h]{../userapp/include/syscall.h}
 
 \end{CJK*}
 \end{document}

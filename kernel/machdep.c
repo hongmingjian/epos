@@ -653,9 +653,9 @@ void syscall(struct context *ctx)
                        (va & PAGE_MASK)) {
                         break;
                     }
-                    ctx->eax = page_alloc_in_addr(va, size/PAGE_SIZE);
+                    ctx->eax = page_alloc_in_addr(va, size/PAGE_SIZE, prot);
                 } else {
-                    ctx->eax = page_alloc(size/PAGE_SIZE, 1);
+                    ctx->eax = page_alloc(size/PAGE_SIZE, prot, 1);
                 }
             }
         }

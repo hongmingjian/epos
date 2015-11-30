@@ -17,7 +17,7 @@
 void __main()
 {
     size_t heap_size = 64*1024*1024;
-    void  *heap_base = mmap(NULL, heap_size, 0, MAP_PRIVATE|MAP_ANON, -1, 0);
+    void  *heap_base = mmap(NULL, heap_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
     init_memory_pool(heap_size, heap_base);
 }
 

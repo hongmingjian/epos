@@ -131,13 +131,17 @@ typedef struct _IMAGE_SECTION_HEADER {
     WORD  NumberOfLinenumbers;
 
     /*
-     * 0x20000000 This section is executable.
-     * 0x80000000 The section is writeable.
-     *            If this flag isn't set in an EXE's section,
-     *            the loader should mark the memory mapped pages
-     *            as read-only or execute-only.
+     * IMAGE_SCN_MEM_EXECUTE This section is executable.
+     * IMAGE_SCN_MEM_READ    This section is readable.
+     * IMAGE_SCN_MEM_WRITE   The section is writeable.
+     *                       If this flag isn't set in an EXE's section,
+     *                       the loader should mark the memory mapped pages
+     *                       as read-only or execute-only.
      */
     DWORD Characteristics;
+#define IMAGE_SCN_MEM_EXECUTE 0x20000000
+#define IMAGE_SCN_MEM_READ    0x40000000
+#define IMAGE_SCN_MEM_WRITE   0x80000000
 } IMAGE_SECTION_HEADER, *PIMAGE_SECTION_HEADER;
 
 uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end)
@@ -198,7 +202,7 @@ uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end)
             return 0;
         }
 
-        uint32_t va, npages;
+        uint32_t va, npages, prot;
         pinh = (PIMAGE_NT_HEADERS)buffer;
         pish = (PIMAGE_SECTION_HEADER)(pinh + 1);
         for(i = 0; i < pinh->FileHeader.NumberOfSections; i++, pish++) {
@@ -213,10 +217,18 @@ uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end)
                    pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
                    pish->Misc.VirtualSize);*/
 
+            prot = VM_PROT_NONE;
+            if(pish->Characteristics & IMAGE_SCN_MEM_EXECUTE)
+                prot |= VM_PROT_EXEC;
+            if(pish->Characteristics & IMAGE_SCN_MEM_READ)
+                prot |= VM_PROT_READ;
+            if(pish->Characteristics & IMAGE_SCN_MEM_WRITE)
+                prot |= VM_PROT_WRITE;
+
             if(pish->PointerToRawData) {
                 npages = PAGE_ROUNDUP(pish->SizeOfRawData)/PAGE_SIZE;
                 va = page_alloc_in_addr(pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
-                                        npages);
+                                        npages, prot);
                 if(va != pinh->OptionalHeader.ImageBase+pish->VirtualAddress) {
                     printk("task #%d: Address 0x%08x of %d pages has already been used!\r\n",
                            sys_task_getid(),
@@ -234,7 +246,7 @@ uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end)
                 if(pish->Misc.VirtualSize) {
                     npages = PAGE_ROUNDUP(pish->Misc.VirtualSize)/PAGE_SIZE;
                     va = page_alloc_in_addr(pinh->OptionalHeader.ImageBase+pish->VirtualAddress,
-                                            npages);
+                                            npages, prot);
                     if(va != pinh->OptionalHeader.ImageBase+pish->VirtualAddress) {
                         printk("task #%d: Address 0x%08x of %d pages has already been used!\r\n",
                                sys_task_getid(),

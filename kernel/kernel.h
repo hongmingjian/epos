@@ -150,10 +150,17 @@ int         sys_task_getid();
 void        sys_task_yield();
 
 void     init_vmspace(uint32_t brk);
-uint32_t page_alloc(int npages, uint32_t user);
-uint32_t page_alloc_in_addr(uint32_t va, int npages);
+uint32_t page_alloc(int npages, uint32_t prot, uint32_t user);
+uint32_t page_alloc_in_addr(uint32_t va, int npages, uint32_t prot);
 int      page_free(uint32_t va, int npages);
-int      page_check(uint32_t va);
+uint32_t page_prot(uint32_t va);
+#define VM_PROT_NONE   0x00
+#define VM_PROT_READ   0x01
+#define VM_PROT_WRITE  0x02
+#define VM_PROT_EXEC   0x04
+#define VM_PROT_RW     (VM_PROT_READ|VM_PROT_WRITE)
+#define VM_PROT_ALL    (VM_PROT_RW  |VM_PROT_EXEC)
+
 void     page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags);
 void     page_unmap(uint32_t vaddr, uint32_t npages);
 

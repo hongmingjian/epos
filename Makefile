@@ -27,6 +27,9 @@ ifeq ($(shell uname -s),Darwin)
 endif
 endif
 
+hd.vmdk: hd.img
+	qemu-img convert -O vmdk $^ $@
+
 .PHONY: run
 run: qemu
 
@@ -61,4 +64,4 @@ endif
 clean:
 	$(MAKE) -C kernel $@
 	$(MAKE) -C userapp $@
-	$(RM) hd.img
+	$(RM) hd.img hd.vmdk

@@ -42,7 +42,12 @@ struct vsmap {
 struct vmzone {
     uint32_t base;
     uint32_t limit;
+
     uint32_t protect;
+#define VM_PROT_NONE   0x00
+#define VM_PROT_READ   0x01
+#define VM_PROT_WRITE  0x02
+
     struct vmzone *next;
 };
 

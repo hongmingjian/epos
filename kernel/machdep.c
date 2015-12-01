@@ -642,6 +642,10 @@ void syscall(struct context *ctx)
             if(len == 0)
                 break;
 
+            /*XXX - 0x8000留给/dev/mem*/
+            if((fd == 0x8000) && (offset & PAGE_MASK))
+                break;
+
             if(((flags & MAP_ANON) == 0) ||
                ((flags & MAP_PRIVATE) == 0)) {
                 break;
@@ -656,6 +660,13 @@ void syscall(struct context *ctx)
                     ctx->eax = page_alloc_in_addr(va, size/PAGE_SIZE, prot);
                 } else {
                     ctx->eax = page_alloc(size/PAGE_SIZE, prot, 1);
+                }
+
+                if(fd == 0x8000 && ctx->eax != -1) {
+                    page_map(ctx->eax,
+                             offset,
+                             size/PAGE_SIZE,
+                             PTE_V|PTE_U|((prot&PROT_WRITE)?PTE_W:0));
                 }
             }
         }

@@ -423,7 +423,6 @@ int sys_putchar(int c)
     outportb(0x3d4, 0x0f);
     curpos += inportb(0x3d5);
     curpos <<= 1;
-//    restore_flags(flags);
 
     switch(c) {
     case '\n'://换行，只是换行而已
@@ -462,7 +461,6 @@ int sys_putchar(int c)
     /*
      * 保存当前光标位置
      */
-//    save_flags_cli(flags);
     curpos >>= 1;
     outportb(0x3d4, 0x0f);
     outportb(0x3d5, curpos & 0x0ff);
@@ -635,39 +633,41 @@ void syscall(struct context *ctx)
             int flags = *(int *)(ctx->esp+16);
             int fd = *(int *)(ctx->esp+20);
             off_t offset = *(off_t *)(ctx->esp+24);
-            uint32_t size = PAGE_ROUNDUP(len);
+            uint32_t npages = PAGE_ROUNDUP(len)/PAGE_SIZE;
             uint32_t va = (uint32_t)addr;
 
             ctx->eax = -1;
             if(len == 0)
+                break;
+            if(fd == -1) {
+                 if(!(flags & MAP_ANON))
+                     break;
+            } else {
+                if(flags & MAP_ANON)
+                    break;
+            }
+            if(!(flags & MAP_PRIVATE))
                 break;
 
             /*XXX - 0x8000留给/dev/mem*/
             if((fd == 0x8000) && (offset & PAGE_MASK))
                 break;
 
-            if(((flags & MAP_ANON) == 0) ||
-               ((flags & MAP_PRIVATE) == 0)) {
-                break;
+            if(flags & MAP_FIXED) {
+                if(va <  USER_MIN_ADDR ||
+                   va >= USER_MAX_ADDR ||
+                   va + len > USER_MAX_ADDR ||
+                   (va & PAGE_MASK)) {
+                    break;
+                }
+                ctx->eax = page_alloc_in_addr(va, npages, prot);
             } else {
-                if(flags & MAP_FIXED) {
-                    if(va <  USER_MIN_ADDR ||
-                       va >= USER_MAX_ADDR ||
-                       va + size > USER_MAX_ADDR ||
-                       (va & PAGE_MASK)) {
-                        break;
-                    }
-                    ctx->eax = page_alloc_in_addr(va, size/PAGE_SIZE, prot);
-                } else {
-                    ctx->eax = page_alloc(size/PAGE_SIZE, prot, 1);
-                }
+                ctx->eax = page_alloc(npages, prot, 1);
+            }
 
-                if(fd == 0x8000 && ctx->eax != -1) {
-                    page_map(ctx->eax,
-                             offset,
-                             size/PAGE_SIZE,
-                             PTE_V|PTE_U|((prot&PROT_WRITE)?PTE_W:0));
-                }
+            if(ctx->eax != -1 && fd == 0x8000) {
+                page_map(ctx->eax, offset,
+                         npages, PTE_U|((prot&PROT_WRITE)?PTE_W:0)|PTE_V);
             }
         }
         break;
@@ -675,7 +675,7 @@ void syscall(struct context *ctx)
         {
             void *addr = *(void **)(ctx->esp+4);
             size_t len = *(size_t *)(ctx->esp+8);
-            uint32_t size = PAGE_ROUNDUP(len);
+            uint32_t npages = PAGE_ROUNDUP(len)/PAGE_SIZE;
             uint32_t va = (uint32_t)addr;
 
             ctx->eax = -1;
@@ -684,10 +684,24 @@ void syscall(struct context *ctx)
 
             if(va <  USER_MIN_ADDR ||
                va >= USER_MAX_ADDR ||
-               va + size > USER_MAX_ADDR) {
+               va + len > USER_MAX_ADDR) {
                 break;
             }
-            ctx->eax = page_free(va, size/PAGE_SIZE);
+
+            ctx->eax = page_free(va, npages);
+
+            if(ctx->eax != -1) {
+                uint32_t i, x;
+                for(i = 0; i < npages; i++) {
+                    x = *vtopte(va);
+                    if(x & PTE_V) {
+                        *vtopte(va) = 0;
+                        invlpg(va);
+                        frame_free(PAGE_TRUNCATE(x), 1);
+                    }
+                    va += PAGE_SIZE;
+                }
+            }
         }
         break;
     case SYSCALL_beep:
@@ -911,7 +925,7 @@ void cstart(uint32_t magic, uint32_t mbi)
     /*
      * 映射640KiB-1MiB区域
      */
-    page_map(0xa0000, 0xa0000, 32, PTE_V|PTE_W|PTE_U);//128K 显存
+    page_map(0xB8000, 0xB8000,  1, PTE_V|PTE_W      );//  4K 彩色文本模式显存
     page_map(0xc0000, 0xc0000, 16, PTE_V|      PTE_U);// 64K Video ROM BIOS
     page_map(0xe0000, 0xe0000, 16, PTE_V|PTE_W|PTE_U);// 64K UMA (for Qemu)
     page_map(0xf0000, 0xf0000, 16, PTE_V|      PTE_U);// 64K System ROM BIOS

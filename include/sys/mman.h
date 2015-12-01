@@ -16,8 +16,8 @@
  */
 #define	MAP_SHARED	0x0001		/* [MF|SHM] share changes */
 #define	MAP_PRIVATE	0x0002		/* [MF|SHM] changes are private */
-#define	MAP_FIXED	0x0010		/* [MF|SHM] interpret addr exactly */
 
+#define	MAP_FIXED	0x0010		/* interpret addr exactly */
 #define	MAP_FILE	0x0000		/* map from file (default) */
 #define	MAP_ANON	0x1000		/* allocated from memory, swap space */
 

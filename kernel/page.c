@@ -274,6 +274,7 @@ void page_unmap(uint32_t vaddr, uint32_t npages)
 {
     for (; npages > 0; npages--){
         *vtopte(vaddr) = 0;
+        invlpg(vaddr);
         vaddr += PAGE_SIZE;
     }
 }

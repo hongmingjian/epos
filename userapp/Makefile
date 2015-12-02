@@ -13,7 +13,7 @@ CFLAGS=	 -nostdinc -I../include -Iinclude -fno-builtin \
 LDFLAGS=-nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
 OBJS=	lib/crt0.o
-OBJS+=	vm86call.o graphics.o main.o
+OBJS+=	vm86call.o vga.o graphics.o main.o
 OBJS+=	lib/math.o lib/stdio.o lib/stdlib.o lib/syscall-wrapper.o
 OBJS+=	../lib/div.o ../lib/string.o \
 		../lib/snprintf.o ../lib/tlsf/tlsf.o

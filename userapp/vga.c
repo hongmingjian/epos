@@ -13,6 +13,9 @@
 #define LOBYTE(w) ((uint8_t)(w))
 #define HIBYTE(w) ((uint8_t)(((uint16_t)(w) >> 8) & 0xFF))
 
+#define MAJOR(x) HIBYTE(x)
+#define MINOR(x) LOBYTE(x)
+
 #define LADDR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))
 
 int vm86call(int fintr, uint32_t n, struct vm86_context *vm86ctx);
@@ -198,8 +201,8 @@ int list_vga_modes()
     }
 
     printf("VESA VBE Version %d.%d detected (%s)\r\n",
-            vib.VbeVersion>>8,
-            vib.VbeVersion&0xf,
+            MAJOR(vib.VbeVersion),
+            MINOR(vib.VbeVersion),
             (char *)(LADDR(HIWORD(vib.OemStringPtr), LOWORD(vib.OemStringPtr))));
 
     int i = 0;
@@ -257,12 +260,14 @@ int init_vga(int mode)
 
     g_vga_dev.XResolution = mib.XResolution;
     g_vga_dev.YResolution = mib.YResolution;
-    g_vga_dev.BytesPerScanLine = mib.BytesPerScanLine;
     g_vga_dev.BitsPerPixel = mib.BitsPerPixel;
 
-    if(((vib.VbeVersion>>8) >= 3) && /*XXX - Bochs中VBE2.0的LFB不能工作*/
+    if((MAJOR(vib.VbeVersion) >= 3) && /*XXX - Bochs中VBE2.0的LFB不能工作*/
        (mib.ModeAttributes & 0x80) &&
        (mib.PhysBasePtr != 0)) {
+        g_vga_dev.BytesPerScanLine = (MAJOR(vib.VbeVersion) >= 3) ?
+                                     mib.LinBytesPerScanLine :
+                                     mib.BytesPerScanLine;
         g_vga_dev.FrameBufferSize = mib.BytesPerScanLine*mib.YResolution;
         g_vga_dev.Linear = 1;
         g_vga_dev.pfnSwitchBank = NULL;
@@ -271,6 +276,7 @@ int init_vga(int mode)
         while((unsigned)(64 >> bankShift) != mib.WinGranularity)
             bankShift++;
 
+        g_vga_dev.BytesPerScanLine = mib.BytesPerScanLine;
         g_vga_dev.FrameBufferSize = mib.WinSize*1024;
         g_vga_dev.Linear = 0;
         g_vga_dev.pfnSwitchBank = switchBank;
@@ -292,12 +298,13 @@ int init_vga(int mode)
     if(g_vga_dev.FrameBuffer == MAP_FAILED)
         return -1;
 
-    printf("VBE%d.%d: On-board memory 0x%08x mapped to 0x%08x (%d pages)\r\n",
-                vib.VbeVersion>>8,
-                vib.VbeVersion&0xf,
+    printf("VBE%d.%d: On-board memory 0x%08x mapped to 0x%08x (%d pages,%s)\r\n",
+                MAJOR(vib.VbeVersion),
+                MINOR(vib.VbeVersion),
                 g_vga_dev.Linear?mib.PhysBasePtr:LADDR(mib.WinASegment, 0),
                 g_vga_dev.FrameBuffer,
-                (g_vga_dev.FrameBufferSize+4096-1)/4096);
+                (g_vga_dev.FrameBufferSize+4096-1)/4096,
+                g_vga_dev.Linear?"linear":"banked");
 
     oldmode = getVBEMode();
     return setVBEMode(mode);

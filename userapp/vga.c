@@ -268,7 +268,7 @@ int init_vga(int mode)
         g_vga_dev.BytesPerScanLine = (MAJOR(vib.VbeVersion) >= 3) ?
                                      mib.LinBytesPerScanLine :
                                      mib.BytesPerScanLine;
-        g_vga_dev.FrameBufferSize = mib.BytesPerScanLine*mib.YResolution;
+        g_vga_dev.FrameBufferSize = g_vga_dev.BytesPerScanLine*g_vga_dev.YResolution;
         g_vga_dev.Linear = 1;
         g_vga_dev.pfnSwitchBank = NULL;
     } else {
@@ -283,12 +283,12 @@ int init_vga(int mode)
     }
 
     printf("VBE%d.%d: mode=0x%04x(%dx%dx%d)\r\n",
-                vib.VbeVersion>>8,
-                vib.VbeVersion&0xf,
+                MAJOR(vib.VbeVersion),
+                MINOR(vib.VbeVersion),
                 mode,
-                mib.XResolution,
-                mib.YResolution,
-                mib.BitsPerPixel);
+                g_vga_dev.XResolution,
+                g_vga_dev.YResolution,
+                g_vga_dev.BitsPerPixel);
 
     g_vga_dev.FrameBuffer = mmap(NULL, g_vga_dev.FrameBufferSize,
                                  PROT_READ|PROT_WRITE,

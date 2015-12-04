@@ -27,6 +27,10 @@ ifeq ($(shell uname -s),Darwin)
 endif
 endif
 
+.PHONY: tags
+tags:
+	ctags -R *
+
 hd.vmdk: hd.img
 	qemu-img convert -O vmdk $^ $@
 
@@ -64,4 +68,4 @@ endif
 clean:
 	$(MAKE) -C kernel $@
 	$(MAKE) -C userapp $@
-	$(RM) hd.img hd.vmdk
+	$(RM) hd.img hd.vmdk tags

@@ -917,10 +917,8 @@ void cstart(uint32_t magic, uint32_t mbi)
      */
     for(i = 0; i < _end; i += PAGE_SIZE) {
         *vtopte(i) = 0;
+        invlpg(i);
     }
-
-    /*清空TLB*/
-    invltlb();
 
     /*
      * 映射640KiB-1MiB区域

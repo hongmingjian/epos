@@ -11,8 +11,8 @@
 
 void setPixel(int x, int y, COLORREF cr)
 {
-    if(x >= g_vga_dev.XResolution ||
-       y >= g_vga_dev.YResolution)
+    if(x < 0 || x >= g_vga_dev.XResolution ||
+       y < 0 || y >= g_vga_dev.YResolution)
         return;
 
     uint8_t bpp = g_vga_dev.BitsPerPixel;

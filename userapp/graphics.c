@@ -1,7 +1,11 @@
 /**
  * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  */
-
+/**
+ * References:
+ * [1] http://webpages.charter.net/danrollins/techhelp/0089.HTM
+ *
+ */
 #include "graphics.h"
 
 #define LOWORD(l) ((uint16_t)(l))
@@ -24,25 +28,15 @@ void setPixel(int x, int y, COLORREF cr)
 
     switch(g_vga_dev.BitsPerPixel) {
     case 1:
-        if(g_vga_dev.Linear) {
-            p = g_vga_dev.FrameBuffer+addr;
-        } else {
-            p = g_vga_dev.FrameBuffer+LOWORD(addr);
-            g_vga_dev.pfnSwitchBank(HIWORD(addr));
-        }
-
-        *p &=    ~(1<<(7-(x&7)));
-        *p |= (cr&1)<<(7-(x&7));
-
         break;
 
     case 2:
-        if(g_vga_dev.Linear) {
-            p = g_vga_dev.FrameBuffer+addr;
+        if(y&1) {
+            p = g_vga_dev.FrameBuffer + 0x2000;
         } else {
-            p = g_vga_dev.FrameBuffer+LOWORD(addr);
-            g_vga_dev.pfnSwitchBank(HIWORD(addr));
+            p = g_vga_dev.FrameBuffer;
         }
+        p += (y/2)*g_vga_dev.BytesPerScanLine+(x*bpp)/8;
 
         *p &=    ~(3<<(6-2*(x&3)));
         *p |= (cr&3)<<(6-2*(x&3));
@@ -50,16 +44,6 @@ void setPixel(int x, int y, COLORREF cr)
         break;
 
     case 4:
-        if(g_vga_dev.Linear) {
-            p = g_vga_dev.FrameBuffer+addr;
-        } else {
-            p = g_vga_dev.FrameBuffer+LOWORD(addr);
-            g_vga_dev.pfnSwitchBank(HIWORD(addr));
-        }
-
-        *p &=    ~(0xf<<(4-4*(x&1)));
-        *p |= (cr&0xf)<<(4-4*(x&1));
-
         break;
 
     case 8:

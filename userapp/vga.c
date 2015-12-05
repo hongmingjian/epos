@@ -207,8 +207,8 @@ int list_vga_modes()
 
     int i = 0;
     printf("\r\n");
-    printf(" Mode     Resolution       Mode     Resolution  \r\n");
-    printf("------------------------------------------------\r\n");
+    printf(" Mode   Resolution       Mode   Resolution   \r\n");
+    printf("---------------------------------------------\r\n");
     for(modep = (uint16_t *)LADDR(HIWORD(vib.VideoModePtr),
                                   LOWORD(vib.VideoModePtr));
         *modep != 0xffff;
@@ -224,25 +224,36 @@ int list_vga_modes()
         if(!(mib.ModeAttributes & 0x10))
             continue;
 
-        if(mib.NumberOfPlanes != 1)
-            continue;
-
-        printf("0x%04x   %4dx%-4dx%2d  ",
+        printf("0x%04x %4dx%-4dx%2d",
                 *modep,
                 mib.XResolution,
                 mib.YResolution,
                 mib.BitsPerPixel);
+        if(mib.NumberOfPlanes > 1)
+            printf("x%d ", mib.NumberOfPlanes);
+        else
+            printf("   ");
         i++;
+        if(i % 44 == 0) {
+            printf("\r\nPress any key to continue...");
+            getchar();
+            printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
+            printf("\b");
+        }
         if(i % 2 == 0)
             printf("\r\n");
         else
-            printf("|  ");
+            printf("| ");
     }
     if(i % 2)
         printf("\r\n");
-    printf("------------------------------------------------\r\n");
-    printf(" Mode     Resolution       Mode     Resolution  \r\n");
+    printf("---------------------------------------------\r\n");
+    printf(" Mode   Resolution       Mode   Resolution   \r\n");
 
+    printf("Press any key to continue...");
+    getchar();
+    getchar();
+    printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
     return 0;
 }
 
@@ -261,6 +272,7 @@ int init_vga(int mode)
     g_vga_dev.XResolution = mib.XResolution;
     g_vga_dev.YResolution = mib.YResolution;
     g_vga_dev.BitsPerPixel = mib.BitsPerPixel;
+    g_vga_dev.NumberOfPlanes = mib.NumberOfPlanes;
 
     if((MAJOR(vib.VbeVersion) >= 3) && /*XXX - Bochs中VBE2.0的LFB不能工作*/
        (mib.ModeAttributes & 0x80) &&
@@ -282,13 +294,14 @@ int init_vga(int mode)
         g_vga_dev.pfnSwitchBank = switchBank;
     }
 
-    printf("VBE%d.%d: mode=0x%04x(%dx%dx%d)\r\n",
+    printf("VBE%d.%d: setting mode to 0x%04x(%dx%dx%d,%d planes)\r\n",
                 MAJOR(vib.VbeVersion),
                 MINOR(vib.VbeVersion),
                 mode,
                 g_vga_dev.XResolution,
                 g_vga_dev.YResolution,
-                g_vga_dev.BitsPerPixel);
+                g_vga_dev.BitsPerPixel,
+                g_vga_dev.NumberOfPlanes);
 
     g_vga_dev.FrameBuffer = mmap(NULL, g_vga_dev.FrameBufferSize,
                                  PROT_READ|PROT_WRITE,

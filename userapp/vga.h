@@ -11,6 +11,7 @@ struct vga_dev {
     uint16_t YResolution;
     uint16_t BytesPerScanLine;
     uint8_t  BitsPerPixel;
+    uint8_t  NumberOfPlanes;
     uint8_t *FrameBuffer;
     uint32_t FrameBufferSize;
     int      Linear;

@@ -190,6 +190,10 @@ struct tcb *sys_task_create(void *tos,
     new->wq_exit = NULL;
     new->next = NULL;
 
+    /*XXX - should be elsewhere*/
+    new->fpu.cwd = 0x37f;
+    new->fpu.twd = 0xffff;
+
     if(ustack != 0) {
         STACK_PUSH(ustack, pv);
         STACK_PUSH(ustack, 0);

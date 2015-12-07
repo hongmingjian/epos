@@ -529,24 +529,36 @@ int exception(struct context *ctx)
         break;
 
     case 7://device not available
-        __asm__ __volatile__("clts");
+        __asm__ __volatile__("clts\t\n");
 
         if(g_task_own_fpu == g_task_running)
             return 0;
 
-        __asm__ __volatile__("fwait");
+        __asm__ __volatile__("fwait\t\n");
 
         if(g_task_own_fpu) {
-            __asm__ __volatile__("fnsave %0"::"m"(g_task_own_fpu->fpu));
+            __asm__ __volatile__("fnsave %0\t\n"::"m"(g_task_own_fpu->fpu));
         }
 
         g_task_own_fpu = g_task_running;
 
-        __asm__ __volatile__("frstor %0"::"m"(g_task_running->fpu));
+        __asm__ __volatile__("frstor %0\t\n"::"m"(g_task_running->fpu));
 
         return 0;
 
         break;
+
+    case 16://x87 FPU Floating-Point Error
+        if(g_task_own_fpu) {
+            __asm__ __volatile__("fnsave %0\t\n"::"m"(g_task_own_fpu->fpu));
+            printk("fpu.cwd=0x%04x\r\n", g_task_own_fpu->fpu.cwd);
+            printk("fpu.swd=0x%04x\r\n", g_task_own_fpu->fpu.swd);
+            printk("fpu.twd=0x%04x\r\n", g_task_own_fpu->fpu.twd);
+            printk("fpu.fip=0x%08x\r\n", g_task_own_fpu->fpu.fip);
+            printk("fpu.fcs=0x%04x\r\n", g_task_own_fpu->fpu.fcs);
+            printk("fpu.foo=0x%08x\r\n", g_task_own_fpu->fpu.foo);
+            printk("fpu.fos=0x%04x\r\n", g_task_own_fpu->fpu.fos);
+        }
     }
 
     printk("Un-handled exception!\r\n");

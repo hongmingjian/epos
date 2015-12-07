@@ -50,13 +50,13 @@ struct segment_descriptor {
 };
 
 struct x87 {
-    uint32_t cwd;
-    uint32_t swd;
-    uint32_t twd;
-    uint32_t fip;
-    uint32_t fcs;
-    uint32_t foo;
-    uint32_t fos;
+    uint32_t cwd;/*Control word*/
+    uint32_t swd;/*Status word*/
+    uint32_t twd;/*Tag word*/
+    uint32_t fip;/*IP Offset*/
+    uint32_t fcs;/*IP Selector*/
+    uint32_t foo;/*Operand Pointer Offset*/
+    uint32_t fos;/*Operand Pointer Selector*/
     uint8_t  st[80];
 };
 

@@ -2,7 +2,7 @@
 #define _STRING_H
 
 void *memcpy(void *dst, const void *src, unsigned long len);
-void *memset(void *b, int c, unsigned long len);
+void *memset(void *b, int c, unsigned len);
 int memcmp(const void *b1, const void *b2, unsigned long len);
 
 char *strcat(char *s, const char *append);

@@ -1,29 +1,5 @@
 #include <string.h>
 
-void *
-memcpy(void *dst, const void *src, unsigned long len)
-{
-	char *p1, *p2;
-	p1 = (char *)dst;
-	p2 = (char *)src;
-
-	while(len--) {
-		*p1++ = *p2++;
-	}
-	return dst;
-}
-
-void *
-memset(void *b, int c, unsigned long len)
-{
-	char *p;
-	p = (char *)b;
-
-	while(len--) {
-		*p++ = c;
-	}
-	return b;
-}
 
 int
 memcmp(const void *b1, const void *b2, unsigned long len)

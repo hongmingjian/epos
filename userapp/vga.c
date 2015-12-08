@@ -100,7 +100,7 @@ static int oldmode;
 static int bankShift;
 static int currBank = -1;
 
-struct vga_dev g_vga_dev;
+struct vga_dev g_vga_dev = {0};
 
 static int getVBEInfo(struct VBEInfoBlock *pvib)
 {

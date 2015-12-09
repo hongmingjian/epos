@@ -51,11 +51,6 @@ typedef unsigned short uid_t;
 typedef unsigned short gid_t;
 #endif
 
-#ifndef _BLKNO_T_DEFINED
-#define _BLKNO_T_DEFINED
-typedef unsigned int blkno_t;
-#endif
-
 #ifndef _LOFF_T_DEFINED
 #define _LOFF_T_DEFINED
 typedef long loff_t;
@@ -73,16 +68,6 @@ typedef off64_t off_t;
 #else
 typedef loff_t off_t;
 #endif
-#endif
-
-#ifndef _HANDLE_T_DEFINED
-#define _HANDLE_T_DEFINED
-typedef int handle_t;
-#endif
-
-#ifndef _SIGSET_T_DEFINED
-#define _SIGSET_T_DEFINED
-typedef unsigned int sigset_t;
 #endif
 
 #endif /*_SYS_TYPES_H*/

@@ -21,6 +21,7 @@
 #include <inttypes.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #include <syscall.h>
 #include "vga.h"
 
@@ -331,7 +332,7 @@ int init_vga(int mode)
                 MINOR(vib.VbeVersion),
                 g_vga_dev.Linear?mib.PhysBasePtr:LADDR(mib.WinASegment, 0),
                 g_vga_dev.FrameBuffer,
-                (g_vga_dev.FrameBufferSize+4096-1)/4096,
+                (g_vga_dev.FrameBufferSize+sysconf(_SC_PAGESIZE)-1)/sysconf(_SC_PAGESIZE),
                 g_vga_dev.Linear?"linear":"banked");
 
     oldmode = getVBEMode();

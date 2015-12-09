@@ -1,8 +1,7 @@
 #include <string.h>
 
-
 int
-memcmp(const void *b1, const void *b2, unsigned long len)
+memcmp(const void *b1, const void *b2, size_t len)
 {
 	char *p1, *p2;
 
@@ -48,7 +47,7 @@ strcpy(char *to, const char *from)
 	return(save);
 }
 
-unsigned
+size_t
 strlen(const char *str)
 {
 	const char *s;
@@ -58,7 +57,7 @@ strlen(const char *str)
 }
 
 char *
-strncpy(char *dest, const char *src, unsigned n)
+strncpy(char *dest, const char *src, size_t n)
 {
     unsigned i;
 

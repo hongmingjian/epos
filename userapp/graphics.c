@@ -20,6 +20,7 @@
 /**
  * References:
  * [1] http://webpages.charter.net/danrollins/techhelp/0089.HTM
+ * [2] http://www.brokenthorn.com/Resources/OSDevVid2.html
  *
  */
 #include "graphics.h"

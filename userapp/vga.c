@@ -290,8 +290,7 @@ int init_vga(int mode)
     g_vga_dev.BitsPerPixel = mib.BitsPerPixel;
     g_vga_dev.NumberOfPlanes = mib.NumberOfPlanes;
 
-    if((MAJOR(vib.VbeVersion) >= 3) && /*XXX - Bochs中VBE2.0的LFB不能工作*/
-       (mib.ModeAttributes & 0x80) &&
+    if((mib.ModeAttributes & 0x80) &&
        (mib.PhysBasePtr != 0)) {
         g_vga_dev.BytesPerScanLine = (MAJOR(vib.VbeVersion) >= 3) ?
                                      mib.LinBytesPerScanLine :
@@ -336,7 +335,7 @@ int init_vga(int mode)
                 g_vga_dev.Linear?"linear":"banked");
 
     oldmode = getVBEMode();
-    return setVBEMode(mode);
+    return setVBEMode(mode|(g_vga_dev.Linear?0x4000:0));
 }
 
 int exit_vga()

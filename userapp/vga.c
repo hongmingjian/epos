@@ -341,6 +341,6 @@ int init_vga(int mode)
 
 int exit_vga()
 {
-    munmap(g_vga_dev.FrameBuffer, g_vga_dev.FrameBufferSize);
     setVBEMode(oldmode);
+    munmap(g_vga_dev.FrameBuffer, g_vga_dev.FrameBufferSize);
 }

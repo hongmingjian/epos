@@ -1,6 +1,7 @@
 #include <syscall.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <limits.h>
 
 int printf(const char *fmt,...)
 {
@@ -50,6 +51,23 @@ int vprintf(const char *fmt, va_list args)
 int vfprintf(FILE *fp, const char *fmt, va_list args)
 {
     return vprintf(fmt, args);
+}
+
+int vsprintf(char *buf, const char *fmt, va_list args)
+{
+    return vsnprintf(buf, INT_MAX, fmt, args);
+}
+
+int sprintf(char *buf, const char *fmt, ...)
+{
+    va_list args;
+    int i;
+
+    va_start(args, fmt);
+    i = vsnprintf(buf, INT_MAX, fmt, args);
+    va_end(args);
+
+    return i;
 }
 
 int fputc(int c, FILE *stream)

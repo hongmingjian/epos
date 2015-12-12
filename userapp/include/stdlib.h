@@ -42,4 +42,10 @@ void  free(void *ptr);
 #define	EXIT_SUCCESS	0
 void exit(int);
 
+long strtol(const char *nptr, char **endptr, register int base);
+unsigned long strtoul(const char *nptr, char **endptr, register int base);
+long atol(const char *str);
+
+void qsort(void *a, size_t n, size_t es, int (*cmp)(const void *, const void *));
+
 #endif /* _STDLIB_H */

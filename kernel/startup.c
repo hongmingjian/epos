@@ -19,7 +19,6 @@
  */
 #include <stddef.h>
 #include "kernel.h"
-#include "dosfs.h"
 
 /*中断向量表*/
 void (*g_intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
@@ -35,6 +34,9 @@ void isr_default(uint32_t irq, struct context *ctx)
 {
     //printk("IRQ=0x%02x\r\n", irq);
 }
+
+#include "dosfs.h"
+uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end);
 
 /**
  * These are the interfaces required by the dosfs

@@ -137,9 +137,6 @@ extern uint32_t g_ram_zone[RAM_ZONE_LEN];
 
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code);
 
-#include "dosfs.h"
-uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end);
-
 int     sys_putchar(int c);
 int     sys_getchar();
 

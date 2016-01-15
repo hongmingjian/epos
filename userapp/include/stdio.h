@@ -4,6 +4,8 @@
 #include <stdarg.h>
 #include <sys/types.h>
 
+#define EOF (-1)
+
 typedef struct {
     int fd;
 } FILE;

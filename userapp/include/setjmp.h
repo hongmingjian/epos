@@ -1,7 +1,7 @@
 #ifndef _SETJMP_H
 #define _SETJMP_H
 
-#include <sys/types.h>
+#include <stdint.h>
 
 typedef struct {
   uint32_t ebx;

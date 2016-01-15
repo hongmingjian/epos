@@ -70,4 +70,9 @@ typedef loff_t off_t;
 #endif
 #endif
 
+#ifndef _PTRDIFF_T_DEFINED
+#define _PTRDIFF_T_DEFINED
+typedef int ptrdiff_t;
+#endif
+
 #endif /*_SYS_TYPES_H*/

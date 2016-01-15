@@ -15,7 +15,7 @@ LDFLAGS=-m32 -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 OBJS=	lib/crt0.o
 OBJS+=	vm86call.o graphics.o main.o
 OBJS+=	lib/sysconf.o lib/math.o lib/stdio.o lib/stdlib.o \
-		lib/syscall-wrapper.o
+		lib/qsort.o lib/setjmp.o lib/syscall-wrapper.o
 OBJS+=	../lib/div.o ../lib/string.o ../lib/memcpy.o \
 		../lib/memset.o ../lib/snprintf.o ../lib/tlsf/tlsf.o
 

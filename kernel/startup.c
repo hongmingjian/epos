@@ -36,7 +36,7 @@ void isr_default(uint32_t irq, struct context *ctx)
 }
 
 #include "dosfs.h"
-uint32_t load_pe(VOLINFO *pvi, char *filename, uint32_t *end);
+uint32_t load_pe(VOLINFO *pvi, char *filename);
 
 /**
  * These are the interfaces required by the dosfs
@@ -93,7 +93,7 @@ uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
 void start_user_task()
 {
     char *filename="a.out";
-    uint32_t entry, _end;
+    uint32_t entry;
 
 #if USE_FLOPPY
     printk("task #%d: Initializing floppy disk controller...", sys_task_getid());
@@ -141,7 +141,7 @@ void start_user_task()
      */
     {
         printk("task #%d: Loading %s...", sys_task_getid(), filename);
-        entry = load_pe(&g_volinfo, filename, &_end);
+        entry = load_pe(&g_volinfo, filename);
 
         if(entry) {
             printk("Done\r\n");

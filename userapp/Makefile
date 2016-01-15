@@ -5,12 +5,12 @@ PROG=	a
 .PHONY: all
 all: $(PROG).out
 
-ASFLAGS=-nostdinc -I../include -Iinclude
-CFLAGS=	 -nostdinc -I../include -Iinclude -fno-builtin \
+ASFLAGS=-m32 -nostdinc -I../include -Iinclude
+CFLAGS=	-m32 -nostdinc -I../include -Iinclude -fno-builtin \
 	-ffreestanding -fno-stack-check \
 	-fleading-underscore -mno-ms-bitfields \
 	-mno-stack-arg-probe -O #-fno-stack-protector #-Wall
-LDFLAGS=-nostdlib -nostartfiles -Wl,-Map,$(PROG).map
+LDFLAGS=-m32 -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
 
 OBJS=	lib/crt0.o
 OBJS+=	vm86call.o graphics.o main.o

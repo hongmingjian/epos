@@ -2,6 +2,7 @@
 #define _STRING_H
 
 #include <stddef.h>
+#include <sys/types.h>
 
 void *memcpy(void *dst, const void *src, size_t len);
 void *memset(void *b, int c, size_t len);

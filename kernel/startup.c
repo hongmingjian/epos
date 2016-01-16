@@ -36,7 +36,7 @@ void isr_default(uint32_t irq, struct context *ctx)
 }
 
 #include "dosfs.h"
-uint32_t load_pe(VOLINFO *pvi, char *filename);
+uint32_t load_aout(VOLINFO *pvi, char *filename);
 
 /**
  * These are the interfaces required by the dosfs
@@ -141,7 +141,7 @@ void start_user_task()
      */
     {
         printk("task #%d: Loading %s...", sys_task_getid(), filename);
-        entry = load_pe(&g_volinfo, filename);
+        entry = load_aout(&g_volinfo, filename);
 
         if(entry) {
             printk("Done\r\n");

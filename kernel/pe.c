@@ -17,6 +17,7 @@
  * purpose.
  *
  */
+#ifdef __WIN32__
 #include <stddef.h>
 #include "kernel.h"
 #include "dosfs.h"
@@ -144,7 +145,7 @@ typedef struct _IMAGE_SECTION_HEADER {
 #define IMAGE_SCN_MEM_WRITE   0x80000000
 } IMAGE_SECTION_HEADER, *PIMAGE_SECTION_HEADER;
 
-uint32_t load_pe(VOLINFO *pvi, char *filename)
+uint32_t load_aout(VOLINFO *pvi, char *filename)
 {
     char scratch[SECTOR_SIZE];
     FILEINFO fi;
@@ -274,3 +275,4 @@ uint32_t load_pe(VOLINFO *pvi, char *filename)
 
     return 0;
 }
+#endif /*__WIN32__*/

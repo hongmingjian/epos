@@ -17,7 +17,13 @@
  * purpose.
  *
  */
+#if defined __WIN32__
 OUTPUT_FORMAT("pei-i386")
+#elif defined __ELF__
+OUTPUT_FORMAT("elf32-i386")
+#else
+#error Unsupported compiler!
+#endif
 ENTRY(_entry)
 SECTIONS {
   . = 0xC0000000;

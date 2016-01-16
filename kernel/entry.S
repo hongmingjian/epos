@@ -40,11 +40,7 @@
 #include "multiboot.h"
 
 /* The flags for the Multiboot header. */
-#ifdef __ELF__
-# define MULTIBOOT_HEADER_FLAGS         0x00000003
-#else
 # define MULTIBOOT_HEADER_FLAGS         0x00010003
-#endif
 
     .text
     .code32
@@ -59,13 +55,11 @@ multiboot_header:
     .long   MULTIBOOT_HEADER_MAGIC /* magic */
     .long   MULTIBOOT_HEADER_FLAGS /* flags */
     .long   -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS) /* checksum */
-#ifndef __ELF__
     .long   R(multiboot_header) /* header_addr */
     .long   R(_entry) /* load_addr */
     .long   R(_edata) /* load_end_addr */
     .long   R(_end) /* bss_end_addr */
     .long   R(_entry) /* entry_addr */
-#endif /* ! __ELF__ */
 
 multiboot_entry:
     /* Switch to the kernel stack */

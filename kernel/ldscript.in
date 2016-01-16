@@ -17,6 +17,8 @@
  * purpose.
  *
  */
+#define KERNBASE 0xC0000000
+
 #if defined __WIN32__
 OUTPUT_FORMAT("pei-i386")
 #elif defined __ELF__
@@ -26,7 +28,7 @@ OUTPUT_FORMAT("elf32-i386")
 #endif
 ENTRY(_entry)
 SECTIONS {
-  . = 0xC0000000;
+  . = KERNBASE;
   .text : {
     *(.text)
   }

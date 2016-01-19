@@ -33,9 +33,9 @@ void srand(unsigned int seed);
 int  rand();
 int  rand_r(unsigned int *seedp);
 
-void *malloc(size_t bytes);
+void *malloc(size_t size);
 void *calloc(size_t num, size_t size);
-void *realloc(void *oldptr, size_t bytes);
+void *realloc(void *oldptr, size_t size);
 void  free(void *ptr);
 
 #define	EXIT_FAILURE	1

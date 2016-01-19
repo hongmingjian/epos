@@ -91,24 +91,6 @@ div (numer, denom)
   return result;
 }
 
-#include "../lib/tlsf/tlsf.h"
-void *malloc(size_t bytes)
-{
-    return tlsf_malloc(bytes);
-}
-void *calloc(size_t num, size_t size)
-{
-    return tlsf_calloc(num, size);
-}
-void *realloc(void *oldptr, size_t bytes)
-{
-    return tlsf_realloc(oldptr, bytes);
-}
-void free(void *ptr)
-{
-    tlsf_free(ptr);
-}
-
 /*-
  * Copyright (c) 1990, 1993
  *  The Regents of the University of California.  All rights reserved.

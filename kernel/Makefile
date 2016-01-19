@@ -6,13 +6,12 @@ PROG=		eposkrnl
 all: $(PROG).bin
 
 ASFLAGS=-m32 -nostdinc -I../include
-CFLAGS=	-m32 -DUSE_FLOPPY=0 -DVERBOSE=0 -nostdinc -I../include \
-	-O -fomit-frame-pointer -fno-builtin \
-	-ffreestanding -mno-stack-arg-probe \
-	-mno-ms-bitfields -fleading-underscore \
-	-fno-stack-check #-fno-stack-protector #-Wall
-
-LDFLAGS=-m32 -Tldscript -nostdlib -nostartfiles -Wl,-Map,$(PROG).map
+CFLAGS=	$(ASFLAGS) -DUSE_FLOPPY=0 -DVERBOSE=0 \
+	-fomit-frame-pointer \
+	-fno-builtin -ffreestanding -fno-stack-check -fleading-underscore \
+	-mno-ms-bitfields -mno-stack-arg-probe -O
+LDFLAGS=-m32 -Tldscript -nostdlib -nostartfiles -nodefaultlibs \
+		-Wl,-Map,$(PROG).map
 
 OBJS=	entry.o ide.o floppy.o e1000.o pci.o vm86.o \
 	kbd.o timer.o machdep.o task.o mktime.o sem.o \

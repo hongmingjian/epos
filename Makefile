@@ -66,6 +66,5 @@ endif
 
 .PHONY: clean
 clean:
-	$(MAKE) -C kernel $@
-	$(MAKE) -C userapp $@
+	@for subdir in $(SUBDIRS); do $(MAKE) -C $${subdir} $@; done
 	$(RM) hd.img hd.vmdk tags

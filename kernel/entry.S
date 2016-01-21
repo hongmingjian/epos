@@ -29,12 +29,10 @@
 
 
 #define KERNBASE 0xC0000000
+#define R(foo) ((foo)-KERNBASE)
 
 #define KDSEL 0x10
 #define KCSEL 0x8
-
-#define LOAD_ADDR 0x100000
-#define R(foo) ((foo)-KERNBASE+LOAD_ADDR)
 
 #define __ASSEMBLY__ 1
 #include "multiboot.h"

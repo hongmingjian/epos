@@ -17,6 +17,7 @@
  * purpose.
  *
  */
+#define LOADADDR 0x100000
 #define KERNBASE 0xC0000000
 
 #if defined __WIN32__
@@ -28,7 +29,7 @@ OUTPUT_FORMAT("elf32-i386")
 #endif
 ENTRY(_entry)
 SECTIONS {
-  . = KERNBASE;
+  . = KERNBASE+LOADADDR;
   .text : {
     *(.text)
   }

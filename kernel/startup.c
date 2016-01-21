@@ -108,6 +108,7 @@ void start_user_task()
     pci_init();           //初始化PCI总线控制器
     printk("Done\r\n");
 
+    vm86_init();          //初始化8086模拟器
     e1000_init();         //初始化E1000网卡
 
     /*

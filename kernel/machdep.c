@@ -408,7 +408,7 @@ static void init_idt()
  */
 int sys_putchar(int c)
 {
-    unsigned char *SCREEN_BASE = (char *)(0xB8000);
+    unsigned char *SCREEN_BASE = (char *)(0xB8000+KERNBASE);
     unsigned int curpos, i;
 
     uint32_t flags;
@@ -787,37 +787,21 @@ static uint32_t init_paging(uint32_t physfree)
     memset(pgdir, 0, PAGE_SIZE);
 
     /*
-     * 恒等映射，即映射虚拟地址[0, R(&end)]到物理地址[0, R(&end)]
+     * 分配小页表，并填充页目录
      */
-    x = (uint32_t)(pgdir)/(1024*PAGE_SIZE);
-    if(x < 1)
-        x = 1;
-    for(i = 0; i < x; i++) {
-        pgdir[i]=physfree|PTE_V|PTE_W|PTE_U;
-        memset((void *)physfree, 0, PAGE_SIZE);
-        physfree+=PAGE_SIZE;
-    }
-    y = 0;
-    for(i = 0; i < x; i++) {
-        pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[i]));
-        for(; y < (uint32_t)(pgdir); y+=PAGE_SIZE)
-            pte[(y-i*1024*PAGE_SIZE)/PAGE_SIZE]=(y)|PTE_V|PTE_W;
-    }
-
-    /*
-     * 映射到链接地址，即映射虚拟地址[KERNBASE, &end]到物理地址[LOAD_ADDR, R(&end)]
-     */
-    for(i = 0; i < NR_KERN_PAGETABLE-x; i++) {
+    for(i = 0; i < NR_KERN_PAGETABLE; i++) {
+        pgdir[i                       ]=
         pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_W;
         memset((void *)physfree, 0, PAGE_SIZE);
         physfree+=PAGE_SIZE;
     }
-    y = KERNBASE;
-    for(i = 0; i < NR_KERN_PAGETABLE-x; i++) {
-        pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[i+(KERNBASE>>PGDR_SHIFT)]));
-        for(; y < KERNBASE+((uint32_t)(pgdir)-LOAD_ADDR); y+=PAGE_SIZE)
-            pte[(y-KERNBASE-i*1024*PAGE_SIZE)/PAGE_SIZE]=(y-KERNBASE+LOAD_ADDR)|PTE_V|PTE_W;
-    }
+
+    /*
+     * 映射映射虚拟地址[0, R(&end)]和[KERNBASE, &end]到物理地址[0, R(&end)]
+     */
+    pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
+    for(i = 0; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
+        pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_W;
 
     /*
      * 映射页目录及页表
@@ -921,29 +905,21 @@ void cstart(uint32_t magic, uint32_t mbi)
             "ret\n\t"
             "1:\n\t"
             :
-            :"i"(KERNBASE-LOAD_ADDR)
+            :"i"(KERNBASE)
             );
 
     /*
      * 内核已经被重定位到链接地址，取消恒等映射
      */
-    for(i = 0; i < _end; i += PAGE_SIZE) {
-        *vtopte(i) = 0;
-        invlpg(i);
-    }
+    for(i = 0; i < NR_KERN_PAGETABLE; i++)
+        PTD[i] = 0;
 
     /*
-     * 映射640KiB-1MiB区域
+     * 取消了1MiB以内、除文本模式显存以外的虚拟内存映射
      */
-    page_map(0xa0000, 0xa0000, 32, PTE_V|PTE_W|PTE_U);//128K 显存
-    page_map(0xc0000, 0xc0000, 16, PTE_V|      PTE_U);// 64K Video ROM BIOS
-    page_map(0xe0000, 0xe0000, 16, PTE_V|PTE_W|PTE_U);// 64K UMA (for Qemu)
-    page_map(0xf0000, 0xf0000, 16, PTE_V|      PTE_U);// 64K System ROM BIOS
-
-    /*
-     * 初始化8086模拟器，以调用ROM/VGA BIOS的功能
-     */
-    init_vm86();
+    for(i = 0; i < 0x100000; i+=PAGE_SIZE)
+        if(i != 0xB8000)
+            *vtopte(i+KERNBASE)=0;
 
     /*
      * 初始化数学协处理器

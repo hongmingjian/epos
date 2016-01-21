@@ -169,8 +169,7 @@ struct vm86_context {
     uint16_t  gs; uint16_t  : 16;/*84*/
 };
 void sys_vm86(struct vm86_context *vm86ctx);
-void init_vm86();
-void exit_vm86();
+void vm86_init();
 int  vm86_emulate(struct vm86_context *vm86ctx);
 
 #if USE_FLOPPY

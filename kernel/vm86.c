@@ -24,14 +24,14 @@
 #define LOBYTE(w) ((uint8_t)(w))
 #define HIBYTE(w) ((uint8_t)(((uint16_t)(w) >> 8) & 0xFF))
 
-void init_vm86()
+void vm86_init()
 {
-    page_map(0, 0, 1, PTE_V|PTE_W|PTE_U);
-}
+    page_map(0xa0000, 0xa0000, 32, PTE_V|PTE_W|PTE_U);//128K Video RAM
+    page_map(0xc0000, 0xc0000, 16, PTE_V|      PTE_U);// 64K Video ROM BIOS
+    page_map(0xe0000, 0xe0000, 16, PTE_V|PTE_W|PTE_U);// 64K UMA (for Qemu)
+    page_map(0xf0000, 0xf0000, 16, PTE_V|      PTE_U);// 64K System ROM BIOS
 
-void exit_vm86()
-{
-    page_unmap(0, 1);
+    page_map(0, 0, 1, PTE_V|PTE_W|PTE_U);
 }
 
 #define LADDR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))

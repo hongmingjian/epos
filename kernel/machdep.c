@@ -597,8 +597,8 @@ void syscall(struct context *ctx)
 
             //printk("stack: 0x%08x, entry: 0x%08x, pvoid: 0x%08x\r\n",
             //       user_stack, user_entry, user_pvoid);
-            if((user_stack < USER_MIN_ADDR) || (user_stack >= USER_MAX_ADDR) ||
-               (user_entry < USER_MIN_ADDR) || (user_entry >= USER_MAX_ADDR)) {
+            if(!IN_USER_VM(user_stack, 0) ||
+               !IN_USER_VM(user_entry, 0)) {
                 ctx->eax = -ctx->eax;
                 break;
             }
@@ -618,9 +618,7 @@ void syscall(struct context *ctx)
         {
             int tid    = *(int  *)(ctx->esp+4);
             int *pcode = *( int **)(ctx->esp+8);
-            if((pcode != NULL) &&
-               (((uint32_t)pcode <  USER_MIN_ADDR) ||
-                ((uint32_t)pcode >= USER_MAX_ADDR))) {
+            if((pcode != NULL) && !IN_USER_VM(pcode, sizeof(int))) {
                 ctx->eax = -ctx->eax;
                 break;
             }
@@ -666,9 +664,7 @@ void syscall(struct context *ctx)
                 break;
 
             if(flags & MAP_FIXED) {
-                if(va <  USER_MIN_ADDR ||
-                   va >= USER_MAX_ADDR ||
-                   va + len > USER_MAX_ADDR ||
+                if(!IN_USER_VM(va, len) ||
                    (va & PAGE_MASK)) {
                     break;
                 }
@@ -694,9 +690,7 @@ void syscall(struct context *ctx)
             if(len == 0)
                 break;
 
-            if(va <  USER_MIN_ADDR ||
-               va >= USER_MAX_ADDR ||
-               va + len > USER_MAX_ADDR) {
+            if(!IN_USER_VM(va, len)) {
                 break;
             }
 
@@ -709,11 +703,26 @@ void syscall(struct context *ctx)
                     if(x & PTE_V) {
                         *vtopte(va) = 0;
                         invlpg(va);
+
+                        //XXX - 可能不是RAM，不能用frame_free
                         frame_free(PAGE_TRUNCATE(x), 1);
                     }
                     va += PAGE_SIZE;
                 }
             }
+        }
+        break;
+    case SYSCALL_sleep:
+        ctx->eax = sys_sleep((*((int *)(ctx->esp+4))));
+        break;
+    case SYSCALL_nanosleep:
+        {
+            ctx->eax = -1;
+            struct timespec *rqtp = *(struct timespec **)(ctx->esp+4);
+            struct timespec *rmtp = *(struct timespec **)(ctx->esp+8);
+            if(IN_USER_VM(rqtp, sizeof(struct timespec)) &&
+               ((rmtp == NULL) || IN_USER_VM(rmtp, sizeof(struct timespec))))
+                ctx->eax = sys_nanosleep(rqtp, rmtp);
         }
         break;
     case SYSCALL_beep:
@@ -915,7 +924,7 @@ void cstart(uint32_t magic, uint32_t mbi)
         PTD[i] = 0;
 
     /*
-     * 取消了1MiB以内、除文本模式显存以外的虚拟内存映射
+     * 取消了1MiB以内、除文本显存以外的虚拟内存映射
      */
     for(i = 0; i < 0x100000; i+=PAGE_SIZE)
         if(i != 0xB8000)

@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 #include <inttypes.h>
+#include <time.h>
 #include "machdep.h"
 
 /*中断向量表*/
@@ -39,23 +40,10 @@ void enable_irq(uint32_t irq);
 /*记录系统启动以来，定时器中断的次数*/
 extern unsigned volatile g_timer_ticks;
 
-
-
-struct tm {
-    int tm_sec;         /* seconds */
-    int tm_min;         /* minutes */
-    int tm_hour;        /* hours */
-    int tm_mday;        /* day of the month */
-    int tm_mon;         /* month */
-    int tm_year;        /* year */
-    int tm_wday;        /* day of the week */
-    int tm_yday;        /* day in the year */
-    int tm_isdst;       /* daylight saving time */
-};
-time_t mktime(struct tm * tm);
-
 /*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
 extern time_t g_startup_time;
+
+time_t mktime(struct tm *tm);
 
 /**
  * 线程控制块
@@ -114,6 +102,11 @@ extern void *ret_from_syscall;
 #define R(x) ((x)-KERNBASE)
 
 #define NR_KERN_PAGETABLE 20
+
+#define IN_USER_VM(va, len) \
+       ((uint32_t)(va) >= USER_MIN_ADDR && \
+        (uint32_t)(va) <  USER_MAX_ADDR && \
+        (uint32_t)(va) + (len) <= USER_MAX_ADDR)
 
 /**
  * `PT', `PTD' and `vtopte' come from FreeBSD

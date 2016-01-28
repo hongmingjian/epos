@@ -95,6 +95,8 @@ void start_user_task()
     char *filename="a.out";
     uint32_t entry;
 
+    calibrate_delay();
+
 #if USE_FLOPPY
     printk("task #%d: Initializing floppy disk controller...", sys_task_getid());
     init_floppy();        //初始化软盘控制器

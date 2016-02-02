@@ -47,26 +47,53 @@ time_t mktime(struct tm *tm);
 
 /**
  * 线程控制块
+ *
+ *       4 kB +---------------------------------+
+ *            |          kernel stack           |
+ *            |                |                |
+ *            |                |                |
+ *            |                V                |
+ *            |         grows downward          |
+ *            |                                 |
+ *            |                                 |
+ *            |                                 |
+ *            |                                 |
+ *            |                                 |
+ *            |                                 |
+ *            |                                 |
+ *            |                                 |
+ *            +---------------------------------+
+ *            |            signature            |
+ *            |                :                |
+ *            |                :                |
+ *            |               tid               |
+ *            |              kstack             |
+ *       0 kB +---------------------------------+
  */
 struct tcb {
     /*hardcoded*/
-    uint32_t        kstack;/*saved top of the kernel stack for this task*/
+    uint32_t        kstack;     /*saved top of the kernel stack for this task*/
 
-    int         tid;/* task id */
-    int         state;/* -1:waiting, 0:running, 1:ready, 2:zombie */
+    int         tid;            /* task id */
+    int         state;          /* -1:waiting,0:running,1:ready,2:zombie */
 #define TASK_STATE_WAITING  -1
 #define TASK_STATE_READY     1
 #define TASK_STATE_ZOMBIE    2
 
     int         timeslice;      //时间片
-#define DEFAULT_TIMESLICE 4
+#define TASK_TIMESLICE_DEFAULT 4
 
     int          code_exit;     //保存该线程的退出代码
     struct wait_queue *wq_exit; //等待该线程退出的队列
 
     struct tcb     *next;
-    struct x87      fpu;        //数学协处理器的寄存器
+    struct fpu      fpu;        //数学协处理器的寄存器
+
+    uint32_t        signature;  //必须是最后一个字段
+#define TASK_SIGNATURE 0x20160201
 };
+
+#define TASK_KSTACK 0           /*=offsetof(struct tcb, kstack)*/
 
 extern struct tcb *g_task_running;
 extern struct tcb *g_task_head;

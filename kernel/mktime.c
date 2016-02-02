@@ -1,4 +1,4 @@
-#include "kernel.h"
+#include <time.h>
 
 /*
  * This isn't the library routine, it is only used in the kernel.

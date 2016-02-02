@@ -49,7 +49,7 @@ struct segment_descriptor {
     unsigned hibase:8 ;
 };
 
-struct x87 {
+struct fpu {
     uint32_t cwd;/*Control word*/
     uint32_t swd;/*Status word*/
     uint32_t twd;/*Tag word*/

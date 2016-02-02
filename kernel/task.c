@@ -173,22 +173,21 @@ struct tcb *sys_task_create(void *tos,
     if(ustack & 3)
         return NULL;
 
-    p = (char *)kmalloc(PAGE_SIZE+PAGE_SIZE);
+    p = (char *)kmalloc(PAGE_SIZE);
     if(p == NULL)
         return NULL;
 
-    p = p + PAGE_SIZE+PAGE_SIZE;
-    p -= sizeof(struct tcb);
     new = (struct tcb *)p;
 
     memset(new, 0, sizeof(struct tcb));
 
-    new->kstack = (uint32_t)new;
+    new->kstack = (uint32_t)(p+PAGE_SIZE);
     new->tid = tid++;
     new->state = TASK_STATE_READY;
-    new->timeslice = DEFAULT_TIMESLICE;
+    new->timeslice = TASK_TIMESLICE_DEFAULT;
     new->wq_exit = NULL;
     new->next = NULL;
+    new->signature = TASK_SIGNATURE;
 
     /*XXX - should be elsewhere*/
     new->fpu.cwd = 0x37f;

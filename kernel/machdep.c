@@ -520,7 +520,7 @@ int exception(struct context *ctx)
                 return 0;
             else {
                 //This exception cannot be eaten by vm86mon, return to user mode
-                struct context *c=(struct context *)(((uint8_t *)g_task_running)-
+                struct context *c=(struct context *)(((uint8_t *)g_task_running)+PAGE_SIZE-
                                                      sizeof(struct context));
                 **((struct vm86_context **)(c->esp+4)) = *((struct vm86_context *)ctx);
                 return 1;

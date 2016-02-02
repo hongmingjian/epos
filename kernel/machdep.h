@@ -66,9 +66,9 @@ struct fpu {
 #define NR_IRQ        16
 
 struct context {
-    uint32_t   es;       /* 0*/
-    uint32_t   ds;       /* 4*/
-    uint32_t   fs;       /* 8*/
+    uint16_t   es, : 16; /* 0*/
+    uint16_t   ds, : 16; /* 4*/
+    uint16_t   fs, : 16; /* 8*/
     uint32_t  edi;       /*12*/
     uint32_t  esi;       /*16*/
     uint32_t  ebp;       /*20*/
@@ -81,11 +81,11 @@ struct context {
     uint32_t  errorcode; /*48*/
     /* below defined in x86 hardware */
     uint32_t  eip;       /*52*/
-    uint32_t   cs;       /*56*/
+    uint16_t   cs, : 16; /*56*/
     uint32_t  eflags;    /*60*/
     /* below only when crossing rings */
     uint32_t  esp;       /*64*/
-    uint32_t   ss;       /*68*/
+    uint16_t   ss, : 16; /*68*/
 };
 
 #define STACK_PUSH(sp, value) do { \
@@ -144,29 +144,29 @@ void isr_keyboard(uint32_t irq, struct context *ctx);
 void sys_beep(int freq);
 
 struct vm86_context {
-    uint32_t  : 32;/*0*/
-    uint32_t  : 32;/*4*/
-    uint32_t  : 32;/*8*/
-    uint32_t  edi; /*12*/
-    uint32_t  esi; /*16*/
-    uint32_t  ebp; /*20*/
-    uint32_t  : 32;/*24*/
-    uint32_t  ebx; /*28*/
-    uint32_t  edx; /*32*/
-    uint32_t  ecx; /*36*/
-    uint32_t  eax; /*40*/
-    uint32_t  : 32;/*44*/
-    uint32_t  : 32;/*48*/
+    uint32_t  : 32;    /* 0*/
+    uint32_t  : 32;    /* 4*/
+    uint32_t  : 32;    /* 8*/
+    uint32_t  edi;     /*12*/
+    uint32_t  esi;     /*16*/
+    uint32_t  ebp;     /*20*/
+    uint32_t  : 32;    /*24*/
+    uint32_t  ebx;     /*28*/
+    uint32_t  edx;     /*32*/
+    uint32_t  ecx;     /*36*/
+    uint32_t  eax;     /*40*/
+    uint32_t  : 32;    /*44*/
+    uint32_t  : 32;    /*48*/
     /* below defined in x86 hardware */
-    uint32_t  eip; /*52*/
-    uint16_t  cs; uint16_t  : 16;/*56*/
-    uint32_t  eflags;/*60*/
-    uint32_t  esp; /*64*/
-    uint16_t  ss; uint16_t  : 16;/*68*/
-    uint16_t  es; uint16_t  : 16;/*72*/
-    uint16_t  ds; uint16_t  : 16;/*76*/
-    uint16_t  fs; uint16_t  : 16;/*80*/
-    uint16_t  gs; uint16_t  : 16;/*84*/
+    uint32_t  eip;     /*52*/
+    uint16_t  cs, : 16;/*56*/
+    uint32_t  eflags;  /*60*/
+    uint32_t  esp;     /*64*/
+    uint16_t  ss, : 16;/*68*/
+    uint16_t  es, : 16;/*72*/
+    uint16_t  ds, : 16;/*76*/
+    uint16_t  fs, : 16;/*80*/
+    uint16_t  gs, : 16;/*84*/
 };
 void sys_vm86(struct vm86_context *vm86ctx);
 void vm86_init();

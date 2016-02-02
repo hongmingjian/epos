@@ -72,24 +72,24 @@ time_t mktime(struct tm *tm);
  */
 struct tcb {
     /*hardcoded*/
-    uint32_t        kstack;     /*saved top of the kernel stack for this task*/
+    uint32_t    kstack;      /*saved top of the kernel stack for this task*/
 
-    int         tid;            /* task id */
-    int         state;          /* -1:waiting,0:running,1:ready,2:zombie */
+    int         tid;         /* task id */
+    int         state;       /* -1:waiting,0:running,1:ready,2:zombie */
 #define TASK_STATE_WAITING  -1
 #define TASK_STATE_READY     1
 #define TASK_STATE_ZOMBIE    2
 
-    int         timeslice;      //时间片
+    int         timeslice;   //时间片
 #define TASK_TIMESLICE_DEFAULT 4
 
-    int          code_exit;     //保存该线程的退出代码
+    int         code_exit;   //保存该线程的退出代码
     struct wait_queue *wq_exit; //等待该线程退出的队列
 
-    struct tcb     *next;
-    struct fpu      fpu;        //数学协处理器的寄存器
+    struct tcb  *next;
+    struct fpu   fpu;        //数学协处理器的寄存器
 
-    uint32_t        signature;  //必须是最后一个字段
+    uint32_t     signature;  //必须是最后一个字段
 #define TASK_SIGNATURE 0x20160201
 };
 

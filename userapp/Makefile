@@ -3,12 +3,12 @@ include ../Makefile.inc
 PROG=	a
 
 .PHONY: all
-all: $(PROG).out
+all: run
 
-ASFLAGS=-m32 -nostdinc -I../include -Iinclude
-CFLAGS=	$(ASFLAGS) \
+ASFLAGS=-nostdinc -I../include -Iinclude
+CFLAGS=	$(ASFLAGS) -m32 \
 	-fno-builtin -ffreestanding -fno-stack-check -fleading-underscore \
-	-mno-ms-bitfields -mno-stack-arg-probe -O
+	-mno-ms-bitfields -mno-stack-arg-probe
 LDFLAGS=-m32 -nostdlib -nostartfiles -nodefaultlibs \
 		-Wl,-Map,$(PROG).map
 
@@ -22,6 +22,14 @@ OBJS+=	lib/malloc.o ../lib/tlsf/tlsf.o
 
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+.PHONY: debug
+debug: CFLAGS+=-O0 -ggdb
+debug: $(PROG).out
+
+.PHONY: run
+run: CFLAGS+=-O2 -ggdb
+run: $(PROG).out
 
 .PHONY: clean
 clean:

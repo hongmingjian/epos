@@ -1,11 +1,13 @@
+.PHONY: all
 all: hd.img
 
+MODE = run
 SUBDIRS = kernel userapp
 
 .PHONY: subdirs $(SUBDIRS)
 subdirs: $(SUBDIRS)
 $(SUBDIRS):
-	$(MAKE) -C $@
+	$(MAKE) -C $@ $(MODE)
 
 hd.img: subdirs
 ifeq ($(OS),Windows_NT)
@@ -27,25 +29,21 @@ ifeq ($(shell uname -s),Darwin)
 endif
 endif
 
-.PHONY: tags
-tags:
-	ctags -R *
-
-hd.vmdk: hd.img
-	qemu-img convert -O vmdk $^ $@
-
-.PHONY: run
-run: qemu
-
-.PHONY: debug
-debug: bochsdbg
-
 .PHONY: qemu
 qemu: hd.img
 ifeq ($(OS),Windows_NT)
 	-qemu-system-i386w.exe -L $(QEMUHOME)/Bios -m 16 -boot order=c -vga std -soundhw pcspk -hda hd.img
 else
-	-qemu-system-i386 -m 16 -boot order=c -vga std -soundhw pcspk -hda hd.img
+	-qemu-system-i386                          -m 16 -boot order=c -vga std -soundhw pcspk -hda hd.img
+endif
+
+.PHONY: qemudbg
+qemudbg: MODE=debug
+qemudbg: hd.img
+ifeq ($(OS),Windows_NT)
+	-qemu-system-i386w.exe -L $(QEMUHOME)/Bios -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -soundhw pcspk -hda hd.img
+else
+	-qemu-system-i386                          -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -soundhw pcspk -hda hd.img
 endif
 
 .PHONY: bochs
@@ -57,12 +55,26 @@ else
 endif
 
 .PHONY: bochsdbg
+bochsdbg: MODE=debug
 bochsdbg: hd.img
 ifeq ($(OS),Windows_NT)
 	-bochsdbg.exe -q -f bochsrc-win.txt
 else
 	-bochsdbg -q -f bochsrc-unix.txt
 endif
+
+.PHONY: tags
+tags:
+	ctags -R *
+
+hd.vmdk: hd.img
+	qemu-img convert -O vmdk $^ $@
+
+.PHONY: run
+run: qemu
+
+.PHONY: debug
+debug: qemudbg
 
 .PHONY: clean
 clean:

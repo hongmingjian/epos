@@ -3,13 +3,13 @@ include ../Makefile.inc
 PROG=		eposkrnl
 
 .PHONY: all
-all: $(PROG).bin
+all: run
 
-ASFLAGS=-m32 -nostdinc -I../include
-CFLAGS=	$(ASFLAGS) -DUSE_FLOPPY=0 -DVERBOSE=0 \
+ASFLAGS=-nostdinc -I../include
+CFLAGS=	$(ASFLAGS) -m32 -DUSE_FLOPPY=0 -DVERBOSE=0 \
 	-fomit-frame-pointer \
 	-fno-builtin -ffreestanding -fno-stack-check -fleading-underscore \
-	-mno-ms-bitfields -mno-stack-arg-probe -O
+	-mno-ms-bitfields -mno-stack-arg-probe
 LDFLAGS=-m32 -Tldscript -nostdlib -nostartfiles -nodefaultlibs \
 		-Wl,-Map,$(PROG).map
 
@@ -26,6 +26,14 @@ $(PROG).bin: ldscript $(OBJS)
 
 ldscript: ldscript.in
 	$(CC) -E -P -x c-header -o $@ $^
+
+.PHONY: debug
+debug: CFLAGS+=-O0 -ggdb
+debug: $(PROG).bin
+
+.PHONY: run
+run: CFLAGS+=-O2 -ggdb
+run: $(PROG).bin
 
 .PHONY: clean
 clean:

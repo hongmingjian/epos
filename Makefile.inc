@@ -1,16 +1,7 @@
-ifeq ($(OS),Windows_NT)
 CROSS=
-else
-ifeq ($(shell uname -s),Linux)
-# For Ubuntu
-#CROSS=i586-mingw32msvc-
 
-# For ArchLinux
-#CROSS=i486-mingw32-
-endif
 ifeq ($(shell uname -s),Darwin)
 CROSS=i586-mingw32-
-endif
 endif
 
 CC=		$(CROSS)gcc

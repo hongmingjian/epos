@@ -260,15 +260,11 @@ int sys_task_wait(int tid, int *pcode_exit)
         *pcode_exit= tsk->code_exit;
 
     if(tsk->wq_exit == NULL) {
-        char *p;
         remove_task(tsk);
         //printk("%d: Task %d reaped\r\n", sys_task_getid(), tsk->tid);
         restore_flags(flags);
 
-        p = (char *)tsk;
-        p += sizeof(struct tcb);
-        p -= (PAGE_SIZE + PAGE_SIZE);
-        kfree(p);
+        kfree(tsk);
         return 0;
     }
 

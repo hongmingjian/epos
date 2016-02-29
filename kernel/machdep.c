@@ -75,7 +75,7 @@ static void init_i8253(uint32_t freq)
     uint16_t latch = 1193182/freq;
     outportb(0x43, 0x36);
     outportb(0x40, latch&0xff);
-    outportb(0x40, (latch&0xff00)>>16);
+    outportb(0x40, (latch&0xff00)>>8);
 }
 
 /**

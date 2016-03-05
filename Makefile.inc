@@ -1,7 +1,7 @@
 CROSS=
 
 ifeq ($(shell uname -s),Darwin)
-CROSS=i586-mingw32-
+CROSS=i586-elf-
 endif
 
 CC=		$(CROSS)gcc
@@ -15,3 +15,4 @@ STRINGS=	$(CROSS)strings
 READELF=	$(CROSS)readelf
 RANLIB=		$(CROSS)ranlib
 NM=		$(CROSS)nm
+GDB=	$(CROSS)gdb

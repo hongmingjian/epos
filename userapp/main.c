@@ -16,7 +16,7 @@
  */
 void __main()
 {
-    size_t heap_size = 64*1024*1024;
+    size_t heap_size = 32*1024*1024;
     void  *heap_base = mmap(NULL, heap_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
     init_memory_pool(heap_size, heap_base);
 }
@@ -26,6 +26,9 @@ void __main()
  */
 void main(void *pv)
 {
+#ifdef __ELF__
+    __main();
+#endif
     printf("task #%d: I'm the first user task(pv=0x%08x)!\r\n",
             task_getid(), pv);
 

@@ -136,19 +136,19 @@ uint32_t load_aout(VOLINFO *pvi, char *filename)
             if(phdr[i].p_flags & PF_W)
                 prot |= VM_PROT_WRITE;
 
-            npages = PAGE_ROUNDUP(phdr[i].p_memsz)/PAGE_SIZE; //XXX p_align
-            va = page_alloc_in_addr(phdr[i].p_vaddr, npages, prot);
-            if(va != phdr[i].p_vaddr) {
+            npages = PAGE_ROUNDUP((phdr[i].p_vaddr&PAGE_MASK)+phdr[i].p_memsz)/PAGE_SIZE;
+            va = page_alloc_in_addr(PAGE_TRUNCATE(phdr[i].p_vaddr), npages, prot);
+            if(va != PAGE_TRUNCATE(phdr[i].p_vaddr)) {
                 printk("task #%d: Address 0x%08x of %d pages has already been used!\r\n",
                     sys_task_getid(),
-                    phdr[i].p_vaddr,
+                    PAGE_TRUNCATE(phdr[i].p_vaddr),
                     npages);
                 kfree(phdr);
                 return 0;
             }
 
             DFS_Seek(&fi, phdr[i].p_offset, scratch);
-            DFS_ReadFile(&fi, scratch, (uint8_t *)va, &read, phdr[i].p_filesz);
+            DFS_ReadFile(&fi, scratch, (uint8_t *)phdr[i].p_vaddr, &read, phdr[i].p_filesz);
             if(read != phdr[i].p_filesz) {
                 printk("task #%d: bad executable file %s\r\n",
                     sys_task_getid(), filename);
@@ -156,7 +156,7 @@ uint32_t load_aout(VOLINFO *pvi, char *filename)
                 return 0;
             }
             if(phdr[i].p_memsz > phdr[i].p_filesz)
-                memset(va+phdr[i].p_filesz,
+                memset(phdr[i].p_vaddr+phdr[i].p_filesz,
                        0,
                        phdr[i].p_memsz-phdr[i].p_filesz);
 

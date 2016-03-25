@@ -19,6 +19,7 @@
  */
 #ifdef __WIN32__
 #include <stddef.h>
+#include <string.h>
 #include "kernel.h"
 #include "dosfs.h"
 
@@ -147,7 +148,7 @@ typedef struct _IMAGE_SECTION_HEADER {
 
 uint32_t load_aout(VOLINFO *pvi, char *filename)
 {
-    char scratch[SECTOR_SIZE];
+    unsigned char scratch[SECTOR_SIZE];
     FILEINFO fi;
     uint32_t res;
 
@@ -159,8 +160,8 @@ uint32_t load_aout(VOLINFO *pvi, char *filename)
     }
 
     {
-        int i, read, e_lfanew;
-        char *buffer = NULL;
+        unsigned int i, read, e_lfanew;
+        unsigned char *buffer = NULL;
         int bufsize;
         PIMAGE_DOS_HEADER pidh;
         PIMAGE_NT_HEADERS pinh;

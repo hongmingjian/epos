@@ -435,9 +435,9 @@ uint32_t DFS_SetFAT(PVOLINFO volinfo, uint8_t *scratch, uint32_t *scratchcache, 
 	src must point to the first non-separator character.
 	dest must point to a 12-byte buffer.
 */
-uint8_t *DFS_CanonicalToDir(uint8_t *dest, uint8_t *src)
+char *DFS_CanonicalToDir(char *dest, char *src)
 {
-	uint8_t *destptr = dest;
+	char *destptr = dest;
 
 	memset(dest, ' ', 11);
 	dest[11] = 0;
@@ -490,7 +490,7 @@ uint32_t DFS_GetFreeFAT(PVOLINFO volinfo, uint8_t *scratch)
 	considered to be the root directory.
 	Returns 0 OK, nonzero for any error.
 */
-uint32_t DFS_OpenDir(PVOLINFO volinfo, uint8_t *dirname, PDIRINFO dirinfo)
+uint32_t DFS_OpenDir(PVOLINFO volinfo, char *dirname, PDIRINFO dirinfo)
 {
 	// Default behavior is a regular search for existing entries
 	dirinfo->flags = 0;
@@ -517,8 +517,8 @@ uint32_t DFS_OpenDir(PVOLINFO volinfo, uint8_t *dirname, PDIRINFO dirinfo)
 	// This is not the root directory. We need to find the start of this subdirectory.
 	// We do this by devious means, using our own companion function DFS_GetNext.
 	else {
-		uint8_t tmpfn[12];
-		uint8_t *ptr = dirname;
+		char tmpfn[12];
+		char *ptr = dirname;
 		uint32_t result;
 		DIRENT de;
 
@@ -680,7 +680,7 @@ uint32_t DFS_GetNext(PVOLINFO volinfo, PDIRINFO dirinfo, PDIRENT dirent)
 	Returns DFS_ERRMISC if a new entry could not be located or created
 	de is updated with the same return information you would expect from DFS_GetNext
 */
-uint32_t DFS_GetFreeDirEnt(PVOLINFO volinfo, uint8_t *path, PDIRINFO di, PDIRENT de)
+uint32_t DFS_GetFreeDirEnt(PVOLINFO volinfo, char *path, PDIRINFO di, PDIRENT de)
 {
 	uint32_t tempclus,i;
 
@@ -747,11 +747,11 @@ uint32_t DFS_GetFreeDirEnt(PVOLINFO volinfo, uint8_t *path, PDIRINFO di, PDIRENT
 	Returns various DFS_* error states. If the result is DFS_OK, fileinfo can be used
 	to access the file from this point on.
 */
-uint32_t DFS_OpenFile(PVOLINFO volinfo, uint8_t *path, uint8_t mode, uint8_t *scratch, PFILEINFO fileinfo)
+uint32_t DFS_OpenFile(PVOLINFO volinfo, char *path, uint8_t mode, uint8_t *scratch, PFILEINFO fileinfo)
 {
-	uint8_t tmppath[MAX_PATH];
-	uint8_t filename[12];
-	uint8_t *p;
+	char tmppath[MAX_PATH];
+	char filename[12];
+	char *p;
 	DIRINFO di;
 	DIRENT de;
 
@@ -1089,9 +1089,8 @@ void DFS_Seek(PFILEINFO fileinfo, uint32_t offset, uint8_t *scratch)
 	Delete a file
 	scratch must point to a sector-sized buffer
 */
-uint32_t DFS_UnlinkFile(PVOLINFO volinfo, uint8_t *path, uint8_t *scratch)
+uint32_t DFS_UnlinkFile(PVOLINFO volinfo, char *path, uint8_t *scratch)
 {
-	PDIRENT de = (PDIRENT) scratch;
 	FILEINFO fi;
 	uint32_t cache = 0;
 	uint32_t tempclus;

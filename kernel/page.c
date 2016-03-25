@@ -18,6 +18,7 @@
  *
  */
 #include <stddef.h>
+#include <string.h>
 #include "kernel.h"
 
 struct pvmap {
@@ -285,7 +286,7 @@ void page_unmap(uint32_t vaddr, uint32_t npages)
  */
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 {
-    uint32_t flags, prot;
+    uint32_t prot;
 
 #if VERBOSE
     printk("PF:0x%08x(0x%01x)", vaddr, code);
@@ -320,7 +321,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
             if(prot & VM_PROT_WRITE)
                 x |= PTE_W;
             *vtopte(vaddr) = paddr|x;
-            memset(PAGE_TRUNCATE(vaddr), 0, PAGE_SIZE);
+            memset((void *)(PAGE_TRUNCATE(vaddr)), 0, PAGE_SIZE);
             invlpg(vaddr);
 
 #if VERBOSE

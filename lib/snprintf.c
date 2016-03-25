@@ -53,6 +53,7 @@
 
 #include <sys/types.h>
 #include <ctype.h>
+#include <string.h>
 
 /* Define this as a fall through, HAVE_STDARG_H is probably already set */
 

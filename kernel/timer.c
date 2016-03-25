@@ -121,6 +121,8 @@ static unsigned _sleep(unsigned ticks)
 
   while (g_timer_ticks - start < ticks)
     sys_task_yield ();
+
+  return 0;
 }
 
 /* Busy-wait for approximately NUM/DENOM seconds. */

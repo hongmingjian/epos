@@ -312,7 +312,7 @@ uint32_t DFS_GetVolInfo(uint8_t unit, uint8_t *scratchsector, uint32_t startsect
 	considered to be the root directory.
 	Returns 0 OK, nonzero for any error.
 */
-uint32_t DFS_OpenDir(PVOLINFO volinfo, uint8_t *dirname, PDIRINFO dirinfo);
+uint32_t DFS_OpenDir(PVOLINFO volinfo, char *dirname, PDIRINFO dirinfo);
 
 /*
 	Get next entry in opened directory structure. Copies fields into the dirent
@@ -333,7 +333,7 @@ uint32_t DFS_GetNext(PVOLINFO volinfo, PDIRINFO dirinfo, PDIRENT dirent);
 	Returns various DFS_* error states. If the result is DFS_OK, fileinfo can be used
 	to access the file from this point on.
 */
-uint32_t DFS_OpenFile(PVOLINFO volinfo, uint8_t *path, uint8_t mode, uint8_t *scratch, PFILEINFO fileinfo);
+uint32_t DFS_OpenFile(PVOLINFO volinfo, char *path, uint8_t mode, uint8_t *scratch, PFILEINFO fileinfo);
 
 /*
 	Read an open file
@@ -364,7 +364,7 @@ void DFS_Seek(PFILEINFO fileinfo, uint32_t offset, uint8_t *scratch);
 	Delete a file
 	scratch must point to a sector-sized buffer
 */
-uint32_t DFS_UnlinkFile(PVOLINFO volinfo, uint8_t *path, uint8_t *scratch);
+uint32_t DFS_UnlinkFile(PVOLINFO volinfo, char *path, uint8_t *scratch);
 
 // If we are building a host-emulation version, include host support
 #ifdef HOSTVER

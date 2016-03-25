@@ -18,6 +18,7 @@
  *
  */
 #include <sys/types.h>
+#include <stdio.h>
 #include "syscall.h"
 
 #define LOWORD(l) ((uint16_t)(l))

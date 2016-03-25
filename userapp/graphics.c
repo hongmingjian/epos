@@ -22,6 +22,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <syscall.h>
+#include <stdio.h>
 #include "graphics.h"
 
 #define LOWORD(l) ((uint16_t)(l))
@@ -342,6 +343,7 @@ int exit_graphic()
 {
     setVBEMode(oldmode);
     munmap(g_graphic_dev.FrameBuffer, g_graphic_dev.FrameBufferSize);
+    return 0;
 }
 
 /**

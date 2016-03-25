@@ -21,6 +21,7 @@
 #include <syscall-nr.h>
 #include <ioctl.h>
 #include <sys/mman.h>
+#include <string.h>
 
 #include "kernel.h"
 #include "multiboot.h"
@@ -408,7 +409,7 @@ static void init_idt()
  */
 int sys_putchar(int c)
 {
-    unsigned char *SCREEN_BASE = (char *)(0xB8000+KERNBASE);
+    unsigned char *SCREEN_BASE = (unsigned char *)(0xB8000+KERNBASE);
     unsigned int curpos, i;
 
     uint32_t flags;
@@ -628,7 +629,7 @@ void syscall(struct context *ctx)
         break;
     case SYSCALL_reboot:
         {
-            int howto = *(int *)(ctx->esp+4);
+            /*int howto = *(int *)(ctx->esp+4);*/
             while(inportb(0x64) & 2)
                 ;
             outportb(0x64, 0xFE);
@@ -753,10 +754,10 @@ void syscall(struct context *ctx)
         break;
     case SYSCALL_send:
         {
-            int sockfd = *( int *)(ctx->esp+4);
+            /*int sockfd = *( int *)(ctx->esp+4);*/
             void *buf = *( uint8_t **)(ctx->esp+8);
             size_t len = *( size_t *)(ctx->esp+12);
-            int flags = *( int *)(ctx->esp+16);
+            /*int flags = *( int *)(ctx->esp+16);*/
             e1000_send(buf, len);
             ctx->eax = len;
         }
@@ -764,7 +765,7 @@ void syscall(struct context *ctx)
     case SYSCALL_ioctl:
         {
             ctx->eax = -1;
-            int fd = *( int *)(ctx->esp+4);
+            /*int fd = *( int *)(ctx->esp+4);*/
             uint32_t req = *( uint32_t *)(ctx->esp+8);
             uint8_t *pv = *( uint8_t **)(ctx->esp+12);
             if(req == SIOCGIFHWADDR) {
@@ -785,7 +786,7 @@ void syscall(struct context *ctx)
  */
 static uint32_t init_paging(uint32_t physfree)
 {
-    uint32_t i, x, y;
+    uint32_t i;
     uint32_t *pgdir, *pte;
 
     /*

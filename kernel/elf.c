@@ -19,6 +19,7 @@
  */
 #ifdef __ELF__
 #include <stdint.h>
+#include <string.h>
 #include "kernel.h"
 #include "dosfs.h"
 
@@ -87,8 +88,8 @@ typedef struct {
 uint32_t load_aout(VOLINFO *pvi, char *filename)
 {
     FILEINFO fi;
-    char scratch[SECTOR_SIZE];
-    int i, read;
+    uint8_t scratch[SECTOR_SIZE];
+    uint32_t i, read;
     Elf32_Ehdr ehdr;
     uint32_t va, npages, prot;
 
@@ -156,7 +157,7 @@ uint32_t load_aout(VOLINFO *pvi, char *filename)
                 return 0;
             }
             if(phdr[i].p_memsz > phdr[i].p_filesz)
-                memset(phdr[i].p_vaddr+phdr[i].p_filesz,
+                memset((void *)(phdr[i].p_vaddr+phdr[i].p_filesz),
                        0,
                        phdr[i].p_memsz-phdr[i].p_filesz);
 

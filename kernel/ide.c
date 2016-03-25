@@ -1,5 +1,5 @@
 #include <inttypes.h>
-#include "cpu.h"
+#include "kernel.h"
 
 #define ATA_SR_BSY     0x80
 #define ATA_SR_DRDY    0x40

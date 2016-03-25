@@ -142,7 +142,7 @@ extern uint8_t   end;
 extern uint32_t *PT;
 extern uint32_t *PTD;
 #define vtopte(va) (PT+((va)>>PAGE_SHIFT))
-#define vtop(va) ((*vtopte(va))&(~PAGE_MASK)|((va)&PAGE_MASK))
+#define vtop(va) (((*vtopte(va))&(~PAGE_MASK))|((va)&PAGE_MASK))
 
 void  init_kmalloc(void *mem, size_t bytes);
 void *kmalloc(size_t bytes);
@@ -165,6 +165,8 @@ int         sys_task_wait(int tid, int *pcode_exit);
 int         sys_task_getid();
 void        sys_task_yield();
 
+int printk(const char *fmt,...);
+
 void     init_vmspace(uint32_t brk);
 uint32_t page_alloc(int npages, uint32_t prot, uint32_t user);
 uint32_t page_alloc_in_addr(uint32_t va, int npages, uint32_t prot);
@@ -185,4 +187,9 @@ uint32_t frame_alloc(uint32_t npages);
 uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t npages);
 void     frame_free(uint32_t paddr, uint32_t npages);
 
+void     calibrate_delay(void);
+unsigned sys_sleep(unsigned seconds);
+int      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+
+void     mi_startup();
 #endif /*_KERNEL_H*/

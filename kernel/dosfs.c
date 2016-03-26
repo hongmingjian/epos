@@ -346,7 +346,7 @@ uint32_t DFS_SetFAT(PVOLINFO volinfo, uint8_t *scratch, uint32_t *scratchcache, 
 
 			// Odd cluster: High 12 bits being set
 			if (cluster & 1) {
-				scratch[offset] = (scratch[offset] & 0x0f) | new_contents & 0xf0;
+				scratch[offset] = (scratch[offset] & 0x0f) | (new_contents & 0xf0);
 			}
 			// Even cluster: Low 12 bits being set
 			else {
@@ -369,7 +369,7 @@ uint32_t DFS_SetFAT(PVOLINFO volinfo, uint8_t *scratch, uint32_t *scratchcache, 
 					}
 					// Even cluster: Low 12 bits being set
 					else {
-						scratch[0] = (scratch[0] & 0xf0) | new_contents & 0x0f;
+						scratch[0] = (scratch[0] & 0xf0) | (new_contents & 0x0f);
 					}
 					result = DFS_WriteSector(volinfo->unit, scratch, *scratchcache, 1);
 					// mirror the FAT into copy 2
@@ -389,13 +389,13 @@ uint32_t DFS_SetFAT(PVOLINFO volinfo, uint8_t *scratch, uint32_t *scratchcache, 
 		else {
 			// Odd cluster: High 12 bits being set
 			if (cluster & 1) {
-				scratch[offset] = (scratch[offset] & 0x0f) | new_contents & 0xf0;
+				scratch[offset] = (scratch[offset] & 0x0f) | (new_contents & 0xf0);
 				scratch[offset+1] = new_contents & 0xff00;
 			}
 			// Even cluster: Low 12 bits being set
 			else {
 				scratch[offset] = new_contents & 0xff;
-				scratch[offset+1] = (scratch[offset+1] & 0xf0) | new_contents & 0x0f;
+				scratch[offset+1] = (scratch[offset+1] & 0xf0) | (new_contents & 0x0f);
 			}
 			result = DFS_WriteSector(volinfo->unit, scratch, *scratchcache, 1);
 			// mirror the FAT into copy 2

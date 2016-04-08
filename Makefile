@@ -44,7 +44,7 @@ qemudbg: MODE=debug
 qemudbg: hd.img
 ifeq ($(OS),Windows_NT)
 	-start $(GDB)
-	-qemu-system-i386w -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -soundhw pcspk -hda hd.img -L $(QEMUHOME)/Bios
+	-qemu-system-i386w -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -hda hd.img -L $(QEMUHOME)/Bios
 else
 ifeq ($(shell uname -s),Linux)
 	-/usr/bin/x-terminal-emulator -e $(GDB)
@@ -54,7 +54,7 @@ ifeq ($(shell uname -s),Darwin)
 			   -e '  tell application "Terminal" to do script "cd $(shell pwd); $(GDB)"' \
 			   -e 'end run'
 endif
-	-qemu-system-i386  -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -soundhw pcspk -hda hd.img
+	-qemu-system-i386  -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -hda hd.img
 endif
 
 .PHONY: bochs

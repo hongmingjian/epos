@@ -8,7 +8,10 @@
 #include <sys/mman.h>
 #include <syscall.h>
 #include <netinet/in.h>
+#include <stdlib.h>
 #include "graphics.h"
+
+extern size_t init_memory_pool(size_t mem_pool_size, void *mem_pool);
 
 /**
  * GCC insists on __main

@@ -34,9 +34,9 @@ endif
 .PHONY: qemu
 qemu: hd.img
 ifeq ($(OS),Windows_NT)
-	-qemu-system-i386w -m 16 -boot order=c -vga std -soundhw pcspk -hda hd.img -L $(QEMUHOME)/Bios
+	-qemu-system-i386w -m 16 -boot order=c -vga std -hda hd.img -L $(QEMUHOME)/Bios
 else
-	-qemu-system-i386  -m 16 -boot order=c -vga std -soundhw pcspk -hda hd.img
+	-qemu-system-i386  -m 16 -boot order=c -vga std -hda hd.img
 endif
 
 .PHONY: qemudbg

@@ -5,8 +5,9 @@ PROG=	a
 .PHONY: all
 all: run
 
-ASFLAGS=-m32 -nostdinc -I../include -Iinclude
-CFLAGS=	$(ASFLAGS) \
+CPPFLAGS=-nostdinc -I../include -Iinclude
+ASFLAGS=-m32 -Wall -D__ASSEMBLY__
+CFLAGS=	-m32 -Wall \
 	-fno-builtin -ffreestanding -fno-stack-check -fleading-underscore \
 	-mno-ms-bitfields -mno-stack-arg-probe
 LDFLAGS=-m32 -nostdlib -nostartfiles -nodefaultlibs \

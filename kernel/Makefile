@@ -5,8 +5,9 @@ PROG=		eposkrnl
 .PHONY: all
 all: run
 
-ASFLAGS=-m32 -nostdinc -I../include
-CFLAGS=	$(ASFLAGS) -DUSE_FLOPPY=0 -DVERBOSE=0 \
+CPPFLAGS=-DUSE_FLOPPY=0 -DVERBOSE=0 -nostdinc -I../include
+ASFLAGS=-m32 -Wall -D__ASSEMBLY__
+CFLAGS=	-m32 -Wall \
 	-fomit-frame-pointer \
 	-fno-builtin -ffreestanding -fno-stack-check -fleading-underscore \
 	-mno-ms-bitfields -mno-stack-arg-probe

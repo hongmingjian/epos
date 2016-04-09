@@ -34,4 +34,4 @@ run: $(PROG).out
 
 .PHONY: clean
 clean:
-	-$(RM) $(OBJS) $(PROG).bin $(PROG).out $(PROG).map *.*~
+	-$(RM) $(OBJS) $(PROG).out $(PROG).map *.*~

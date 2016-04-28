@@ -29,9 +29,6 @@ void __main()
  */
 void main(void *pv)
 {
-#ifdef __ELF__
-    __main();
-#endif
     printf("task #%d: I'm the first user task(pv=0x%08x)!\r\n",
             task_getid(), pv);
 

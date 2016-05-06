@@ -34,9 +34,9 @@ endif
 .PHONY: qemu
 qemu: hd.img
 ifeq ($(OS),Windows_NT)
-	-qemu-system-i386w -m 16 -boot order=c -vga std -hda hd.img -L $(QEMUHOME)/Bios
+	-qemu-system-i386w -m 16 -boot order=c -vga std -hda $^ -L $(QEMUHOME)/Bios
 else
-	-qemu-system-i386  -m 16 -boot order=c -vga std -hda hd.img
+	-qemu-system-i386  -m 16 -boot order=c -vga std -hda $^
 endif
 
 .PHONY: qemudbg
@@ -44,7 +44,7 @@ qemudbg: MODE=debug
 qemudbg: hd.img
 ifeq ($(OS),Windows_NT)
 	-start $(GDB)
-	-qemu-system-i386w -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -hda hd.img -L $(QEMUHOME)/Bios
+	-qemu-system-i386w -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -hda $^ -L $(QEMUHOME)/Bios
 else
 ifeq ($(shell uname -s),Linux)
 	-/usr/bin/x-terminal-emulator -e $(GDB)
@@ -54,7 +54,7 @@ ifeq ($(shell uname -s),Darwin)
 			   -e '  tell application "Terminal" to do script "cd $(shell pwd); $(GDB)"' \
 			   -e 'end run'
 endif
-	-qemu-system-i386  -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -hda hd.img
+	-qemu-system-i386  -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 16 -boot order=c -vga std -hda $^
 endif
 
 .PHONY: bochs
@@ -75,26 +75,26 @@ else
 endif
 
 .PHONY: vbox
-vbox: hd.vdi
+vbox: hd.vmdk
 	@if ! VBoxManage -q list vms | grep epos >/dev/null; then \
 		VBoxManage -q createvm --name epos --ostype Other --register; \
 	else \
 		VBoxManage -q controlvm epos poweroff; \
 		sleep 1; \
 		VBoxManage -q storagectl epos --name IDE --remove; \
-		VBoxManage -q closemedium disk hd.vdi; \
+		VBoxManage -q closemedium disk $^; \
 	fi
 	@VBoxManage -q modifyvm epos --cpus 1 --memory 32 --boot1 disk --nic1 bridged --nictype1 82540EM  --bridgeadapter1 en0 --macaddress1 auto
 	@VBoxManage -q storagectl epos --add ide --name IDE
-	@VBoxManage -q storageattach epos --storagectl IDE --port 0 --device 0 --type hdd --medium hd.vdi
+	@VBoxManage -q storageattach epos --storagectl IDE --port 0 --device 0 --type hdd --medium $^
 	@VBoxManage startvm epos
 
 .PHONY: tags
 tags:
 	ctags -R *
 
-hd.vdi: hd.img
-	qemu-img convert -O vdi $^ $@
+hd.vmdk: hd.img
+	qemu-img convert -O vmdk $^ $@
 
 .PHONY: run
 run: qemu
@@ -105,7 +105,7 @@ debug: qemudbg
 .PHONY: clean
 clean:
 	@for subdir in $(SUBDIRS); do $(MAKE) -C $${subdir} $@; done
-	$(RM) hd.img hd.vdi tags
+	$(RM) hd.img hd.vmdk tags
 
 .PHONY: submit
 submit: clean

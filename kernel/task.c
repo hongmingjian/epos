@@ -190,10 +190,6 @@ struct tcb *sys_task_create(void *tos,
     new->next = NULL;
     new->signature = TASK_SIGNATURE;
 
-    /*XXX - should be elsewhere*/
-    new->fpu.cwd = 0x37f;
-    new->fpu.twd = 0xffff;
-
     if(ustack != 0) {
         STACK_PUSH(ustack, pv);
         STACK_PUSH(ustack, 0);

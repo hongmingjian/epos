@@ -1,8 +1,4 @@
-CROSS=
-
-ifeq ($(shell uname -s),Darwin)
-CROSS=i586-elf-
-endif
+CROSS=arm-none-eabi-
 
 SHELL=		/bin/bash
 CC=		$(CROSS)gcc

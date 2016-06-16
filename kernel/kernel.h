@@ -43,8 +43,6 @@ extern unsigned volatile g_timer_ticks;
 /*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
 extern time_t g_startup_time;
 
-time_t mktime(struct tm *tm);
-
 /**
  * 线程控制块
  *
@@ -87,7 +85,6 @@ struct tcb {
     struct wait_queue *wq_exit; //等待该线程退出的队列
 
     struct tcb  *next;
-    struct fpu   fpu;        //数学协处理器的寄存器
 
     uint32_t     signature;  //必须是最后一个字段
 #define TASK_SIGNATURE 0x20160201
@@ -113,22 +110,22 @@ void wake_up(struct wait_queue **head, int n);
 
 void init_task(void);
 void syscall(struct context *ctx);
-extern void *ret_from_syscall;
+//extern void *ret_from_syscall;
 
 /**
  * `VADDR' comes from FreeBSD
  */
 #define VADDR(pdi, pti) ((uint32_t)(((pdi)<<PGDR_SHIFT)|((pti)<<PAGE_SHIFT)))
 
-#define KERN_MAX_ADDR VADDR(1023, 1023)
-#define KERN_MIN_ADDR VADDR(767, 767)
-#define USER_MAX_ADDR VADDR(767, 0)
-#define USER_MIN_ADDR VADDR(1, 0)
+#define KERN_MAX_ADDR VADDR(0xFFF, 0xF0)
+#define KERN_MIN_ADDR VADDR(0xC00, 0x04)
+#define USER_MAX_ADDR VADDR(0xBFC, 0x00)
+#define USER_MIN_ADDR VADDR(4, 0)
 
-#define KERNBASE  VADDR(768, 0)
+#define KERNBASE  VADDR(0xC00, 0)
 #define R(x) ((x)-KERNBASE)
 
-#define NR_KERN_PAGETABLE 20
+#define NR_KERN_PAGETABLE 80
 
 #define IN_USER_VM(va, len) \
        ((uint32_t)(va) >= USER_MIN_ADDR && \

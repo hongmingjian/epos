@@ -24,61 +24,35 @@
 #include <string.h>
 
 #include "kernel.h"
-#include "multiboot.h"
 
-#define __CONCAT1(x,y)  x ## y
-#define __CONCAT(x,y)   __CONCAT1(x,y)
-#define __STRING(x)     #x              /* stringify without expanding x */
-#define __XSTRING(x)    __STRING(x)     /* expand x, then stringify */
-
-#define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
-#define CMOS_READ(addr) ({ \
-        outportb(0x70, 0x80|addr); \
-        inportb(0x71); \
-        })
 /*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
 time_t g_startup_time;
 
 /**
- * 初始化i8253定时器
+ * 初始化定时器
  */
 static void init_pit(uint32_t freq)
 {
-    uint16_t latch = 1193182/freq;
-    outportb(0x43, 0x36);
-    outportb(0x40, latch&0xff);
-    outportb(0x40, (latch&0xff00)>>8);
+    uint32_t timer_clock = 1000000;
+    armtimer_reg_t *pit = (armtimer_reg_t *)ARMTIMER_REG_BASE;
+    pit->Load = timer_clock/freq;
+    pit->Reload = pit->Load;
+    pit->PreDivider = (SYS_CLOCK_FREQ/timer_clock)-1;
+    pit->Control = ARMTIMER_CTRL_23BIT |
+                ARMTIMER_CTRL_PRESCALE_1 |
+                ARMTIMER_CTRL_INTR_ENABLE |
+                ARMTIMER_CTRL_ENABLE;
 }
 
-#define IO_ICU1  0x20  /* 8259A Interrupt Controller #1 */
-#define IO_ICU2  0xA0  /* 8259A Interrupt Controller #2 */
-#define IRQ_SLAVE 0x04
-#define ICU_SLAVEID 2
-#define ICU_IMR_OFFSET  1 /* IO_ICU{1,2} + 1 */
-#define ICU_IDT_OFFSET 32 /* 外部中断在IDT的起始号码 */
 /**
- * 初始化i8259中断控制器
+ * 初始化中断控制器
  */
 static void init_pic()
 {
-    uint8_t idt_offset = ICU_IDT_OFFSET;
-    outportb(IO_ICU1, 0x11);//ICW1
-    outportb(IO_ICU1+ICU_IMR_OFFSET, idt_offset); //ICW2
-    outportb(IO_ICU1+ICU_IMR_OFFSET, IRQ_SLAVE); //ICW3
-    outportb(IO_ICU1+ICU_IMR_OFFSET, 1); //ICW4
-    outportb(IO_ICU1+ICU_IMR_OFFSET, 0xff); //OCW1
-    outportb(IO_ICU1, 0x0a); //OCW3
-
-    outportb(IO_ICU2, 0x11); //ICW1
-    outportb(IO_ICU2+ICU_IMR_OFFSET, idt_offset+8); //ICW2
-    outportb(IO_ICU2+ICU_IMR_OFFSET, ICU_SLAVEID); //ICW3
-    outportb(IO_ICU2+ICU_IMR_OFFSET,1); //ICW4
-    outportb(IO_ICU2+ICU_IMR_OFFSET, 0xff); //OCW1
-    outportb(IO_ICU2, 0x0a); //OCW3
-
-    //打开ICU2中断
-    outportb(IO_ICU1+ICU_IMR_OFFSET,
-             inportb(IO_ICU1+ICU_IMR_OFFSET) & (~(1<<2)));
+    intr_reg_t *pic = (intr_reg_t *)INTR_REG_BASE;
+    pic->Disable_basic_IRQs = 0xffffffff;
+    pic->Disable_IRQs_1 = 0xffffffff;
+    pic->Disable_IRQs_2 = 0xffffffff;
 }
 
 /**
@@ -86,14 +60,13 @@ static void init_pic()
  */
 void enable_irq(uint32_t irq)
 {
-    uint8_t val;
-    if(irq < 8){
-        val = inportb(IO_ICU1+ICU_IMR_OFFSET);
-        outportb(IO_ICU1+ICU_IMR_OFFSET, val & (~(1<<irq)));
-    } else if(irq < NR_IRQ) {
-        irq -= 8;
-        val = inportb(IO_ICU2+ICU_IMR_OFFSET);
-        outportb(IO_ICU2+ICU_IMR_OFFSET, val & (~(1<<irq)));
+    intr_reg_t *pic = (intr_reg_t *)INTR_REG_BASE;
+    if(irq  < 8) {
+        pic->Enable_basic_IRQs = 1 << irq;
+    } else if(irq < 40) {
+        pic->Enable_IRQs_1 = 1<<(irq - 8);
+    } else if(irq < 72) {
+        pic->Enable_IRQs_2 = 1<<(irq - 40);
     }
 }
 
@@ -102,14 +75,13 @@ void enable_irq(uint32_t irq)
  */
 void disable_irq(uint32_t irq)
 {
-    uint8_t val;
-    if(irq < 8) {
-        val = inportb(IO_ICU1+ICU_IMR_OFFSET);
-        outportb(IO_ICU1+ICU_IMR_OFFSET, val | (1<<irq));
-    } else if(irq < NR_IRQ) {
-        irq -= 8;
-        val = inportb(IO_ICU2+ICU_IMR_OFFSET);
-        outportb(IO_ICU2+ICU_IMR_OFFSET, val | (1<<irq));
+    intr_reg_t *pic = (intr_reg_t *)INTR_REG_BASE;
+    if(irq  < 8) {
+        pic->Disable_basic_IRQs = 1 << irq;
+    } else if(irq < 40) {
+        pic->Disable_IRQs_1 = 1<<(irq - 8);
+    } else if(irq < 72) {
+        pic->Disable_IRQs_2 = 1<<(irq - 40);
     }
 }
 
@@ -118,289 +90,56 @@ void disable_irq(uint32_t irq)
  */
 void switch_to(struct tcb *new)
 {
-    __asm__ __volatile__ (
-            "pushal\n\t"
-            "pushl $1f\n\t"
-            "movl %0, %%eax\n\t"
-            "movl %%esp, (%%eax)\n\t"
-            "addl $36, %%esp\n\t"
-            :
-            :"m"(g_task_running)
-            :"%eax"
-            );
 
-    g_task_running = new;
-
-    __asm__ __volatile__ (
-            "movl %0, %%eax\n\t"
-            "movl (%%eax), %%esp\n\t"
-            "ret\n\t"
-            "1:\n\t"
-            "movl %%cr0, %%eax\n\t"
-            "orl $8, %%eax\n\t"
-            "movl %%eax, %%cr0\n\t"
-            "popal\n\t"
-            :
-            :"m"(g_task_running)
-            :"%eax"
-            );
 }
-
-static
-struct segment_descriptor gdt[NR_GDT] = {
-    {// GSEL_NULL
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0 },
-    { // GSEL_KCODE
-        0xffff,
-        0x0,
-        0x1a,
-        SEL_KPL,
-        0x1,
-        0xf,
-        0x0,
-        0x1,
-        0x1,
-        0x0 },
-    { // GSEL_KDATA
-        0xffff,
-        0x0,
-        0x12,
-        SEL_KPL,
-        0x1,
-        0xf,
-        0x0,
-        0x1,
-        0x1,
-        0x0 },
-    { // GSEL_UCODE
-        0xffff,
-        0x0,
-        0x1a,
-        SEL_UPL,
-        0x1,
-        0xf,
-        0x0,
-        0x1,
-        0x1,
-        0x0 },
-    { // GSEL_UDATA
-        0xffff,
-        0x0,
-        0x12,
-        SEL_UPL,
-        0x1,
-        0xf,
-        0x0,
-        0x1,
-        0x1,
-        0x0 },
-    { // GSEL_TSS, to be filled
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0,
-        0x0 }
-};
-
-static
-struct tss {
-    uint32_t prev; // UNUSED
-    uint32_t esp0; // loaded when CPU changed from user to kernel mode.
-    uint32_t ss0;  // ditto
-    uint32_t esp1; // everything below is UNUSUED
-    uint32_t ss1;
-    uint32_t esp2;
-    uint32_t ss2;
-    uint32_t cr3;
-    uint32_t eip;
-    uint32_t eflags;
-    uint32_t eax;
-    uint32_t ecx;
-    uint32_t edx;
-    uint32_t ebx;
-    uint32_t esp;
-    uint32_t ebp;
-    uint32_t esi;
-    uint32_t edi;
-    uint32_t es;
-    uint32_t cs;
-    uint32_t ss;
-    uint32_t ds;
-    uint32_t fs;
-    uint32_t gs;
-    uint32_t ldt;
-    uint16_t debug;
-    uint16_t iomap_base;
-} __attribute__ ((packed)) tss;
-
-struct region_descriptor {
-    unsigned limit:16;
-    unsigned base:32 __attribute__ ((packed));
-};
-
-extern char tmp_stack;
-
-void lgdt(struct region_descriptor *rdp);
-static void init_gdt(void)
-{
-    struct region_descriptor rd;
-    uint32_t base = (uint32_t)&tss, limit = sizeof(struct tss);
-
-    gdt[GSEL_TSS].lolimit = limit & 0xffff;
-    gdt[GSEL_TSS].lobase = base & 0xffffff;
-    gdt[GSEL_TSS].type = 9;
-    gdt[GSEL_TSS].dpl = SEL_UPL;
-    gdt[GSEL_TSS].p = 1;
-    gdt[GSEL_TSS].hilimit = (limit&0xf0000)>>16;
-    gdt[GSEL_TSS].xx = 0;
-    gdt[GSEL_TSS].def32 = 0;
-    gdt[GSEL_TSS].gran = 0;
-    gdt[GSEL_TSS].hibase = (base&0xff000000)>>24;
-
-    rd.limit = NR_GDT*sizeof(gdt[0]) - 1;
-    rd.base =  (uint32_t) gdt;
-    lgdt(&rd);
-
-    memset(&tss, 0, sizeof(struct tss));
-    tss.ss0  = GSEL_KDATA*sizeof(gdt[0]);
-    tss.esp0 = (uint32_t)&tmp_stack;
-
-    __asm__ __volatile__(
-            "movw %0, %%ax\n\t"
-            "ltr %%ax\n\t"
-            :
-            :"i"((GSEL_TSS * sizeof(gdt[0])) | SEL_UPL)
-            :"%ax"
-            );
-}
-
-typedef void (*idt_handler_t)(uint32_t eip, uint32_t cs, uint32_t eflags,
-        uint32_t esp, uint32_t ss);
-#define IDT_EXCEPTION(name) __CONCAT(exception_,name)
-extern idt_handler_t
-    IDT_EXCEPTION(divide_error),    IDT_EXCEPTION(debug),
-    IDT_EXCEPTION(nmi),             IDT_EXCEPTION(breakpoint),
-    IDT_EXCEPTION(overflow),        IDT_EXCEPTION(bounds_check),
-    IDT_EXCEPTION(inval_opcode),    IDT_EXCEPTION(double_fault),
-    IDT_EXCEPTION(copr_not_avail),  IDT_EXCEPTION(copr_seg_overrun),
-    IDT_EXCEPTION(inval_tss),       IDT_EXCEPTION(segment_not_present),
-    IDT_EXCEPTION(stack_fault),     IDT_EXCEPTION(general_protection),
-    IDT_EXCEPTION(page_fault),      IDT_EXCEPTION(intel_reserved),
-    IDT_EXCEPTION(copr_error),      IDT_EXCEPTION(alignment_check),
-    IDT_EXCEPTION(machine_check),   IDT_EXCEPTION(simd_fp),
-    int0x82_syscall;
-
-#define IDT_INTERRUPT(name) __CONCAT(hwint,name)
-extern idt_handler_t
-    IDT_INTERRUPT(00),IDT_INTERRUPT(01), IDT_INTERRUPT(02), IDT_INTERRUPT(03),
-    IDT_INTERRUPT(04),IDT_INTERRUPT(05), IDT_INTERRUPT(06), IDT_INTERRUPT(07),
-    IDT_INTERRUPT(08),IDT_INTERRUPT(09), IDT_INTERRUPT(10), IDT_INTERRUPT(11),
-    IDT_INTERRUPT(12),IDT_INTERRUPT(13), IDT_INTERRUPT(14), IDT_INTERRUPT(15);
 
 /**
- * `struct gate_descriptor' comes from FreeBSD
+ * 初始化串口
  */
-#define NR_IDT 131
-static
-struct gate_descriptor {
-    unsigned looffset:16 ;
-    unsigned selector:16 ;
-    unsigned stkcpy:5 ;
-    unsigned xx:3 ;
-    unsigned type:5 ;
-#define GT_386INTR 14 /* 386 interrupt gate */
-#define GT_386TRAP 15 /* 386 trap gate */
-
-    unsigned dpl:2 ;
-    unsigned p:1 ;
-    unsigned hioffset:16 ;
-} idt[NR_IDT];
-
-/**
- * `setidt' comes from FreeBSD
- */
-static void setidt(int idx, idt_handler_t *func, int typ, int dpl)
+static void init_uart(uint32_t baud)
 {
-    struct gate_descriptor *ip;
+    aux_reg_t *aux = (aux_reg_t *)AUX_REG_BASE;
+    gpio_reg_t *gpio = (gpio_reg_t *)GPIO_REG_BASE;
 
-    ip = idt + idx;
-    ip->looffset = (uint32_t)func;
-    ip->selector = (GSEL_KCODE * sizeof(gdt[0])) | SEL_KPL;
-    ip->stkcpy = 0;
-    ip->xx = 0;
-    ip->type = typ;
-    ip->dpl = dpl;
-    ip->p = 1;
-    ip->hioffset = ((uint32_t)func)>>16 ;
+    aux->enables = 1;
+    aux->mu_ier = 0;
+    aux->mu_cntl = 0;
+    aux->mu_lcr = 3;
+    aux->mu_mcr = 0;
+    aux->mu_baud = (SYS_CLOCK_FREQ/(8*baud))-1;
+
+    uint32_t ra=gpio->gpfsel1;
+    ra&=~(7<<12); //gpio14
+    ra|=2<<12;    //alt5
+    ra&=~(7<<15); //gpio15
+    ra|=2<<15;    //alt5
+    gpio->gpfsel1 = ra;
+
+    gpio->gppud = 0;
+    gpio->gppudclk0 = (1<<14)|(1<<15);
+    gpio->gppudclk0 = 0;
+
+    aux->mu_cntl = 3;
 }
 
-void lidt(struct region_descriptor *rdp);
-
-static void init_idt()
+void uart_putc ( int c )
 {
-    int i;
-    struct region_descriptor rd;
+    aux_reg_t *aux = (aux_reg_t *)AUX_REG_BASE;
+    while(1) {
+        if(aux->mu_lsr&0x20)
+            break;
+    }
+    aux->mu_io = c;
+}
 
-    for (i = 0; i < NR_IDT; i++)
-        setidt(i, &IDT_EXCEPTION(intel_reserved), GT_386TRAP, SEL_KPL);
-
-    setidt(0,  &IDT_EXCEPTION(divide_error),        GT_386INTR, SEL_KPL);
-    setidt(1,  &IDT_EXCEPTION(debug),               GT_386INTR, SEL_KPL);
-    setidt(2,  &IDT_EXCEPTION(nmi),                 GT_386INTR, SEL_KPL);
-    setidt(3,  &IDT_EXCEPTION(breakpoint),          GT_386INTR, SEL_KPL);
-    setidt(4,  &IDT_EXCEPTION(overflow),            GT_386INTR, SEL_KPL);
-    setidt(5,  &IDT_EXCEPTION(bounds_check),        GT_386INTR, SEL_KPL);
-    setidt(6,  &IDT_EXCEPTION(inval_opcode),        GT_386INTR, SEL_KPL);
-    setidt(7,  &IDT_EXCEPTION(copr_not_avail),      GT_386INTR, SEL_KPL);
-    setidt(8,  &IDT_EXCEPTION(double_fault),        GT_386INTR, SEL_KPL);
-    setidt(9,  &IDT_EXCEPTION(copr_seg_overrun),    GT_386INTR, SEL_KPL);
-    setidt(10, &IDT_EXCEPTION(inval_tss),           GT_386INTR, SEL_KPL);
-    setidt(11, &IDT_EXCEPTION(segment_not_present), GT_386INTR, SEL_KPL);
-    setidt(12, &IDT_EXCEPTION(stack_fault),         GT_386INTR, SEL_KPL);
-    setidt(13, &IDT_EXCEPTION(general_protection),  GT_386INTR, SEL_KPL);
-    setidt(14, &IDT_EXCEPTION(page_fault),          GT_386INTR, SEL_KPL);
-    setidt(15, &IDT_EXCEPTION(intel_reserved),      GT_386INTR, SEL_KPL);
-    setidt(16, &IDT_EXCEPTION(copr_error),          GT_386INTR, SEL_KPL);
-    setidt(17, &IDT_EXCEPTION(alignment_check),     GT_386INTR, SEL_KPL);
-    setidt(18, &IDT_EXCEPTION(machine_check),       GT_386INTR, SEL_KPL);
-    setidt(19, &IDT_EXCEPTION(simd_fp),             GT_386INTR, SEL_KPL);
-
-    setidt(ICU_IDT_OFFSET+0, &IDT_INTERRUPT(00), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+1, &IDT_INTERRUPT(01), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+2, &IDT_INTERRUPT(02), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+3, &IDT_INTERRUPT(03), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+4, &IDT_INTERRUPT(04), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+5, &IDT_INTERRUPT(05), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+6, &IDT_INTERRUPT(06), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+7, &IDT_INTERRUPT(07), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+8, &IDT_INTERRUPT(08), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+9, &IDT_INTERRUPT(09), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+10,&IDT_INTERRUPT(10), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+11,&IDT_INTERRUPT(11), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+12,&IDT_INTERRUPT(12), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+13,&IDT_INTERRUPT(13), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+14,&IDT_INTERRUPT(14), GT_386INTR, SEL_KPL);
-    setidt(ICU_IDT_OFFSET+15,&IDT_INTERRUPT(15), GT_386INTR, SEL_KPL);
-
-    setidt(0x82, &int0x82_syscall, GT_386INTR, SEL_UPL/*!*/);
-
-    rd.limit = NR_IDT*sizeof(idt[0]) - 1;
-    rd.base = (uint32_t) idt;
-    lidt(&rd);
+int uart_getc()
+{
+    aux_reg_t *aux = (aux_reg_t *)AUX_REG_BASE;
+    while(1) {
+        if(aux->mu_lsr&0x1)
+            break;
+    }
+    return aux->mu_io;
 }
 
 /**
@@ -410,174 +149,85 @@ static void init_idt()
  */
 int sys_putchar(int c)
 {
-    unsigned char *SCREEN_BASE = (unsigned char *)(0xB8000+KERNBASE);
-    unsigned int curpos, i;
-
-    uint32_t flags;
-
-    /*
-     * 读取当前光标位置
-     */
-    save_flags_cli(flags);
-    outportb(0x3d4, 0x0e);
-    curpos = inportb(0x3d5);
-    curpos <<= 8;
-    outportb(0x3d4, 0x0f);
-    curpos += inportb(0x3d5);
-    curpos <<= 1;
-
-    switch(c) {
-    case '\n'://换行，只是换行而已
-        curpos = (curpos/160)*160 + 160;
-        break;
-    case '\r'://回车，只是回车而已
-        curpos = (curpos/160)*160;
-        break;
-    case '\t':
-        curpos += 8;
-        break;
-    case '\b':
-        curpos -= 2;
-        SCREEN_BASE[curpos] = 0x20;
-        break;
-    default:
-        SCREEN_BASE[curpos++] = c;
-        SCREEN_BASE[curpos++] = 0x07;
-        break;
-    }
-
-    /*
-     * 滚动屏幕
-     */
-    if(curpos >= 160*25) {
-        for(i = 0; i < 160*24; i++) {
-            SCREEN_BASE[i] = SCREEN_BASE[i+160];
-        }
-        for(i = 0; i < 80; i++) {
-            SCREEN_BASE[(160*24)+(i*2)  ] = 0x20;
-            SCREEN_BASE[(160*24)+(i*2)+1] = 0x07;
-        }
-        curpos -= 160;
-    }
-
-    /*
-     * 保存当前光标位置
-     */
-    curpos >>= 1;
-    outportb(0x3d4, 0x0f);
-    outportb(0x3d5, curpos & 0x0ff);
-    outportb(0x3d4, 0x0e);
-    outportb(0x3d5, curpos >> 8);
-    restore_flags(flags);
-
+    uart_putc(c);
     return c;
 }
 
-/**
- * 系统调用beep的执行函数
- * 让蜂鸣器以频率freq发声，如果freq=0表示关闭蜂鸣器
- */
-void sys_beep(int freq)
+int exception(struct context *ctx)
 {
-    if(freq <= 0)
-        outportb (0x61, 0);
-    else {
-        uint32_t flags;
+    printk("  CPSR: 0x%x\r\n", ctx->cf_spsr);
+    printk("  R0  : 0x%x\r\n", ctx->cf_r0);
+    printk("  R1  : 0x%x\r\n", ctx->cf_r1);
+    printk("  R2  : 0x%x\r\n", ctx->cf_r2);
+    printk("  R3  : 0x%x\r\n", ctx->cf_r3);
+    printk("  R4  : 0x%x\r\n", ctx->cf_r4);
+    printk("  R5  : 0x%x\r\n", ctx->cf_r5);
+    printk("  R6  : 0x%x\r\n", ctx->cf_r6);
+    printk("  R7  : 0x%x\r\n", ctx->cf_r7);
+    printk("  R8  : 0x%x\r\n", ctx->cf_r8);
+    printk("  R9  : 0x%x\r\n", ctx->cf_r9);
+    printk("  R10 : 0x%x\r\n", ctx->cf_r10);
+    printk("  R11 : 0x%x\r\n", ctx->cf_r11);
+    printk("  R12 : 0x%x\r\n", ctx->cf_r12);
+    printk("  USR_SP  : 0x%x\r\n", ctx->cf_usr_sp);
+    printk("  USR_LR  : 0x%x\r\n", ctx->cf_usr_lr);
+    printk("  SVC_SP  : 0x%x\r\n", ctx->cf_svc_sp);
+    printk("  SVC_LR  : 0x%x\r\n", ctx->cf_svc_lr);
+    printk("  PC  : 0x%x\r\n", ctx->cf_pc);
 
-        freq = 1193182 / freq;
+    while(1);
+	
+	return 0;
+}
 
-        save_flags_cli(flags);
-        outportb (0x43, 0xB6);
-        outportb (0x42,  freq       & 0xFF);
-        outportb (0x42, (freq >> 8) & 0xFF);
-        restore_flags(flags);
+void abort_handler(struct context *ctx, uint32_t vaddr, uint32_t code)
+{
+    do_page_fault(ctx, vaddr, code);
+}
 
-        outportb (0x61, 3);
+void irq_handler(struct context *ctx)
+{
+    int irq;
+    intr_reg_t *pic = (intr_reg_t *)INTR_REG_BASE;
+
+    for(irq = 0 ; irq < 8; irq++)
+        if(pic->IRQ_basic_pending & (1<<irq))
+            break;
+
+    if(irq == 8){
+        for( ; irq < 40; irq++)
+            if(pic->IRQ_pending_1 & (1<<(irq-8)))
+                break;
+
+        if(irq == 40) {
+            for( ; irq < 72; irq++)
+                if(pic->IRQ_pending_1 & (1<<(irq-40)))
+                    break;
+
+            if(irq == 72)
+                return;
+        }
+    }
+
+    g_intr_vector[irq](irq, ctx);
+
+    switch(irq) {
+    case 0: {
+        armtimer_reg_t *pit = (armtimer_reg_t *)ARMTIMER_REG_BASE;
+        pit->IRQClear = 1;
+        break;
+    }
     }
 }
 
-/**
- * CPU异常处理程序，ctx保存了发生异常时CPU各个寄存器的值
- */
-int exception(struct context *ctx)
+void undefined_handler(struct context *ctx)
 {
-    switch(ctx->exception) {
-    case 14://page fault
-        {
-            uint32_t vaddr;
-            int res;
-            __asm__ __volatile__("movl %%cr2,%0" : "=r" (vaddr));
-            sti();
-            res = do_page_fault(ctx, vaddr, ctx->errorcode);
-            cli();
-            if(res == 0)
-                return 0;
-        }
-        break;
+    exception(ctx);
+}
 
-    case 13://general protection
-        if(ctx->eflags & 0x20000) {
-            if(vm86_emulate((struct vm86_context *)ctx))
-                //This exception was eaten by vm86mon and return to vm86 mode
-                return 0;
-            else {
-                //This exception cannot be eaten by vm86mon, return to user mode
-                struct context *c=(struct context *)(((uint8_t *)g_task_running)+PAGE_SIZE-
-                                                     sizeof(struct context));
-                **((struct vm86_context **)(c->esp+4)) = *((struct vm86_context *)ctx);
-                return 1;
-            }
-        }
-        break;
-
-    case 7://device not available
-        __asm__ __volatile__("clts\t\n");
-
-        if(g_task_own_fpu == g_task_running)
-            return 0;
-
-        __asm__ __volatile__("fwait\t\n");
-
-        if(g_task_own_fpu) {
-            __asm__ __volatile__("fnsave %0\t\n"::"m"(g_task_own_fpu->fpu));
-        }
-
-        g_task_own_fpu = g_task_running;
-
-        __asm__ __volatile__("frstor %0\t\n"::"m"(g_task_running->fpu));
-
-        return 0;
-
-        break;
-
-    case 16://x87 FPU Floating-Point Error
-        if(g_task_own_fpu) {
-            __asm__ __volatile__("fnsave %0\t\n"::"m"(g_task_own_fpu->fpu));
-            printk("fpu.cwd=0x%04x\r\n", g_task_own_fpu->fpu.cwd);
-            printk("fpu.swd=0x%04x\r\n", g_task_own_fpu->fpu.swd);
-            printk("fpu.twd=0x%04x\r\n", g_task_own_fpu->fpu.twd);
-            printk("fpu.fip=0x%08x\r\n", g_task_own_fpu->fpu.fip);
-            printk("fpu.fcs=0x%04x\r\n", g_task_own_fpu->fpu.fcs);
-            printk("fpu.foo=0x%08x\r\n", g_task_own_fpu->fpu.foo);
-            printk("fpu.fos=0x%04x\r\n", g_task_own_fpu->fpu.fos);
-        }
-    }
-
-    printk("Un-handled exception!\r\n");
-    printk(" fs=0x%08x,  es=0x%08x,  ds=0x%08x\r\n",
-            ctx->fs, ctx->es, ctx->ds);
-    printk("edi=0x%08x, esi=0x%08x, ebp=0x%08x, isp=0x%08x\r\n",
-            ctx->edi, ctx->esi, ctx->ebp, ctx->isp);
-    printk("ebx=0x%08x, edx=0x%08x, ecx=0x%08x, eax=0x%08x\r\n",
-            ctx->ebx, ctx->edx, ctx->ecx, ctx->eax);
-    printk("exception=0x%02x, errorcode=0x%08x\r\n",
-            ctx->exception, ctx->errorcode);
-    printk("eip=0x%08x,  cs=0x%04x, eflags=0x%08x\r\n",
-            ctx->eip, ctx->cs, ctx->eflags);
-    if(ctx->cs & SEL_UPL)
-        printk("esp=0x%08x,  ss=0x%04x\r\n", ctx->esp, ctx->ss);
-
-    while(1);
+void swi_handler(struct context *ctx)
+{
+    exception(ctx);
 }
 
 /**
@@ -585,203 +235,30 @@ int exception(struct context *ctx)
  */
 void syscall(struct context *ctx)
 {
-    //printk("task #%d syscalling #%d.\r\n", sys_task_getid(), ctx->eax);
-    switch(ctx->eax) {
+    //printk("task #%d syscalling #%d.\r\n", sys_task_getid(), ctx->cf_r0);
+    switch(ctx->cf_r0) {
     case SYSCALL_task_exit:
-        sys_task_exit(*((int *)(ctx->esp+4)));
-        break;
     case SYSCALL_task_create:
-        {
-            uint32_t user_stack = *((uint32_t *)(ctx->esp+4));
-            uint32_t user_entry = *((uint32_t *)(ctx->esp+8));
-            uint32_t user_pvoid = *((uint32_t *)(ctx->esp+12));
-            struct tcb *tsk;
-
-            //printk("stack: 0x%08x, entry: 0x%08x, pvoid: 0x%08x\r\n",
-            //       user_stack, user_entry, user_pvoid);
-            if(!IN_USER_VM(user_stack, 0) ||
-               !IN_USER_VM(user_entry, 0)) {
-                ctx->eax = -ctx->eax;
-                break;
-            }
-            tsk = sys_task_create((void *)user_stack,
-                                  (void (*)(void *))user_entry,
-                                  (void *)user_pvoid);
-            ctx->eax = (tsk==NULL)?-1:tsk->tid;
-        }
-        break;
     case SYSCALL_task_getid:
-        ctx->eax=sys_task_getid();
-        break;
     case SYSCALL_task_yield:
-        sys_task_yield();
-        break;
     case SYSCALL_task_wait:
-        {
-            int tid    = *(int  *)(ctx->esp+4);
-            int *pcode = *( int **)(ctx->esp+8);
-            if((pcode != NULL) && !IN_USER_VM(pcode, sizeof(int))) {
-                ctx->eax = -ctx->eax;
-                break;
-            }
-
-            ctx->eax = sys_task_wait(tid, pcode);
-        }
-        break;
     case SYSCALL_reboot:
-        {
-            /*int howto = *(int *)(ctx->esp+4);*/
-            while(inportb(0x64) & 2)
-                ;
-            outportb(0x64, 0xFE);
-            ctx->eax = -1;
-        }
-        break;
     case SYSCALL_mmap:
-        {
-            void *addr = *(void **)(ctx->esp+4);
-            size_t len = *(size_t *)(ctx->esp+8);
-            int prot = *(int *)(ctx->esp+12);
-            int flags = *(int *)(ctx->esp+16);
-            int fd = *(int *)(ctx->esp+20);
-            off_t offset = *(off_t *)(ctx->esp+24);
-            uint32_t npages = PAGE_ROUNDUP(len)/PAGE_SIZE;
-            uint32_t va = (uint32_t)addr;
-
-            ctx->eax = -1;
-            if(len == 0)
-                break;
-            if(fd == -1) {
-                 if(!(flags & MAP_ANON))
-                     break;
-            } else {
-                if(flags & MAP_ANON)
-                    break;
-            }
-            if(!(flags & MAP_PRIVATE))
-                break;
-
-            /*XXX - 0x8000留给/dev/mem*/
-            if((fd == 0x8000) && (offset & PAGE_MASK))
-                break;
-
-            if(flags & MAP_FIXED) {
-                if(!IN_USER_VM(va, len) ||
-                   (va & PAGE_MASK)) {
-                    break;
-                }
-                ctx->eax = page_alloc_in_addr(va, npages, prot);
-            } else {
-                ctx->eax = page_alloc(npages, prot, 1);
-            }
-
-            if(ctx->eax != -1 && fd == 0x8000) {
-                page_map(ctx->eax, offset,
-                         npages, L2E_U|((prot&PROT_WRITE)?L2E_W:0)|L2E_V);
-            }
-        }
-        break;
     case SYSCALL_munmap:
-        {
-            void *addr = *(void **)(ctx->esp+4);
-            size_t len = *(size_t *)(ctx->esp+8);
-            uint32_t npages = PAGE_ROUNDUP(len)/PAGE_SIZE;
-            uint32_t va = (uint32_t)addr;
-
-            ctx->eax = -1;
-            if(len == 0)
-                break;
-
-            if(!IN_USER_VM(va, len)) {
-                break;
-            }
-
-            ctx->eax = page_free(va, npages);
-
-            if(ctx->eax != -1) {
-                uint32_t i, x;
-                for(i = 0; i < npages; i++) {
-                    x = *vtopte(va);
-                    if(x & L2E_V) {
-                        *vtopte(va) = 0;
-                        invlpg(va);
-
-                        //XXX - 可能不是RAM，不能用frame_free
-                        frame_free(PAGE_TRUNCATE(x), 1);
-                    }
-                    va += PAGE_SIZE;
-                }
-            }
-        }
-        break;
     case SYSCALL_sleep:
-        ctx->eax = sys_sleep((*((int *)(ctx->esp+4))));
-        break;
     case SYSCALL_nanosleep:
-        {
-            ctx->eax = -1;
-            struct timespec *rqtp = *(struct timespec **)(ctx->esp+4);
-            struct timespec *rmtp = *(struct timespec **)(ctx->esp+8);
-            if(IN_USER_VM(rqtp, sizeof(struct timespec)) &&
-               ((rmtp == NULL) || IN_USER_VM(rmtp, sizeof(struct timespec))))
-                ctx->eax = sys_nanosleep(rqtp, rmtp);
-        }
-        break;
     case SYSCALL_beep:
-        sys_beep((*((int *)(ctx->esp+4))));
-        break;
     case SYSCALL_vm86:
-        {
-            struct vm86_context *p = *(struct vm86_context **)(ctx->esp+4);
-            p->eflags &= 0x0ffff;
-            p->eflags |= 0x20000;
-            sys_vm86(p);
-        }
-        break;
     case SYSCALL_putchar:
-        ctx->eax = sys_putchar((*((int *)(ctx->esp+4)))&0xff);
-        break;
     case SYSCALL_getchar:
-        ctx->eax = sys_getchar();
-        break;
     case SYSCALL_recv:
-        {
-            int sockfd = *( int *)(ctx->esp+4);
-            void *buf = *( uint8_t **)(ctx->esp+8);
-            size_t len = *( size_t *)(ctx->esp+12);
-            int flags = *( int *)(ctx->esp+16);
-            ctx->eax = sys_recv(sockfd, buf, len, flags);
-        }
-        break;
     case SYSCALL_send:
-        {
-            /*int sockfd = *( int *)(ctx->esp+4);*/
-            void *buf = *( uint8_t **)(ctx->esp+8);
-            size_t len = *( size_t *)(ctx->esp+12);
-            /*int flags = *( int *)(ctx->esp+16);*/
-            e1000_send(buf, len);
-            ctx->eax = len;
-        }
-        break;
     case SYSCALL_ioctl:
-        {
-            ctx->eax = -1;
-            /*int fd = *( int *)(ctx->esp+4);*/
-            uint32_t req = *( uint32_t *)(ctx->esp+8);
-            uint8_t *pv = *( uint8_t **)(ctx->esp+12);
-            if(req == SIOCGIFHWADDR) {
-                e1000_getmac(pv);
-                ctx->eax = 6;
-            }
-        }
-        break;
     default:
-        printk("syscall #%d not implemented.\r\n", ctx->eax);
-        ctx->eax = -ctx->eax;
+        printk("syscall #%d not implemented.\r\n", ctx->cf_r0);
         break;
     }
 }
-
 /**
  * page fault处理函数。
  * 特别注意：此时系统的中断处于打开状态
@@ -794,6 +271,34 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     printk("PF:0x%08x(0x%04x)", vaddr, code);
 #endif
 
+    if(code & (1<<10)) {
+#if !VERBOSE
+        printk("PF:0x%08x(0x%04x)", vaddr, code);
+#endif
+        printk("->UNKNOWN CODE\r\n");
+        return -1;
+    } else {
+        switch(code & 0xf) {
+        case 0x3: //domain fault (page)
+        case 0xf: //permission fault (page)
+#if !VERBOSE
+            printk("PF:0x%08x(0x%04x)", vaddr, code);
+#endif
+            printk("->PROTECTION VIOLATION\r\n");
+            return -1;
+            break;
+        case 0x7: //translation fault (page)
+            break;
+        default:
+#if !VERBOSE
+            printk("PF:0x%08x(0x%04x)", vaddr, code);
+#endif
+            printk("->UNKNOWN CODE\r\n");
+            return -1;
+            break;
+        }
+    }
+
     /*检查地址是否合法*/
     prot = page_prot(vaddr);
     if(prot == -1 || prot == VM_PROT_NONE) {
@@ -804,24 +309,15 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
         return -1;
     }
 
-    if(code & L2E_V) {
-        /*页面保护引起PF*/
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-        printk("->PROTECTION VIOLATION\r\n");
-		return -1;
-    }
-
     {
         uint32_t paddr;
         uint32_t flags = L2E_V|L2E_C;
 
         if(prot & VM_PROT_WRITE)
             flags |= L2E_W;
-
+        
         /*只要访问用户的地址空间，都代表用户模式访问*/
-        if (vaddr < KERN_MIN_ADDR)
+        if(vaddr < USER_MAX_ADDR)
             flags |= L2E_U;
 
         /*搜索空闲帧*/
@@ -865,82 +361,83 @@ static uint32_t init_paging(uint32_t physfree)
     memset(pgdir, 0, L1_TABLE_SIZE);
 
     /*
-     * 分配NR_KERN_PAGETABLE张小页表，并填充到页目录
+     * 分配4张小页表，并填充到页目录
+     * 用于映射页表自身所占的虚拟内存范围，即[0xbfc00000, 0xc0000000]
      */
-    for(i = 0; i < NR_KERN_PAGETABLE; i++) {
-        pgdir[i                       ]=
-        pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|L2E_V|L2E_W;
+    uint32_t *ptpte = (uint32_t *)physfree;
+    for(i = 0; i < 4; i++)
+    {
+        pgdir[0xBFC+i] = (physfree)|L1E_V;
         memset((void *)physfree, 0, L2_TABLE_SIZE);
         physfree+=L2_TABLE_SIZE;
     }
 
     /*
-     * 映射映射虚拟地址[0, R(&end)]和[KERNBASE, &end]到物理地址[0, R(&end)]
+     * 分配NR_KERN_PAGETABLE张小页表，并填充到页目录，也填充到ptpte
      */
-    pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
-    for(i = 0; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
-        pte[i>>PAGE_SHIFT]=(i)|L2E_V|L2E_W;
+    pte = (uint32_t *)physfree;
+    for(i = 0; i < NR_KERN_PAGETABLE; i++)
+    {
+        pgdir[i] = pgdir[i+(KERNBASE>>PGDR_SHIFT)] = (physfree)|L1E_V;
+
+        if((i & 3) == 0)
+            ptpte[3*L2_ENTRY_COUNT+(i>>2)] = (physfree)|L2E_V|L2E_W|L2E_C;
+
+        memset((void *)physfree, 0, L2_TABLE_SIZE);
+        physfree += L2_TABLE_SIZE;
+    }
+    ptpte[3*L2_ENTRY_COUNT-1] = ((uint32_t)ptpte)|L2E_V|L2E_W|L2E_C;
 
     /*
-     * 映射页目录及页表
+     * 设置恒等映射，填充小页表
+     * 映射虚拟地址[0, 0x4000]和[KERNBASE, KERNBASE+0x4000]到物理地址为[0, 0x4000]
      */
-    pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|L2E_V|L2E_W;
+    for(i = 0; i < 0x4000; i+=PAGE_SIZE)
+      pte[i>>PAGE_SHIFT] = i|L2E_V|L2E_W|L2E_C;
+
+    /*
+     * 把页目录映射到[0x4000, 0x8000]和[KERNBASE+0x4000, KERNBASE+0x8000]
+     */
+    for(i = 0x4000; i < 0x8000; i+=PAGE_SIZE)
+      pte[i>>PAGE_SHIFT] = (((uint32_t)pgdir)+i-0x4000)|L2E_V|L2E_W|L2E_C;
+
+    /*
+     * 设置恒等映射，填充小页表
+     * 映射虚拟地址[0x8000, R(_end)]和[KERNBASE+0x8000, _end]到物理地址为[0x8000, R(_end)]
+     */
+    for(i = 0x8000; i < (uint32_t)pgdir; i+=PAGE_SIZE)
+      pte[i>>PAGE_SHIFT] = i|L2E_V|L2E_W|L2E_C;
 
     /*
      * 打开分页
      */
-    __asm__ __volatile__ (
-            "movl %0, %%eax\n\t"
-            "movl %%eax, %%cr3\n\t"
-            "movl %%cr0, %%eax\n\t"
-            "orl  $0x80000000, %%eax\n\t"
-            "movl %%eax, %%cr0\n\t"
-            :
-            :"m"(pgdir)
-            :"%eax"
-            );
+     __asm__ __volatile__ (
+             "mcr p15,0,%0,c2,c0,0\n\t"
+             "mvn r0, #0\n\t"
+             "mcr p15,0,r0,c3,c0,0\n\t"
+             "mrc p15,0,r0,c1,c0,0\n\t"
+             "orr r0, r0, #1\n\t"
+             "mcr p15,0,r0,c1,c0,0\n\t"
+             "mov r0,r0\n\t"
+             "mov r0,r0\n\t"
+             :
+             : "r" (pgdir)
+             : "r0"
+     );
+
 
     return physfree;
 }
 
 /**
  * 初始化物理内存
- */
-static void init_ram(multiboot_memory_map_t *mmap,
-        uint32_t size,
-        uint32_t physfree)
+*/
+static void init_ram(uint32_t physfree)
 {
-    int n = 0;
-
-    for (; size;
-            size -= (mmap->size+sizeof(mmap->size)),
-            mmap = (multiboot_memory_map_t *) ((uint32_t)mmap +
-                                               mmap->size +
-                                               sizeof (mmap->size))) {
-        if(mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
-            g_ram_zone[n  ] = PAGE_TRUNCATE(mmap->addr&0xffffffff);
-            g_ram_zone[n+1] = PAGE_TRUNCATE(g_ram_zone[n]+(mmap->len&0xffffffff));
-
-            /*扣除内核所占的物理内存*/
-            if((physfree >  g_ram_zone[n  ]) &&
-               (physfree <= g_ram_zone[n+1]))
-                g_ram_zone[n]=physfree;
-
-            /*为8086模式保留0-4KiB的物理内存*/
-            if((PAGE_SIZE >  g_ram_zone[n  ]) &&
-               (PAGE_SIZE <= g_ram_zone[n+1]))
-                g_ram_zone[n]=PAGE_SIZE;
-
-            if(g_ram_zone[n+1] >= g_ram_zone[n] + PAGE_SIZE) {
-                n += 2;
-                if(n + 2 >= RAM_ZONE_LEN)
-                    break;
-            }
-        }
-    }
-
-    g_ram_zone[n  ] = 0;
-    g_ram_zone[n+1] = 0;
+    g_ram_zone[0] = physfree;
+    g_ram_zone[1] = 0x1FFFFFFF;
+    g_ram_zone[2] = 0;
+    g_ram_zone[3] = 0;
 }
 
 /**
@@ -949,16 +446,14 @@ static void init_ram(multiboot_memory_map_t *mmap,
 static void md_startup(uint32_t mbi, uint32_t physfree)
 {
     physfree=init_paging(physfree);
+    init_ram(physfree);
 
-    init_gdt();
-    init_idt();
-
-    init_ram((void *)(((multiboot_info_t *)mbi)->mmap_addr),
-             ((multiboot_info_t *)mbi)->mmap_length,
-             physfree);
+    /*Physical addresses range from 0x20000000 to 0x20FFFFFF for peripherals*/
+    page_map(MMIO_BASE, 0x20000000, 4096, L2E_V|L2E_W);
 
     init_pic();
     init_pit(HZ);
+    init_uart(9600);
 }
 
 /**
@@ -966,79 +461,12 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
  */
 void cstart(uint32_t magic, uint32_t mbi)
 {
-    uint32_t i, _end = ROUNDUP(R((uint32_t)(&end)), L1_TABLE_SIZE);
+    uint32_t _end = ROUNDUP(R((uint32_t)(&end)), L1_TABLE_SIZE);
 
     /*
      * 机器相关（Machine Dependent）的初始化
      */
     md_startup(mbi, _end);
-
-    /*
-     * 分页已经打开，切换到虚拟地址运行
-     */
-    __asm__ __volatile__ (
-            "addl %0,%%esp\n\t"
-            "addl %0,%%ebp\n\t"
-            "pushl $1f\n\t"
-            "ret\n\t"
-            "1:\n\t"
-            :
-            :"i"(KERNBASE)
-            );
-
-    /*
-     * 内核已经被重定位到链接地址，取消恒等映射
-     */
-    for(i = 0; i < NR_KERN_PAGETABLE; i++)
-        PTD[i] = 0;
-
-    /*
-     * 取消了1MiB以内、除文本显存以外的虚拟内存映射
-     */
-    for(i = 0; i < 0x100000; i+=PAGE_SIZE)
-        if(i != 0xB8000)
-            *vtopte(i+KERNBASE)=0;
-
-    /*
-     * 初始化数学协处理器
-     */
-    __asm__ __volatile__ (
-            "movl %%cr0, %%eax\n\t"
-            "orl  $0x20, %%eax\n\t"
-            "movl %%eax, %%cr0\n\t"
-            "fninit\n\t"
-            :
-            :
-            :"%eax"
-            );
-
-    /*
-     * 从CMOS读取计算机启动的时间，即自1970-01-01 00:00:00 +0000 (UTC)以来的秒数
-     */
-    {
-        struct tm time;
-
-        do {
-            time.tm_sec  = CMOS_READ(0);
-            time.tm_min  = CMOS_READ(2);
-            time.tm_hour = CMOS_READ(4);
-            time.tm_mday = CMOS_READ(7);
-            time.tm_mon  = CMOS_READ(8);
-            time.tm_year = CMOS_READ(9);
-        } while (time.tm_sec != CMOS_READ(0));
-        BCD_TO_BIN(time.tm_sec);
-        BCD_TO_BIN(time.tm_min);
-        BCD_TO_BIN(time.tm_hour);
-        BCD_TO_BIN(time.tm_mday);
-        BCD_TO_BIN(time.tm_mon);
-        BCD_TO_BIN(time.tm_year);
-
-        time.tm_mon--;
-        if((time.tm_year + 1900) < 1970)
-            time.tm_year += 100;
-
-        g_startup_time = mktime(&time);
-    }
 
     /*
      * 机器无关（Machine Independent）的初始化

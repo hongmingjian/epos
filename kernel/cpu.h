@@ -20,135 +20,121 @@
 #ifndef _CPU_H
 #define _CPU_H
 
-#include <inttypes.h>
+#include "arch.h"
 
-static __inline uint8_t inportb(uint16_t port)
-{
-    register uint8_t val;
-    __asm__ __volatile__ ("inb %%dx, %%al" : "=a" (val) : "d" (port));
-    return( val );
-}
-static __inline uint16_t inportw(uint16_t port)
-{
-    register uint16_t val;
-    __asm__ __volatile__ ("inw %%dx, %%ax" : "=a" (val) : "d" (port));
-    return( val );
-}
-static __inline uint32_t inportl(uint16_t port)
-{
-    register uint32_t val;
-    __asm__ __volatile__ ("inl %%dx, %%eax" : "=a" (val) : "d" (port));
-    return( val );
-}
-static __inline void outportb(uint16_t port, uint8_t val)
-{
-    __asm__ __volatile__ ("outb %%al, %%dx" : : "d" (port), "a" (val));
-}
+#define MMIO_BASE      0xC4000000
 
-static __inline void outportw(uint16_t port, uint16_t val)
-{
-    __asm__ __volatile__ ("outw %%ax, %%dx" : : "d" (port), "a" (val));
-}
-static __inline void outportl(uint16_t port, uint32_t val)
-{
-    __asm__ __volatile__ ("outl %%eax, %%dx" : : "d" (port), "a" (val));
-}
+#define ARMTIMER_REG_BASE (MMIO_BASE+0xB400)
+typedef struct {
+	volatile unsigned int Load;
+	volatile unsigned int Value;
+	volatile unsigned int Control;
+#define ARMTIMER_CTRL_23BIT            (1 << 1)
+#define ARMTIMER_CTRL_PRESCALE_1       (0 << 2)
+#define ARMTIMER_CTRL_PRESCALE_16      (1 << 2)
+#define ARMTIMER_CTRL_PRESCALE_256     (2 << 2)
+#define ARMTIMER_CTRL_INTR_ENABLE      (1 << 5)
+#define ARMTIMER_CTRL_ENABLE           (1 << 7)
 
-static __inline void insb(uint16_t port, void *addr, uint32_t count)
-{
-    __asm__ __volatile__ ("rep ; insb": "=D"(addr), "=c"(count)
-            : "d"(port), "0"(addr), "1"(count));
-}
-static __inline void insw(uint16_t port, void *addr, uint32_t count)
-{
-    __asm__ __volatile__ ("rep ; insw": "=D"(addr), "=c"(count)
-            : "d"(port), "0"(addr), "1"(count));
-}
-static __inline void insl(uint16_t port, void *addr, uint32_t count)
-{
-    __asm__ __volatile__ ("rep ; insl": "=D"(addr), "=c"(count)
-            : "d"(port), "0"(addr), "1"(count));
-}
-static __inline void outsb(uint16_t port, void *addr, uint32_t count)
-{
-    __asm__ __volatile__ ("rep ; outsb": "=S"(addr), "=c"(count)
-            : "d"(port), "0"(addr), "1"(count));
-}
-static __inline void outsw(uint16_t port, void *addr, uint32_t count)
-{
-    __asm__ __volatile__ ("rep ; outsw": "=S"(addr), "=c"(count)
-            : "d"(port), "0"(addr), "1"(count));
-}
-static __inline void outsl(uint16_t port, void *addr, uint32_t count)
-{
-    __asm__ __volatile__ ("rep ; outsl": "=S"(addr), "=c"(count)
-            : "d"(port), "0"(addr), "1"(count));
-}
+	volatile unsigned int IRQClear;
+	volatile unsigned int RAWIRQ;
+	volatile unsigned int MaskedIRQ;
+	volatile unsigned int Reload;
+	volatile unsigned int PreDivider;
+	volatile unsigned int FreeRunningCounter;
+} armtimer_reg_t;
 
-static __inline void cli()
-{
-    __asm__ __volatile__("cli");
-}
-static __inline void sti()
-{
-    __asm__ __volatile__("sti");
-}
+#define INTR_REG_BASE (MMIO_BASE+0xB200)
+typedef struct {
+	volatile unsigned int IRQ_basic_pending;
+	volatile unsigned int IRQ_pending_1;
+	volatile unsigned int IRQ_pending_2;
+	volatile unsigned int FIQ_control;
+	volatile unsigned int Enable_IRQs_1;
+	volatile unsigned int Enable_IRQs_2;
+	volatile unsigned int Enable_basic_IRQs;
+	volatile unsigned int Disable_IRQs_1;
+	volatile unsigned int Disable_IRQs_2;
+	volatile unsigned int Disable_basic_IRQs;
+} intr_reg_t;
 
-static __inline void
-cpu_idle()
-{
-    __asm__ __volatile__("hlt");
-}
+#define AUX_REG_BASE (MMIO_BASE+0x215000)
+typedef struct {
+	volatile unsigned int IRQ;
+	volatile unsigned int enables;
+	volatile unsigned int UNUSED1[14];
+	volatile unsigned int mu_io;
+	volatile unsigned int mu_ier;
+	volatile unsigned int mu_iir;
+	volatile unsigned int mu_lcr;
+	volatile unsigned int mu_mcr;
+	volatile unsigned int mu_lsr;
+	volatile unsigned int mu_msr;
+	volatile unsigned int mu_scratch;
+	volatile unsigned int mu_cntl;
+	volatile unsigned int mu_stat;
+	volatile unsigned int mu_baud;
+	volatile unsigned int UNUSED2[5];
+	volatile unsigned int spi0_cntl0;
+	volatile unsigned int spi0_cntl1;
+	volatile unsigned int spi0_stat;
+	volatile unsigned int UNUSED3[1];
+	volatile unsigned int spi0_io;
+	volatile unsigned int spi0_peek;
+	volatile unsigned int UNUSED4[10];
+	volatile unsigned int spi1_cntl0;
+	volatile unsigned int spi1_cntl1;
+	volatile unsigned int spi1_stat;
+	volatile unsigned int UNUSED5[1];
+	volatile unsigned int spi1_io;
+	volatile unsigned int spi1_peek;
+} aux_reg_t;
 
-#define save_flags_cli(flags)   \
-    do {                        \
-        __asm__ __volatile__(   \
-                "pushfl\n\t"    \
-                "popl %0\n\t"   \
-                "cli\n\t"       \
-                :"=g"(flags): );\
-    } while(0)
+#define GPIO_REG_BASE (MMIO_BASE+0x200000)
+typedef struct {
+	volatile unsigned int gpfsel0;
+	volatile unsigned int gpfsel1;
+	volatile unsigned int gpfsel2;
+	volatile unsigned int gpfsel3;
+	volatile unsigned int gpfsel4;
+	volatile unsigned int gpfsel5;
+	volatile unsigned int reserved1;
+	volatile unsigned int gpset0;
+	volatile unsigned int gpset1;
+	volatile unsigned int reserved2;
+	volatile unsigned int gpclr0;
+	volatile unsigned int gpclr1;
+	volatile unsigned int reserved3;
+	volatile unsigned int gplev0;
+	volatile unsigned int gplev1;
+	volatile unsigned int reserved4;
+	volatile unsigned int gpeds0;
+	volatile unsigned int gpeds1;
+	volatile unsigned int reserved5;
+	volatile unsigned int gpren0;
+	volatile unsigned int gpren1;
+	volatile unsigned int reserved6;
+	volatile unsigned int gpfen0;
+	volatile unsigned int gpfen1;
+	volatile unsigned int reserved7;
+	volatile unsigned int gphen0;
+	volatile unsigned int gphen1;
+	volatile unsigned int reserved8;
+	volatile unsigned int gplen0;
+	volatile unsigned int gplen1;
+	volatile unsigned int reserved9;
+	volatile unsigned int gparen0;
+	volatile unsigned int gparen1;
+	volatile unsigned int reserved10;
+	volatile unsigned int gpafen0;
+	volatile unsigned int gpafen1;
+	volatile unsigned int reserved11;
+	volatile unsigned int gppud;
+	volatile unsigned int gppudclk0;
+	volatile unsigned int gppudclk1;
+} gpio_reg_t;
 
-#define restore_flags(flags)    \
-    do {                        \
-        __asm__ __volatile__(   \
-                "pushl %0\n\t"  \
-                "popfl\n\t"     \
-                ::"g"(flags)    \
-                :"memory" );    \
-    } while(0)
+#define IRQ_TIMER     0
+#define NR_IRQ        (8+64)
 
-static __inline void
-invlpg(uint32_t addr)
-{
-    __asm__ __volatile__("invlpg %0" : : "m" (*(char *)addr) : "memory");
-}
-
-#define L1_TABLE_SIZE      PAGE_SIZE
-#define L2_TABLE_SIZE      PAGE_SIZE
-#define L1_ENTRY_COUNT     (L1_TABLE_SIZE / 4)
-#define L2_ENTRY_COUNT     (L2_TABLE_SIZE / 4)
-
-#define ROUNDUP(x, y) (((x)+((y)-1))&(~((y)-1)))
-
-#define PAGE_SHIFT  12
-#define PGDR_SHIFT  22
-#define PAGE_SIZE   (1<<PAGE_SHIFT)
-#define PAGE_MASK   (PAGE_SIZE-1)
-#define PAGE_TRUNCATE(x)  ((x)&(~PAGE_MASK))
-#define PAGE_ROUNDUP(x)   ROUNDUP(x, PAGE_SIZE)
-
-#define L1E_V   0x001 /* Valid */
-#define L1E_W   0x002 /* Read/Write */
-#define L1E_U   0x004 /* User/Supervisor */
-#define L2E_C   0x000 /* Cache */
-#define L1E_A   0x020 /* Accessed */
-
-#define L2E_V   0x001 /* Valid */
-#define L2E_W   0x002 /* Read/Write */
-#define L2E_U   0x004 /* User/Supervisor */
-#define L2E_C   0x000 /* Cache */
-#define L2E_A   0x020 /* Accessed */
-#define L2E_M   0x040 /* Dirty */
-
-#endif /*_CPU_H*/
+#endif /* _CPU_H */

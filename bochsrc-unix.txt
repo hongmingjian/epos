@@ -1,7 +1,0 @@
-#display_library: sdl,options="gui_debug"
-display_library: sdl
-
-memory: guest=16, host=256
-
-ata0-master: type=disk,path="hd.img",mode=flat,cylinders=65,heads=16,spt=63
-boot: disk

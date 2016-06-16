@@ -1,5 +1,5 @@
 /**
- * vim: filetype=c:fenc=utf-8:ts=2:et:sw=2:sts=2
+ * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  *
  * Copyright (C) 2005, 2008, 2013 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
@@ -17,37 +17,11 @@
  * purpose.
  *
  */
-#define LOADADDR 0x8000
-#define KERNBASE 0xC0000000
+#ifndef _BOARD_H
+#define _BOARD_H
 
-OUTPUT_FORMAT("elf32-littlearm")
-OUTPUT_ARCH(arm)
+#include "cpu.h"
 
-ENTRY(_entry)
-SECTIONS {
-  . = KERNBASE+LOADADDR;
-  .text : {
-    *(.text)
-  }
+#define SYS_CLOCK_FREQ 250000000UL
 
-  . = ALIGN(4);
-  .rodata : {
-    *(.rodata)
-  }
-  .rdata : {
-    *(.rdata)
-  }
-  .data : {
-    *(.data)
-  }
-  . = ALIGN(4);
-  _edata = .;
-
-  .bss : {
-    *(.bss)
-    *(COMMON)
-  }
-
-  . = ALIGN(4);
-  _end = .;
-}
+#endif /*_BOARD_H*/

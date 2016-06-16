@@ -337,7 +337,7 @@ void init_floppy()
   g_intr_vector[IRQ_FDC] = isr_floppy;
   enable_irq(IRQ_FDC);
 
-  *vtopte((uint32_t)g_buf_dma)=((uint32_t)g_buf_dma)|PTE_V|PTE_RW;
+  *vtopte((uint32_t)g_buf_dma)=((uint32_t)g_buf_dma)|L2E_V|L2E_W;
   invlpg((uint32_t)g_buf_dma);
 
   reset();

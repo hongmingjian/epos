@@ -34,7 +34,6 @@
 #define KDSEL 0x10
 #define KCSEL 0x8
 
-#define __ASSEMBLY__ 1
 #include "multiboot.h"
 
 /* The flags for the Multiboot header. */

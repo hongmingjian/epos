@@ -124,40 +124,31 @@ invlpg(uint32_t addr)
     __asm__ __volatile__("invlpg %0" : : "m" (*(char *)addr) : "memory");
 }
 
-static __inline void
-invltlb(void)
-{
-    uint32_t temp;
-    __asm__ __volatile__("movl %%cr3, %0; movl %0, %%cr3" : "=r" (temp)
-            : : "memory");
-}
+#define L1_TABLE_SIZE      PAGE_SIZE
+#define L2_TABLE_SIZE      PAGE_SIZE
+#define L1_ENTRY_COUNT     (L1_TABLE_SIZE / 4)
+#define L2_ENTRY_COUNT     (L2_TABLE_SIZE / 4)
 
-static __inline void
-write_eflags(uint32_t ef)
-{
-    __asm__ __volatile__("pushl %0; popfl" : : "r" (ef));
-}
-
-static __inline uint32_t
-read_eflags(void)
-{
-    uint32_t ef;
-
-    __asm__ __volatile__("pushfl; popl %0" : "=r" (ef));
-    return (ef);
-}
+#define ROUNDUP(x, y) (((x)+((y)-1))&(~((y)-1)))
 
 #define PAGE_SHIFT  12
 #define PGDR_SHIFT  22
 #define PAGE_SIZE   (1<<PAGE_SHIFT)
 #define PAGE_MASK   (PAGE_SIZE-1)
 #define PAGE_TRUNCATE(x)  ((x)&(~PAGE_MASK))
-#define PAGE_ROUNDUP(x)   (((x)+PAGE_MASK)&(~PAGE_MASK))
+#define PAGE_ROUNDUP(x)   ROUNDUP(x, PAGE_SIZE)
 
-#define PTE_V   0x001 /* Valid */
-#define PTE_W   0x002 /* Read/Write */
-#define PTE_U   0x004 /* User/Supervisor */
-#define PTE_A   0x020 /* Accessed */
-#define PTE_M   0x040 /* Dirty */
+#define L1E_V   0x001 /* Valid */
+#define L1E_W   0x002 /* Read/Write */
+#define L1E_U   0x004 /* User/Supervisor */
+#define L2E_C   0x000 /* Cache */
+#define L1E_A   0x020 /* Accessed */
+
+#define L2E_V   0x001 /* Valid */
+#define L2E_W   0x002 /* Read/Write */
+#define L2E_U   0x004 /* User/Supervisor */
+#define L2E_C   0x000 /* Cache */
+#define L2E_A   0x020 /* Accessed */
+#define L2E_M   0x040 /* Dirty */
 
 #endif /*_CPU_H*/

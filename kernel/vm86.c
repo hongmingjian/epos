@@ -26,12 +26,12 @@
 
 void vm86_init()
 {
-    page_map(0xa0000, 0xa0000, 32, PTE_V|PTE_W|PTE_U);//128K Video RAM
-    page_map(0xc0000, 0xc0000, 16, PTE_V|      PTE_U);// 64K Video ROM BIOS
-    page_map(0xe0000, 0xe0000, 16, PTE_V|PTE_W|PTE_U);// 64K UMA (for Qemu)
-    page_map(0xf0000, 0xf0000, 16, PTE_V|      PTE_U);// 64K System ROM BIOS
+    page_map(0xa0000, 0xa0000, 32, L2E_V|L2E_W|L2E_U);//128K Video RAM
+    page_map(0xc0000, 0xc0000, 16, L2E_V|      L2E_U);// 64K Video ROM BIOS
+    page_map(0xe0000, 0xe0000, 16, L2E_V|L2E_W|L2E_U);// 64K UMA (for Qemu)
+    page_map(0xf0000, 0xf0000, 16, L2E_V|      L2E_U);// 64K System ROM BIOS
 
-    page_map(0, 0, 1, PTE_V|PTE_W|PTE_U);
+    page_map(0, 0, 1, L2E_V|L2E_W|L2E_U);
 }
 
 #define LADDR(seg,off) ((uint32_t)(((uint16_t)(seg)<<4)+(uint16_t)(off)))

@@ -244,7 +244,7 @@ int e1000_init()
 	g_e1000.irq = pci_get_intr_line(E1000_VENDOR_ID, E1000_DEVICE_ID);
 
 	g_e1000.mmio_addr = page_alloc(PAGE_ROUNDUP(bsize)/PAGE_SIZE, VM_PROT_RW, 0);
-	page_map(g_e1000.mmio_addr, baddr, PAGE_ROUNDUP(bsize)/PAGE_SIZE, PTE_V | PTE_W);
+	page_map(g_e1000.mmio_addr, baddr, PAGE_ROUNDUP(bsize)/PAGE_SIZE, L2E_V | L2E_W);
 
 	printk("E1000: On-board memory 0x%08x mapped to 0x%08x (%d pages)\r\n",
 	       vtop(g_e1000.mmio_addr), g_e1000.mmio_addr, PAGE_ROUNDUP(bsize)/PAGE_SIZE);

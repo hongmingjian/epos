@@ -4,6 +4,7 @@ ifeq ($(shell uname -s),Darwin)
 CROSS=i586-elf-
 endif
 
+SHELL=		/bin/bash
 CC=		$(CROSS)gcc
 AS=		$(CROSS)as
 LD=		$(CROSS)ld
@@ -15,4 +16,5 @@ STRINGS=	$(CROSS)strings
 READELF=	$(CROSS)readelf
 RANLIB=		$(CROSS)ranlib
 NM=		$(CROSS)nm
-GDB=	$(CROSS)gdb
+GDB=		$(CROSS)gdb
+OBJDUMP= $(CROSS)objdump

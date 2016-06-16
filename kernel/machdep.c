@@ -39,16 +39,29 @@
 /*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
 time_t g_startup_time;
 
+/**
+ * 初始化i8253定时器
+ */
+static void init_pit(uint32_t freq)
+{
+    uint16_t latch = 1193182/freq;
+    outportb(0x43, 0x36);
+    outportb(0x40, latch&0xff);
+    outportb(0x40, (latch&0xff00)>>8);
+}
+
 #define IO_ICU1  0x20  /* 8259A Interrupt Controller #1 */
 #define IO_ICU2  0xA0  /* 8259A Interrupt Controller #2 */
 #define IRQ_SLAVE 0x04
 #define ICU_SLAVEID 2
 #define ICU_IMR_OFFSET  1 /* IO_ICU{1,2} + 1 */
+#define ICU_IDT_OFFSET 32 /* 外部中断在IDT的起始号码 */
 /**
  * 初始化i8259中断控制器
  */
-static void init_i8259(uint8_t idt_offset)
+static void init_pic()
 {
+    uint8_t idt_offset = ICU_IDT_OFFSET;
     outportb(IO_ICU1, 0x11);//ICW1
     outportb(IO_ICU1+ICU_IMR_OFFSET, idt_offset); //ICW2
     outportb(IO_ICU1+ICU_IMR_OFFSET, IRQ_SLAVE); //ICW3
@@ -66,17 +79,6 @@ static void init_i8259(uint8_t idt_offset)
     //打开ICU2中断
     outportb(IO_ICU1+ICU_IMR_OFFSET,
              inportb(IO_ICU1+ICU_IMR_OFFSET) & (~(1<<2)));
-}
-
-/**
- * 初始化i8253定时器
- */
-static void init_i8253(uint32_t freq)
-{
-    uint16_t latch = 1193182/freq;
-    outportb(0x43, 0x36);
-    outportb(0x40, latch&0xff);
-    outportb(0x40, (latch&0xff00)>>8);
 }
 
 /**
@@ -312,7 +314,6 @@ extern idt_handler_t
 /**
  * `struct gate_descriptor' comes from FreeBSD
  */
-#define ICU_IDT_OFFSET 32
 #define NR_IDT 131
 static
 struct gate_descriptor {
@@ -676,7 +677,7 @@ void syscall(struct context *ctx)
 
             if(ctx->eax != -1 && fd == 0x8000) {
                 page_map(ctx->eax, offset,
-                         npages, PTE_U|((prot&PROT_WRITE)?PTE_W:0)|PTE_V);
+                         npages, L2E_U|((prot&PROT_WRITE)?L2E_W:0)|L2E_V);
             }
         }
         break;
@@ -701,7 +702,7 @@ void syscall(struct context *ctx)
                 uint32_t i, x;
                 for(i = 0; i < npages; i++) {
                     x = *vtopte(va);
-                    if(x & PTE_V) {
+                    if(x & L2E_V) {
                         *vtopte(va) = 0;
                         invlpg(va);
 
@@ -782,6 +783,72 @@ void syscall(struct context *ctx)
 }
 
 /**
+ * page fault处理函数。
+ * 特别注意：此时系统的中断处于打开状态
+ */
+int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
+{
+    uint32_t prot;
+
+#if VERBOSE
+    printk("PF:0x%08x(0x%04x)", vaddr, code);
+#endif
+
+    /*检查地址是否合法*/
+    prot = page_prot(vaddr);
+    if(prot == -1 || prot == VM_PROT_NONE) {
+#if !VERBOSE
+        printk("PF:0x%08x(0x%04x)", vaddr, code);
+#endif
+        printk("->ILLEGAL MEMORY ACCESS\r\n");
+        return -1;
+    }
+
+    if(code & L2E_V) {
+        /*页面保护引起PF*/
+#if !VERBOSE
+        printk("PF:0x%08x(0x%04x)", vaddr, code);
+#endif
+        printk("->PROTECTION VIOLATION\r\n");
+    }
+
+    {
+        uint32_t paddr;
+        uint32_t flags = L2E_V|L2E_C;
+
+        if(prot & VM_PROT_WRITE)
+            flags |= L2E_W;
+
+        /*只要访问用户的地址空间，都代表用户模式访问*/
+        if (vaddr < KERN_MIN_ADDR)
+            flags |= L2E_U;
+
+        /*搜索空闲帧*/
+        paddr = frame_alloc(1);
+        if(paddr != SIZE_MAX) {
+            /*找到空闲帧*/
+            *vtopte(vaddr) = paddr|flags;
+            memset((void *)(PAGE_TRUNCATE(vaddr)), 0, PAGE_SIZE);
+            invlpg(vaddr);
+
+#if VERBOSE
+            printk("->0x%08x\r\n", *vtopte(vaddr));
+#endif
+
+            return 0;
+        } else {
+            /*物理内存已耗尽*/
+#if !VERBOSE
+            printk("PF:0x%08x(0x%04x)", vaddr, code);
+#endif
+            printk("->OUT OF RAM\r\n");
+        }
+    }
+
+    return -1;
+}
+
+/**
  * 初始化分页子系统
  */
 static uint32_t init_paging(uint32_t physfree)
@@ -793,17 +860,17 @@ static uint32_t init_paging(uint32_t physfree)
      * 分配页目录
      */
     pgdir=(uint32_t *)physfree;
-    physfree += PAGE_SIZE;
-    memset(pgdir, 0, PAGE_SIZE);
+    physfree += L1_TABLE_SIZE;
+    memset(pgdir, 0, L1_TABLE_SIZE);
 
     /*
-     * 分配小页表，并填充页目录
+     * 分配NR_KERN_PAGETABLE张小页表，并填充到页目录
      */
     for(i = 0; i < NR_KERN_PAGETABLE; i++) {
         pgdir[i                       ]=
-        pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|PTE_V|PTE_W;
-        memset((void *)physfree, 0, PAGE_SIZE);
-        physfree+=PAGE_SIZE;
+        pgdir[i+(KERNBASE>>PGDR_SHIFT)]=physfree|L2E_V|L2E_W;
+        memset((void *)physfree, 0, L2_TABLE_SIZE);
+        physfree+=L2_TABLE_SIZE;
     }
 
     /*
@@ -811,12 +878,12 @@ static uint32_t init_paging(uint32_t physfree)
      */
     pte=(uint32_t *)(PAGE_TRUNCATE(pgdir[0]));
     for(i = 0; i < (uint32_t)(pgdir); i+=PAGE_SIZE)
-        pte[i>>PAGE_SHIFT]=(i)|PTE_V|PTE_W;
+        pte[i>>PAGE_SHIFT]=(i)|L2E_V|L2E_W;
 
     /*
      * 映射页目录及页表
      */
-    pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|PTE_V|PTE_W;
+    pgdir[(KERNBASE>>PGDR_SHIFT)-1]=(uint32_t)(pgdir)|L2E_V|L2E_W;
 
     /*
      * 打开分页
@@ -889,8 +956,8 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
              ((multiboot_info_t *)mbi)->mmap_length,
              physfree);
 
-    init_i8259(ICU_IDT_OFFSET);
-    init_i8253(HZ);
+    init_pic();
+    init_pit(HZ);
 }
 
 /**
@@ -898,7 +965,7 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
  */
 void cstart(uint32_t magic, uint32_t mbi)
 {
-    uint32_t i, _end = PAGE_ROUNDUP(R((uint32_t)(&end)));
+    uint32_t i, _end = ROUNDUP(R((uint32_t)(&end)), L1_TABLE_SIZE);
 
     /*
      * 机器相关（Machine Dependent）的初始化

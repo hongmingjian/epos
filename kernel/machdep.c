@@ -810,6 +810,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
         printk("PF:0x%08x(0x%04x)", vaddr, code);
 #endif
         printk("->PROTECTION VIOLATION\r\n");
+		return -1;
     }
 
     {

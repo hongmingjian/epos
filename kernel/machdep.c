@@ -34,7 +34,7 @@ time_t g_startup_time;
 static void init_pit(uint32_t freq)
 {
     uint32_t timer_clock = 1000000;
-    armtimer_reg_t *pit = (armtimer_reg_t *)ARMTIMER_REG_BASE;
+    armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE+ARMTIMER_REG_BASE);
     pit->Load = timer_clock/freq;
     pit->Reload = pit->Load;
     pit->PreDivider = (SYS_CLOCK_FREQ/timer_clock)-1;
@@ -49,7 +49,7 @@ static void init_pit(uint32_t freq)
  */
 static void init_pic()
 {
-    intr_reg_t *pic = (intr_reg_t *)INTR_REG_BASE;
+    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE+INTR_REG_BASE);
     pic->Disable_basic_IRQs = 0xffffffff;
     pic->Disable_IRQs_1 = 0xffffffff;
     pic->Disable_IRQs_2 = 0xffffffff;
@@ -60,7 +60,7 @@ static void init_pic()
  */
 void enable_irq(uint32_t irq)
 {
-    intr_reg_t *pic = (intr_reg_t *)INTR_REG_BASE;
+    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE+INTR_REG_BASE);
     if(irq  < 8) {
         pic->Enable_basic_IRQs = 1 << irq;
     } else if(irq < 40) {
@@ -75,7 +75,7 @@ void enable_irq(uint32_t irq)
  */
 void disable_irq(uint32_t irq)
 {
-    intr_reg_t *pic = (intr_reg_t *)INTR_REG_BASE;
+    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE+INTR_REG_BASE);
     if(irq  < 8) {
         pic->Disable_basic_IRQs = 1 << irq;
     } else if(irq < 40) {
@@ -98,8 +98,8 @@ void switch_to(struct tcb *new)
  */
 static void init_uart(uint32_t baud)
 {
-    aux_reg_t *aux = (aux_reg_t *)AUX_REG_BASE;
-    gpio_reg_t *gpio = (gpio_reg_t *)GPIO_REG_BASE;
+    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE+AUX_REG_BASE);
+    gpio_reg_t *gpio = (gpio_reg_t *)(MMIO_BASE+GPIO_REG_BASE);
 
     aux->enables = 1;
     aux->mu_ier = 0;
@@ -124,7 +124,7 @@ static void init_uart(uint32_t baud)
 
 void uart_putc ( int c )
 {
-    aux_reg_t *aux = (aux_reg_t *)AUX_REG_BASE;
+    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE+AUX_REG_BASE);
     while(1) {
         if(aux->mu_lsr&0x20)
             break;
@@ -134,7 +134,7 @@ void uart_putc ( int c )
 
 int uart_getc()
 {
-    aux_reg_t *aux = (aux_reg_t *)AUX_REG_BASE;
+    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE+AUX_REG_BASE);
     while(1) {
         if(aux->mu_lsr&0x1)
             break;
@@ -175,20 +175,22 @@ int exception(struct context *ctx)
     printk("  SVC_LR  : 0x%x\r\n", ctx->cf_svc_lr);
     printk("  PC  : 0x%x\r\n", ctx->cf_pc);
 
+	while(1);
+
 	return 0;
 }
 
 void abort_handler(struct context *ctx, uint32_t vaddr, uint32_t code)
 {
     if(do_page_fault(ctx, vaddr, code) < 0)
-		while(1);
+		exception(ctx);
 }
 
 void irq_handler(struct context *ctx)
 {
 
     int irq;
-    intr_reg_t *pic = (intr_reg_t *)INTR_REG_BASE;
+    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE+INTR_REG_BASE);
 
     for(irq = 0 ; irq < 8; irq++)
         if(pic->IRQ_basic_pending & (1<<irq))
@@ -213,7 +215,7 @@ void irq_handler(struct context *ctx)
 
     switch(irq) {
     case 0: {
-        armtimer_reg_t *pit = (armtimer_reg_t *)ARMTIMER_REG_BASE;
+        armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE+ARMTIMER_REG_BASE);
         pit->IRQClear = 1;
         break;
     }
@@ -222,11 +224,13 @@ void irq_handler(struct context *ctx)
 
 void undefined_handler(struct context *ctx)
 {
+	printk("undefined exception\r\n");
     exception(ctx);
 }
 
 void swi_handler(struct context *ctx)
 {
+	printk("swi\r\n");
     exception(ctx);
 }
 

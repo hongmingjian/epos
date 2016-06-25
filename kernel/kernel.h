@@ -25,6 +25,8 @@
 #include <time.h>
 #include "machdep.h"
 
+#define MMIO_BASE      0xC4000000
+
 /*中断向量表*/
 extern void (*g_intr_vector[])(uint32_t irq, struct context *ctx);
 

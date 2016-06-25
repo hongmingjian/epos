@@ -175,18 +175,18 @@ int exception(struct context *ctx)
     printk("  SVC_LR  : 0x%x\r\n", ctx->cf_svc_lr);
     printk("  PC  : 0x%x\r\n", ctx->cf_pc);
 
-    while(1);
-	
 	return 0;
 }
 
 void abort_handler(struct context *ctx, uint32_t vaddr, uint32_t code)
 {
-    do_page_fault(ctx, vaddr, code);
+    if(do_page_fault(ctx, vaddr, code) < 0)
+		while(1);
 }
 
 void irq_handler(struct context *ctx)
 {
+
     int irq;
     intr_reg_t *pic = (intr_reg_t *)INTR_REG_BASE;
 
@@ -265,7 +265,7 @@ void syscall(struct context *ctx)
  */
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 {
-    uint32_t prot;
+    uint32_t i, prot;
 
 #if VERBOSE
     printk("PF:0x%08x(0x%04x)", vaddr, code);
@@ -315,7 +315,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 
         if(prot & VM_PROT_WRITE)
             flags |= L2E_W;
-        
+
         /*只要访问用户的地址空间，都代表用户模式访问*/
         if(vaddr < USER_MAX_ADDR)
             flags |= L2E_U;
@@ -324,9 +324,19 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
         paddr = frame_alloc(1);
         if(paddr != SIZE_MAX) {
             /*找到空闲帧*/
+
+			/*如果是小页表引起的缺页，需要填充页目录*/
+			if(vaddr >= USER_MAX_ADDR && vaddr < KERNBASE) {
+				for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++) {
+					PTD[i+((PAGE_TRUNCATE(vaddr)-USER_MAX_ADDR))/L2_TABLE_SIZE] = (paddr+i*L2_TABLE_SIZE)|L1E_V;
+				}
+			}
+
             *vtopte(vaddr) = paddr|flags;
-            memset((void *)(PAGE_TRUNCATE(vaddr)), 0, PAGE_SIZE);
+
             invlpg(vaddr);
+
+            memset((void *)(PAGE_TRUNCATE(vaddr)), 0, PAGE_SIZE);
 
 #if VERBOSE
             printk("->0x%08x\r\n", *vtopte(vaddr));
@@ -365,9 +375,9 @@ static uint32_t init_paging(uint32_t physfree)
      * 用于映射页表自身所占的虚拟内存范围，即[0xbfc00000, 0xc0000000]
      */
     uint32_t *ptpte = (uint32_t *)physfree;
-    for(i = 0; i < 4; i++)
+    for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++)
     {
-        pgdir[0xBFC+i] = (physfree)|L1E_V;
+        pgdir[i+(USER_MAX_ADDR>>PGDR_SHIFT)] = (physfree)|L1E_V;
         memset((void *)physfree, 0, L2_TABLE_SIZE);
         physfree+=L2_TABLE_SIZE;
     }
@@ -411,20 +421,28 @@ static uint32_t init_paging(uint32_t physfree)
     /*
      * 打开分页
      */
-     __asm__ __volatile__ (
-             "mcr p15,0,%0,c2,c0,0\n\t"
-             "mvn r0, #0\n\t"
-             "mcr p15,0,r0,c3,c0,0\n\t"
-             "mrc p15,0,r0,c1,c0,0\n\t"
-             "orr r0, r0, #1\n\t"
-             "mcr p15,0,r0,c1,c0,0\n\t"
-             "mov r0,r0\n\t"
-             "mov r0,r0\n\t"
-             :
-             : "r" (pgdir)
-             : "r0"
-     );
+	/* Translation table 0 */
+	__asm__ __volatile__("mcr p15, 0, %[addr], c2, c0, 0" : : [addr] "r" (pgdir));
+	/* Translation table 1 */
+	__asm__ __volatile__("mcr p15, 0, %[addr], c2, c0, 1" : : [addr] "r" (pgdir));
+	/* Use translation table 0 for everything, for now */
+	__asm__ __volatile__("mcr p15, 0, %[n], c2, c0, 2" : : [n] "r" (0));
 
+	/* Set Domain 0 ACL to "Client", enforcing memory permissions
+	 * See ARM1176JZF-S manual, 3-64
+	 * Every mapped section/page is in domain 0
+	 */
+	__asm__ __volatile__("mcr p15, 0, %[r], c3, c0, 0" : : [r] "r" (0x1));
+
+	/* Read control register */
+	register uint32_t control;
+	__asm__ __volatile__("mrc p15, 0, %[control], c1, c0, 0" : [control] "=r" (control));
+	/* Turn on MMU */
+	control |= 1;
+	/* Enable ARMv6 MMU features (disable sub-page AP) */
+	control |= (1<<23);
+	/* Write value back to control register */
+	__asm__ __volatile__("mcr p15, 0, %[control], c1, c0, 0" : : [control] "r" (control));
 
     return physfree;
 }
@@ -468,7 +486,9 @@ void cstart(uint32_t magic, uint32_t mbi)
      */
     md_startup(mbi, _end);
 
-    /*
+	__asm__ __volatile__("add sp, sp, %0" : : "r" (KERNBASE));
+
+	/*
      * 机器无关（Machine Independent）的初始化
      */
     mi_startup();

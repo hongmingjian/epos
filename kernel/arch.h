@@ -42,7 +42,7 @@
 static __inline void
 cpu_idle()
 {
-    __asm__ __volatile__("mov 	r0, r0");
+    __asm__ __volatile__("mcr p15,0,r0,c7,c0,4" : : : "r0");
 }
 
 #define save_flags_cli(flags)					\
@@ -83,11 +83,13 @@ extern void invlpg(uint32_t page);
 #define _L2_TYPE_S       0x02      /* Small Page */
 #define _L2_B            0x04      /* Bufferable page */
 #define _L2_C            0x08      /* Cacheable page */
-#define _L2_AP0(x)       (((x) & 0x3) << 4)      /* access permissions (sp 0) */
+#define _L2_AP0          (1 << 4) /* AP[0]:  Access permission bit 0 */
+#define _L2_AP1          (1 << 5) /* AP[1]:  Access permission bit 1 */
 #define _L2_S_TEX(x)     (((x) & 0x7) << 6)
-#define _L2_APX          (1 << 9)
+#define _L2_AP2          (1 << 9) /* Bit 15: AP[2]:  Access permission bit 2 */
 #define _L2_S            (1 << 10)
 #define _L2_nG           (1 << 11)
+
 
 #define ROUNDUP(x, y) (((x)+((y)-1))&(~((y)-1)))
 
@@ -104,8 +106,8 @@ extern void invlpg(uint32_t page);
 #define L1E_C   0
 
 #define L2E_V   (_L2_S_TEX(0)|_L2_TYPE_S) /* Valid */
-#define L2E_W   _L2_AP0(1)                /* Read/Write */
-#define L2E_U   _L2_AP0(2)                /* User/Supervisor */
+#define L2E_W   _L2_AP0                   /* Read/Write */
+#define L2E_U   _L2_AP1                   /* User/Supervisor */
 #define L2E_C   (_L2_B|_L2_C)             /* Cacheable */
 
 #endif /*_ARCH_H*/

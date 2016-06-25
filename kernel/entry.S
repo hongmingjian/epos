@@ -102,9 +102,6 @@
 	add		sp, sp, #(3*4);				\
 	ldmia	sp!, {lr, pc}^
 
-
-
-
     .text
     .globl _entry
 _entry:
@@ -116,8 +113,6 @@ _entry:
     b   .
     ldr pc, vector_irq
     b   .
-
-    .align 4
 
 vector_reset:
 	.word reset
@@ -162,23 +157,23 @@ zeroify.1:
 
 	orr	r1, r0, #PSR_MODE_UND|PSR_I|PSR_F
 	msr	cpsr_cxsf, r1
-	ldr	sp, =0x4000
+	ldr	sp, =(KERNBASE+0x1000)
 
 	orr	r1, r0, #PSR_MODE_FIQ|PSR_I|PSR_F
 	msr	cpsr_cxsf, r1
-	ldr	sp, =(0x4000-0x100)
+	ldr	sp, =(KERNBASE+0x1000-12)
 
 	orr	r1, r0, #PSR_MODE_ABT|PSR_I|PSR_F
 	msr	cpsr_cxsf, r1
-	ldr	sp, =(0x4000-0x200)
+	ldr	sp, =(KERNBASE+0x1000-24)
 
 	orr	r1, r0, #PSR_MODE_IRQ|PSR_I|PSR_F
 	msr	cpsr_cxsf, r1
-	ldr	sp, =(0x4000-0x300)
+	ldr	sp, =(KERNBASE+0x1000-36)
 
 	orr	r1, r0, #PSR_MODE_SVC|PSR_I|PSR_F
 	msr	cpsr_cxsf, r1
-	ldr r0, =(0x4000-0x400)
+	ldr r0, =(0x1000-48)
 	sub sp, r0, #4
 
     /* Now enter the C main function... */
@@ -200,6 +195,7 @@ prefetch_abort:
 	PULLFRAMEANDEXIT
 
 data_abort:
+	sub		lr, lr, #4                @https://stackoverflow.com/questions/6292620/why-are-the-return-addresses-of-prefetch-abort-and-data-abort-different-in-arm-e
 	PUSHFRAMEINSVC
 	mov		r0, sp
 
@@ -247,7 +243,7 @@ _cli:							@ disable IRQs
 	orr		r0, r0, #PSR_I
 	msr		cpsr_cxsf, r0
 	ldmfd	sp!, {r0, pc}
-	
+
 	.globl _atomic_or, _atomic_and, _atomic_xor
 _atomic_or:
 	stmfd	sp!, {r2, r3, lr}
@@ -261,7 +257,7 @@ _atomic_or:
 
 	msr	cpsr_c, r2
 	ldmfd	sp!, {r2, r3, pc}
-	
+
 _atomic_and:
 	stmfd	sp!, {r2, r3, lr}
 	mrs	r2, cpsr
@@ -274,7 +270,7 @@ _atomic_and:
 
 	msr	cpsr_c, r2
 	ldmfd	sp!, {r2, r3, pc}
-	
+
 _atomic_xor:
 	stmfd	sp!, {r2, r3, lr}
 	mrs	r2, cpsr
@@ -287,12 +283,8 @@ _atomic_xor:
 
 	msr	cpsr_c, r2
 	ldmfd	sp!, {r2, r3, pc}
-	
+
 	.globl _invlpg
 _invlpg:
-	stmfd	sp!, {r3, lr}
-	mov	r3, #0
-	mcr	p15, 0, r3, c7, c10, 4		@drain WB
-	mcr	p15, 0, r0, c8, c6, 1		@invalidate D TLB entry
-	mcr p15, 0, r0, c8, c5, 1		@invalidate I TLB entry
-	ldmfd	sp!, {r3, pc}
+	mcr p15, 0, r0, c8, c7, 1
+	mov pc, lr

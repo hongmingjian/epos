@@ -40,7 +40,7 @@ void isr_default(uint32_t irq, struct context *ctx)
  */
 void mi_startup()
 {
-    uint32_t brk;
+    uint32_t i, brk;
 
     printk("Welcome to EPOS\r\n");
     printk("Copyright (C) 2005-2015 MingJian Hong<hongmingjian@gmail.com>\r\n");
@@ -48,7 +48,6 @@ void mi_startup()
 
     {
         /*安装默认的中断处理程序*/
-        uint32_t i;
         for(i = 0; i < NR_IRQ; i++)
             g_intr_vector[i]=isr_default;
 
@@ -77,11 +76,38 @@ void mi_startup()
 	 * 把memory-mapped I/O所映射的虚拟内存保留下来
 	 */
 	page_alloc_in_addr(MMIO_BASE, 4096, VM_PROT_RW);
-	
-	printk("Done");
-	
+
+	/*
+	 * 把异常向量remap到0xffff0000
+	 */
+	page_alloc_in_addr(0xffff0000, 1, VM_PROT_RW);
+	page_map(0xffff0000, 0x0, 1, L2E_V|L2E_W|L2E_C);
+    __asm__ __volatile__ (
+             "mrc p15,0,r0,c1,c0,0\n\t"
+             "orr r0, r0, #(1<<13) @ SCTLR.V=1\n\t"
+             "mcr p15,0,r0,c1,c0,0\n\t"
+             :
+             :
+             : "r0"
+    );
+
+	/*
+	 * 取消恒等映射
+	 */
+	for(i = 0; i < NR_KERN_PAGETABLE; i++)
+    {
+		PTD[i] = 0;
+	}
+
+	/* Invalidate the translation lookaside buffer (TLB)
+	 * ARM1176JZF-S manual, p. 3-86
+	 */
+	__asm__ __volatile__("mcr p15, 0, %[data], c8, c7, 0" : : [data] "r" (0));
+
+	printk("We are in a virutalised world!");
+
 	sti();
-	
+
     while(1)
         cpu_idle();
 }

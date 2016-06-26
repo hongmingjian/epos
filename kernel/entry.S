@@ -159,21 +159,17 @@ zeroify.1:
 	msr	cpsr_cxsf, r1
 	ldr	sp, =(KERNBASE+0x1000)
 
-	orr	r1, r0, #PSR_MODE_FIQ|PSR_I|PSR_F
+	orr	r1, r0, #PSR_MODE_ABT|PSR_I|PSR_F
 	msr	cpsr_cxsf, r1
 	ldr	sp, =(KERNBASE+0x1000-12)
 
-	orr	r1, r0, #PSR_MODE_ABT|PSR_I|PSR_F
+	orr	r1, r0, #PSR_MODE_IRQ|PSR_I|PSR_F
 	msr	cpsr_cxsf, r1
 	ldr	sp, =(KERNBASE+0x1000-24)
 
-	orr	r1, r0, #PSR_MODE_IRQ|PSR_I|PSR_F
-	msr	cpsr_cxsf, r1
-	ldr	sp, =(KERNBASE+0x1000-36)
-
 	orr	r1, r0, #PSR_MODE_SVC|PSR_I|PSR_F
 	msr	cpsr_cxsf, r1
-	ldr r0, =(0x1000-48)
+	ldr r0, =(0x1000-36)
 	sub sp, r0, #4
 
     /* Now enter the C main function... */

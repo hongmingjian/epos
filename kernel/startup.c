@@ -72,41 +72,66 @@ void mi_startup()
      */
     init_kmalloc((uint8_t *)brk, 1024*PAGE_SIZE);
 
-	/*
-	 * 把memory-mapped I/O所映射的虚拟内存保留下来
-	 */
-	page_alloc_in_addr(MMIO_BASE, 4096, VM_PROT_RW);
+    /*
+     * 把[MMIO_BASE, MMIO_BASE+16M)保留下来
+     */
+    page_alloc_in_addr(MMIO_BASE, 4096, VM_PROT_RW);
 
-	/*
-	 * 把异常向量remap到0xffff0000
-	 */
-	page_alloc_in_addr(0xffff0000, 1, VM_PROT_RW);
-	page_map(0xffff0000, 0x0, 1, L2E_V|L2E_W|L2E_C);
+    /*
+     * 把[0xffff0000, 0xffff1000)保留下来，并映射到0x0
+     */
+    page_alloc_in_addr(0xffff0000, 1, VM_PROT_RW);
+    page_map(0xffff0000, 0x0, 1, L2E_V|L2E_W|L2E_C);
     __asm__ __volatile__ (
              "mrc p15,0,r0,c1,c0,0\n\t"
-             "orr r0, r0, #(1<<13) @ SCTLR.V=1\n\t"
+             "orr r0, r0, #(1<<13) @SCTLR.V=1\n\t"
              "mcr p15,0,r0,c1,c0,0\n\t"
              :
              :
              : "r0"
     );
 
-	/*
-	 * 取消恒等映射
-	 */
-	for(i = 0; i < NR_KERN_PAGETABLE; i++)
-    {
-		PTD[i] = 0;
-	}
+    /*
+     * 内核已经被重定位到链接地址，取消恒等映射
+     */
+    for(i = 0; i < NR_KERN_PAGETABLE; i++)
+        PTD[i] = 0;
 
-	/* Invalidate the translation lookaside buffer (TLB)
-	 * ARM1176JZF-S manual, p. 3-86
-	 */
-	__asm__ __volatile__("mcr p15, 0, %[data], c8, c7, 0" : : [data] "r" (0));
+    /*
+     * 取消[KERNBASE+0x1000, KERNBASE+0x4000)的地址映射
+     */
+    for(i = 0x1000; i < 0x4000; i+=PAGE_SIZE)
+        *vtopte(i+KERNBASE)=0;
 
-	printk("We are in a virutalised world!");
+    /* Invalidate the translation lookaside buffer (TLB)
+     * ARM1176JZF-S manual, p. 3-86
+     */
+    __asm__ __volatile__("mcr p15, 0, %[data], c8, c7, 0" : : [data] "r" (0));
 
-	sti();
+    /* Virtual memory layout
+     *
+     * 0xffff 0000 - 0xffff 1000 = Hivecs
+     * 0xc400 0000 - 0xc500 0000 = Memory-mapped I/O
+     * 0xc000 8000 - 0xc0?? ???? = kernel.img
+     * 0xc000 4000 - 0xc000 8000 = Page directory (PTD)
+     * 0xc000 1000 - 0xc000 4000 = Unused
+     * 0xc000 0000 - 0xc000 1000 = Stacks for modes UND/ABT/IRQ/SVC
+     * 0xbfc0 0000 - 0xc000 0000 = Page tables (PT)
+     * 0x0040 0000 - 0xbfc0 0000 = User accessible memory
+     * 0x0000 0000 - 0x0040 0000 = Unused
+     */
+    /* Physical memory layout
+     *
+     * 0x2000 0000 - 0x2100 0000 = Memory-mapped I/O
+     * 0x00yy y000 - 0x2000 0000 = Free (managed)
+     * 0x00xx 8000 - 0x00yy y000 = (NR_KERN_PAGETABLE+4) page tables
+     * 0x00xx 4000 - 0x00xx 8000 = Page directory
+     * 0x0000 8000 - 0x00xx 4000 = kernel.img
+     * 0x0000 1000 - 0x0000 8000 = Free (un-managed)
+     * 0x0000 0000 - 0x0000 1000 = Hivecs and stacks for modes UND/ABT/IRQ/SVC
+     */
+
+    sti();
 
     while(1)
         cpu_idle();

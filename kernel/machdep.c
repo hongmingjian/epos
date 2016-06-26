@@ -155,35 +155,37 @@ int sys_putchar(int c)
 
 int exception(struct context *ctx)
 {
-    printk("  CPSR: 0x%x\r\n", ctx->cf_spsr);
-    printk("  R0  : 0x%x\r\n", ctx->cf_r0);
-    printk("  R1  : 0x%x\r\n", ctx->cf_r1);
-    printk("  R2  : 0x%x\r\n", ctx->cf_r2);
-    printk("  R3  : 0x%x\r\n", ctx->cf_r3);
-    printk("  R4  : 0x%x\r\n", ctx->cf_r4);
-    printk("  R5  : 0x%x\r\n", ctx->cf_r5);
-    printk("  R6  : 0x%x\r\n", ctx->cf_r6);
-    printk("  R7  : 0x%x\r\n", ctx->cf_r7);
-    printk("  R8  : 0x%x\r\n", ctx->cf_r8);
-    printk("  R9  : 0x%x\r\n", ctx->cf_r9);
-    printk("  R10 : 0x%x\r\n", ctx->cf_r10);
-    printk("  R11 : 0x%x\r\n", ctx->cf_r11);
-    printk("  R12 : 0x%x\r\n", ctx->cf_r12);
-    printk("  USR_SP  : 0x%x\r\n", ctx->cf_usr_sp);
-    printk("  USR_LR  : 0x%x\r\n", ctx->cf_usr_lr);
-    printk("  SVC_SP  : 0x%x\r\n", ctx->cf_svc_sp);
-    printk("  SVC_LR  : 0x%x\r\n", ctx->cf_svc_lr);
-    printk("  PC  : 0x%x\r\n", ctx->cf_pc);
+    printk("CPSR  : 0x%x\r\n", ctx->cf_spsr);
+    printk("R0    : 0x%x\r\n", ctx->cf_r0);
+    printk("R1    : 0x%x\r\n", ctx->cf_r1);
+    printk("R2    : 0x%x\r\n", ctx->cf_r2);
+    printk("R3    : 0x%x\r\n", ctx->cf_r3);
+    printk("R4    : 0x%x\r\n", ctx->cf_r4);
+    printk("R5    : 0x%x\r\n", ctx->cf_r5);
+    printk("R6    : 0x%x\r\n", ctx->cf_r6);
+    printk("R7    : 0x%x\r\n", ctx->cf_r7);
+    printk("R8    : 0x%x\r\n", ctx->cf_r8);
+    printk("R9    : 0x%x\r\n", ctx->cf_r9);
+    printk("R10   : 0x%x\r\n", ctx->cf_r10);
+    printk("R11   : 0x%x\r\n", ctx->cf_r11);
+    printk("R12   : 0x%x\r\n", ctx->cf_r12);
+    printk("USR_SP: 0x%x\r\n", ctx->cf_usr_sp);
+    printk("USR_LR: 0x%x\r\n", ctx->cf_usr_lr);
+    printk("SVC_SP: 0x%x\r\n", ctx->cf_svc_sp);
+    printk("SVC_LR: 0x%x\r\n", ctx->cf_svc_lr);
+    printk("PC    : 0x%x\r\n", ctx->cf_pc);
 
-	while(1);
+    while(1);
 
-	return 0;
+    return 0;
 }
 
-void abort_handler(struct context *ctx, uint32_t vaddr, uint32_t code)
+void abort_handler(struct context *ctx, uint32_t far, uint32_t fsr)
 {
-    if(do_page_fault(ctx, vaddr, code) < 0)
-		exception(ctx);
+    if(do_page_fault(ctx, far, fsr) == 0)
+        return;
+
+    exception(ctx);
 }
 
 void irq_handler(struct context *ctx)
@@ -224,13 +226,13 @@ void irq_handler(struct context *ctx)
 
 void undefined_handler(struct context *ctx)
 {
-	printk("undefined exception\r\n");
+    printk("undefined exception\r\n");
     exception(ctx);
 }
 
 void swi_handler(struct context *ctx)
 {
-	printk("swi\r\n");
+    printk("swi\r\n");
     exception(ctx);
 }
 
@@ -263,6 +265,7 @@ void syscall(struct context *ctx)
         break;
     }
 }
+
 /**
  * page fault处理函数。
  * 特别注意：此时系统的中断处于打开状态
@@ -275,32 +278,33 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     printk("PF:0x%08x(0x%04x)", vaddr, code);
 #endif
 
-    if(code & (1<<10)) {
+    if((code & (1<<10))/*FS[4]==1*/) {
 #if !VERBOSE
         printk("PF:0x%08x(0x%04x)", vaddr, code);
 #endif
-        printk("->UNKNOWN CODE\r\n");
+        printk("->UNKNOWN ABORT\r\n");
         return -1;
-    } else {
-        switch(code & 0xf) {
-        case 0x3: //domain fault (page)
-        case 0xf: //permission fault (page)
+    }
+
+    if((code & 0xf)/*FS[0:3]*/ != 0x7/*translation fault (page)*/) {
 #if !VERBOSE
-            printk("PF:0x%08x(0x%04x)", vaddr, code);
+        printk("PF:0x%08x(0x%04x)", vaddr, code);
 #endif
-            printk("->PROTECTION VIOLATION\r\n");
-            return -1;
+        switch(code & 0xf) {
+        case 0x1: //alignment fault
+            printk("->ALIGNMENT FAULT\r\n");
             break;
-        case 0x7: //translation fault (page)
+        case 0x6: //access flag fault (page)
+        case 0xb: //domain fault (page)
+        case 0xf: //permission fault (page)
+            printk("->PROTECTION VIOLATION\r\n");
             break;
         default:
-#if !VERBOSE
-            printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-            printk("->UNKNOWN CODE\r\n");
-            return -1;
+            printk("->UNKNOWN ABORT\r\n");
             break;
         }
+
+        return -1;
     }
 
     /*检查地址是否合法*/
@@ -329,12 +333,12 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
         if(paddr != SIZE_MAX) {
             /*找到空闲帧*/
 
-			/*如果是小页表引起的缺页，需要填充页目录*/
-			if(vaddr >= USER_MAX_ADDR && vaddr < KERNBASE) {
-				for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++) {
-					PTD[i+((PAGE_TRUNCATE(vaddr)-USER_MAX_ADDR))/L2_TABLE_SIZE] = (paddr+i*L2_TABLE_SIZE)|L1E_V;
-				}
-			}
+            /*如果是小页表引起的缺页，需要填充页目录*/
+            if(vaddr >= USER_MAX_ADDR && vaddr < KERNBASE) {
+                for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++) {
+                    PTD[i+((PAGE_TRUNCATE(vaddr)-USER_MAX_ADDR))/L2_TABLE_SIZE] = (paddr+i*L2_TABLE_SIZE)|L1E_V;
+                }
+            }
 
             *vtopte(vaddr) = paddr|flags;
 
@@ -381,7 +385,7 @@ static uint32_t init_paging(uint32_t physfree)
     uint32_t *ptpte = (uint32_t *)physfree;
     for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++)
     {
-        pgdir[i+(USER_MAX_ADDR>>PGDR_SHIFT)] = (physfree)|L1E_V;
+        pgdir[i+(((uint32_t)PT)>>PGDR_SHIFT)] = (physfree)|L1E_V;
         memset((void *)physfree, 0, L2_TABLE_SIZE);
         physfree+=L2_TABLE_SIZE;
     }
@@ -425,28 +429,28 @@ static uint32_t init_paging(uint32_t physfree)
     /*
      * 打开分页
      */
-	/* Translation table 0 */
-	__asm__ __volatile__("mcr p15, 0, %[addr], c2, c0, 0" : : [addr] "r" (pgdir));
-	/* Translation table 1 */
-	__asm__ __volatile__("mcr p15, 0, %[addr], c2, c0, 1" : : [addr] "r" (pgdir));
-	/* Use translation table 0 for everything, for now */
-	__asm__ __volatile__("mcr p15, 0, %[n], c2, c0, 2" : : [n] "r" (0));
+    /* Translation table 0 */
+    __asm__ __volatile__("mcr p15, 0, %[addr], c2, c0, 0" : : [addr] "r" (pgdir));
+    /* Translation table 1 */
+    __asm__ __volatile__("mcr p15, 0, %[addr], c2, c0, 1" : : [addr] "r" (pgdir));
+    /* Use translation table 0 for everything, for now */
+    __asm__ __volatile__("mcr p15, 0, %[n], c2, c0, 2" : : [n] "r" (0));
 
-	/* Set Domain 0 ACL to "Client", enforcing memory permissions
-	 * See ARM1176JZF-S manual, 3-64
-	 * Every mapped section/page is in domain 0
-	 */
-	__asm__ __volatile__("mcr p15, 0, %[r], c3, c0, 0" : : [r] "r" (0x1));
+    /* Set Domain 0 ACL to "Client", enforcing memory permissions
+     * See ARM1176JZF-S manual, 3-64
+     * Every mapped section/page is in domain 0
+     */
+    __asm__ __volatile__("mcr p15, 0, %[r], c3, c0, 0" : : [r] "r" (0x1));
 
-	/* Read control register */
-	register uint32_t control;
-	__asm__ __volatile__("mrc p15, 0, %[control], c1, c0, 0" : [control] "=r" (control));
-	/* Turn on MMU */
-	control |= 1;
-	/* Enable ARMv6 MMU features (disable sub-page AP) */
-	control |= (1<<23);
-	/* Write value back to control register */
-	__asm__ __volatile__("mcr p15, 0, %[control], c1, c0, 0" : : [control] "r" (control));
+    /* Read control register */
+    register uint32_t control;
+    __asm__ __volatile__("mrc p15, 0, %[control], c1, c0, 0" : [control] "=r" (control));
+    /* Turn on MMU */
+    control |= 1;
+    /* Enable ARMv6 MMU features (disable sub-page AP) */
+    control |= (1<<23);
+    /* Write value back to control register */
+    __asm__ __volatile__("mcr p15, 0, %[control], c1, c0, 0" : : [control] "r" (control));
 
     return physfree;
 }
@@ -457,7 +461,7 @@ static uint32_t init_paging(uint32_t physfree)
 static void init_ram(uint32_t physfree)
 {
     g_ram_zone[0] = physfree;
-    g_ram_zone[1] = 0x1FFFFFFF;
+    g_ram_zone[1] = 0x20000000;
     g_ram_zone[2] = 0;
     g_ram_zone[3] = 0;
 }
@@ -470,7 +474,10 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
     physfree=init_paging(physfree);
     init_ram(physfree);
 
-    /*Physical addresses range from 0x20000000 to 0x20FFFFFF for peripherals*/
+    /*
+     * 映射虚拟地址[MMIO_BASE, MMIO_BASE+16M)和[MMIO_BASE-KERNBASE, MMIO_BASE-KERNBASE+16M)
+     * 到物理地址[0x20000000, 0x20000000+16M)
+     */
     page_map(MMIO_BASE, 0x20000000, 4096, L2E_V|L2E_W);
 
     init_pic();
@@ -490,9 +497,12 @@ void cstart(uint32_t magic, uint32_t mbi)
      */
     md_startup(mbi, _end);
 
-	__asm__ __volatile__("add sp, sp, %0" : : "r" (KERNBASE));
+    /*
+     * 分页已经打开，切换到虚拟地址运行
+     */
+    __asm__ __volatile__("add sp, sp, %0" : : "r" (KERNBASE));
 
-	/*
+    /*
      * 机器无关（Machine Independent）的初始化
      */
     mi_startup();

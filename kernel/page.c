@@ -263,7 +263,7 @@ void page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags)
 {
     for (; npages > 0; npages--){
         *vtopte(vaddr) = paddr | flags;
-		invlpg(vaddr);
+        invlpg(vaddr);
         vaddr += PAGE_SIZE;
         paddr += PAGE_SIZE;
     }

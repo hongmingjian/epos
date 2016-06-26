@@ -124,10 +124,10 @@ void mi_startup()
      *
      * 0x2000 0000 - 0x2100 0000 = Memory-mapped I/O
      * 0x00yy y000 - 0x2000 0000 = Free (managed)
-     * 0x00xx 8000 - 0x00yy y000 = (NR_KERN_PAGETABLE+4) page tables
-     * 0x00xx 4000 - 0x00xx 8000 = Page directory
-     * 0x0000 8000 - 0x00xx 4000 = kernel.img
-     * 0x0000 1000 - 0x0000 8000 = Free (un-managed)
+     * 0x00xx x000 - 0x00yy y000 = (NR_KERN_PAGETABLE+4) page tables
+     * 0x0000 8000 - 0x00xx x000 = kernel.img
+     * 0x0000 4000 - 0x0000 8000 = Page directory
+     * 0x0000 1000 - 0x0000 4000 = Free (un-managed)
      * 0x0000 0000 - 0x0000 1000 = Hivecs and stacks for modes UND/ABT/IRQ/SVC
      */
 

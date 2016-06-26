@@ -372,10 +372,9 @@ static uint32_t init_paging(uint32_t physfree)
     uint32_t *pgdir, *pte;
 
     /*
-     * 分配页目录
+     * 页目录放在物理地址[0x4000, 0x8000]
      */
-    pgdir=(uint32_t *)physfree;
-    physfree += L1_TABLE_SIZE;
+    pgdir=(uint32_t *)0x4000;
     memset(pgdir, 0, L1_TABLE_SIZE);
 
     /*
@@ -408,22 +407,9 @@ static uint32_t init_paging(uint32_t physfree)
 
     /*
      * 设置恒等映射，填充小页表
-     * 映射虚拟地址[0, 0x4000]和[KERNBASE, KERNBASE+0x4000]到物理地址为[0, 0x4000]
+     * 映射虚拟地址[0, R(_end)]和[KERNBASE, _end]到物理地址为[0, R(_end)]
      */
-    for(i = 0; i < 0x4000; i+=PAGE_SIZE)
-      pte[i>>PAGE_SHIFT] = i|L2E_V|L2E_W|L2E_C;
-
-    /*
-     * 把页目录映射到[0x4000, 0x8000]和[KERNBASE+0x4000, KERNBASE+0x8000]
-     */
-    for(i = 0x4000; i < 0x8000; i+=PAGE_SIZE)
-      pte[i>>PAGE_SHIFT] = (((uint32_t)pgdir)+i-0x4000)|L2E_V|L2E_W|L2E_C;
-
-    /*
-     * 设置恒等映射，填充小页表
-     * 映射虚拟地址[0x8000, R(_end)]和[KERNBASE+0x8000, _end]到物理地址为[0x8000, R(_end)]
-     */
-    for(i = 0x8000; i < (uint32_t)pgdir; i+=PAGE_SIZE)
+    for(i = 0; i < (uint32_t)ptpte; i+=PAGE_SIZE)
       pte[i>>PAGE_SHIFT] = i|L2E_V|L2E_W|L2E_C;
 
     /*
@@ -490,7 +476,7 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
  */
 void cstart(uint32_t magic, uint32_t mbi)
 {
-    uint32_t _end = ROUNDUP(R((uint32_t)(&end)), L1_TABLE_SIZE);
+    uint32_t _end = PAGE_ROUNDUP(R((uint32_t)(&end)));
 
     /*
      * 机器相关（Machine Dependent）的初始化

@@ -155,7 +155,7 @@ int sys_putchar(int c)
 
 int exception(struct context *ctx)
 {
-    printk("CPSR  : 0x%x\r\n", ctx->cf_spsr);
+    printk("SPSR  : 0x%x\r\n", ctx->cf_spsr);
     printk("R0    : 0x%x\r\n", ctx->cf_r0);
     printk("R1    : 0x%x\r\n", ctx->cf_r1);
     printk("R2    : 0x%x\r\n", ctx->cf_r2);
@@ -415,28 +415,18 @@ static uint32_t init_paging(uint32_t physfree)
     /*
      * 打开分页
      */
-    /* Translation table 0 */
-    __asm__ __volatile__("mcr p15, 0, %[addr], c2, c0, 0" : : [addr] "r" (pgdir));
-    /* Translation table 1 */
-    __asm__ __volatile__("mcr p15, 0, %[addr], c2, c0, 1" : : [addr] "r" (pgdir));
-    /* Use translation table 0 for everything, for now */
-    __asm__ __volatile__("mcr p15, 0, %[n], c2, c0, 2" : : [n] "r" (0));
-
-    /* Set Domain 0 ACL to "Client", enforcing memory permissions
-     * See ARM1176JZF-S manual, 3-64
-     * Every mapped section/page is in domain 0
-     */
-    __asm__ __volatile__("mcr p15, 0, %[r], c3, c0, 0" : : [r] "r" (0x1));
-
-    /* Read control register */
-    register uint32_t control;
-    __asm__ __volatile__("mrc p15, 0, %[control], c1, c0, 0" : [control] "=r" (control));
-    /* Turn on MMU */
-    control |= 1;
-    /* Enable ARMv6 MMU features (disable sub-page AP) */
-    control |= (1<<23);
-    /* Write value back to control register */
-    __asm__ __volatile__("mcr p15, 0, %[control], c1, c0, 0" : : [control] "r" (control));
+    __asm__ __volatile__ (
+            "mcr p15,0,%0,c2,c0,0 @TTBR0\n\t"
+            "mcr p15,0,%0,c2,c0,1 @TTBR1\n\t"
+            "mcr p15,0,%1,c2,c0,2 @TTBCR\n\t"
+            "mcr p15,0,%2,c3,c0,0 @Client\n\t"
+            "mrc p15,0,r0,c1,c0,0\n\t"
+            "orr r0, r0, %3\n\t"
+            "mcr p15,0,r0,c1,c0,0\n\t"
+            :
+            : "r" (pgdir), "r"(0), "r"(0x55555555), "r"(1|(1<<23))
+            : "r0"
+    );
 
     return physfree;
 }

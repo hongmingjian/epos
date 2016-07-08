@@ -93,7 +93,14 @@ struct context {
     *((uint32_t *)(sp)) = (uint32_t)(value); \
 } while(0)
 
-#define INIT_TASK_CONTEXT(ustack, kstack, entry) do { \
+#define INIT_TASK_CONTEXT(ustack, kstack, entry, pv) do { \
+    if((ustack) != 0) { \
+        STACK_PUSH(ustack, pv); \
+        STACK_PUSH(ustack, 0); \
+    } else { \
+        STACK_PUSH(kstack, pv); \
+        STACK_PUSH(kstack, 0); \
+    } \
     uint32_t n = sizeof(struct segment_descriptor); \
     if(ustack) { \
         STACK_PUSH(kstack, (GSEL_UDATA*n)|SEL_UPL); \

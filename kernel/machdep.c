@@ -90,7 +90,38 @@ void disable_irq(uint32_t irq)
  */
 void switch_to(struct tcb *new)
 {
+    __asm__ __volatile__ (
+            "stmdb sp!, {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r14}\n\t"
+            "ldr r0, =1f\n\t"
+            "stmdb sp!, {r0}\n\t"
+            "ldr r0, %0\n\t"
+            "str sp, [r0]\n\t"
+            "add sp, sp, #60\n\t"
+            :
+            :"m"(g_task_running)
+            :"r0"
+            );
 
+    if(0) printk("0x%08x, kstack=0x%08x\r\n", g_task_running, g_task_running->kstack);
+    g_task_running = new;
+    if(0) printk("0x%08x, kstack=0x%08x\r\n", g_task_running, g_task_running->kstack);
+    if(0){
+        int i;
+        uint32_t *xp=(uint32_t *)g_task_running->kstack;
+        for(i = 0; i < 20; i++)
+            printk("kstack[%d]=0x%08x\r\n", i, *xp++);
+    }
+
+    __asm__ __volatile__ (
+            "ldr r0, %0\n\t"
+            "ldr sp, [r0]\n\t"
+            "ldmia sp!, {pc}\n\t"
+            "1:\n\t"
+            "ldmia sp!, {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r14}\n\t"
+            :
+            :"m"(g_task_running)
+            :"r0"
+            );
 }
 
 /**
@@ -155,25 +186,25 @@ int sys_putchar(int c)
 
 int exception(struct context *ctx)
 {
-    printk("SPSR  : 0x%x\r\n", ctx->cf_spsr);
-    printk("R0    : 0x%x\r\n", ctx->cf_r0);
-    printk("R1    : 0x%x\r\n", ctx->cf_r1);
-    printk("R2    : 0x%x\r\n", ctx->cf_r2);
-    printk("R3    : 0x%x\r\n", ctx->cf_r3);
-    printk("R4    : 0x%x\r\n", ctx->cf_r4);
-    printk("R5    : 0x%x\r\n", ctx->cf_r5);
-    printk("R6    : 0x%x\r\n", ctx->cf_r6);
-    printk("R7    : 0x%x\r\n", ctx->cf_r7);
-    printk("R8    : 0x%x\r\n", ctx->cf_r8);
-    printk("R9    : 0x%x\r\n", ctx->cf_r9);
-    printk("R10   : 0x%x\r\n", ctx->cf_r10);
-    printk("R11   : 0x%x\r\n", ctx->cf_r11);
-    printk("R12   : 0x%x\r\n", ctx->cf_r12);
-    printk("USR_SP: 0x%x\r\n", ctx->cf_usr_sp);
-    printk("USR_LR: 0x%x\r\n", ctx->cf_usr_lr);
-    printk("SVC_SP: 0x%x\r\n", ctx->cf_svc_sp);
-    printk("SVC_LR: 0x%x\r\n", ctx->cf_svc_lr);
-    printk("PC    : 0x%x\r\n", ctx->cf_pc);
+    printk("SPSR  : 0x%08x\r\n", ctx->cf_spsr);
+    printk("R0    : 0x%08x\r\n", ctx->cf_r0);
+    printk("R1    : 0x%08x\r\n", ctx->cf_r1);
+    printk("R2    : 0x%08x\r\n", ctx->cf_r2);
+    printk("R3    : 0x%08x\r\n", ctx->cf_r3);
+    printk("R4    : 0x%08x\r\n", ctx->cf_r4);
+    printk("R5    : 0x%08x\r\n", ctx->cf_r5);
+    printk("R6    : 0x%08x\r\n", ctx->cf_r6);
+    printk("R7    : 0x%08x\r\n", ctx->cf_r7);
+    printk("R8    : 0x%08x\r\n", ctx->cf_r8);
+    printk("R9    : 0x%08x\r\n", ctx->cf_r9);
+    printk("R10   : 0x%08x\r\n", ctx->cf_r10);
+    printk("R11   : 0x%08x\r\n", ctx->cf_r11);
+    printk("R12   : 0x%08x\r\n", ctx->cf_r12);
+    printk("USR_SP: 0x%08x\r\n", ctx->cf_usr_sp);
+    printk("USR_LR: 0x%08x\r\n", ctx->cf_usr_lr);
+    printk("SVC_SP: 0x%08x\r\n", ctx->cf_svc_sp);
+    printk("SVC_LR: 0x%08x\r\n", ctx->cf_svc_lr);
+    printk("PC    : 0x%08x\r\n", ctx->cf_pc);
 
     while(1);
 
@@ -232,8 +263,7 @@ void undefined_handler(struct context *ctx)
 
 void swi_handler(struct context *ctx)
 {
-    printk("swi\r\n");
-    exception(ctx);
+    syscall(ctx);
 }
 
 /**
@@ -241,8 +271,11 @@ void swi_handler(struct context *ctx)
  */
 void syscall(struct context *ctx)
 {
-    //printk("task #%d syscalling #%d.\r\n", sys_task_getid(), ctx->cf_r0);
-    switch(ctx->cf_r0) {
+    //printk("task #%d syscalling #%d.\r\n", sys_task_getid(), ctx->cf_r7);
+    switch(ctx->cf_r7) {
+    case SYSCALL_putchar:
+        ctx->cf_r0 = sys_putchar(ctx->cf_r0 & 0xff);
+        break;
     case SYSCALL_task_exit:
     case SYSCALL_task_create:
     case SYSCALL_task_getid:
@@ -255,13 +288,12 @@ void syscall(struct context *ctx)
     case SYSCALL_nanosleep:
     case SYSCALL_beep:
     case SYSCALL_vm86:
-    case SYSCALL_putchar:
     case SYSCALL_getchar:
     case SYSCALL_recv:
     case SYSCALL_send:
     case SYSCALL_ioctl:
     default:
-        printk("syscall #%d not implemented.\r\n", ctx->cf_r0);
+        printk("syscall #%d not implemented.\r\n", ctx->cf_r7);
         break;
     }
 }
@@ -306,6 +338,12 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 
         return -1;
     }
+
+    if(vaddr == 0x08047fc0)
+        return -1;
+
+    if(vaddr == 0x08070398)
+        return -1;
 
     /*检查地址是否合法*/
     prot = page_prot(vaddr);

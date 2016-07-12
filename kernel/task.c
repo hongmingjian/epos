@@ -190,15 +190,7 @@ struct tcb *sys_task_create(void *tos,
     new->next = NULL;
     new->signature = TASK_SIGNATURE;
 
-    if(ustack != 0) {
-        STACK_PUSH(ustack, pv);
-        STACK_PUSH(ustack, 0);
-    } else {
-        STACK_PUSH(new->kstack, pv);
-        STACK_PUSH(new->kstack, 0);
-    }
-
-    INIT_TASK_CONTEXT(ustack, new->kstack, func);
+    INIT_TASK_CONTEXT(ustack, new->kstack, func, pv);
 
     save_flags_cli(flags);
     add_task(new);

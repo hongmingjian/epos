@@ -18,10 +18,9 @@
 #
 # $Id: entry.S,v 1.1.1.1 2007/06/22 03:20:53 hmj Exp $
 #
-    .extern _edata
-    .extern _end
-	.extern _cstart
+    .extern _edata, _end
     .extern _abort_handler, _swi_handler, _undefined_handler, _irq_handler
+	.extern _cstart, _schedule, _g_resched, _g_task_running
 
 #define KERNBASE 0xC0000000
 
@@ -77,7 +76,7 @@
 	str		lr, [r13, #IRQ_SPSR];		\
 	str		r0, [r13, #IRQ_R0];			\
 	mov		r0, r13;					\
-	add		r13, r13, #12;				\
+	add		r13, r13, #IRQ_SIZE;		\
 	mrs		r14, cpsr;					\
 	bic		r14, r14, #PSR_MODE_MASK;	\
 	orr		r14, r14, #PSR_MODE_SVC;	\
@@ -101,6 +100,58 @@
 	ldmia	sp, {r13, r14}^;			\
 	add		sp, sp, #(3*4);				\
 	ldmia	sp!, {lr, pc}^
+
+#define PROLOGUE \
+	ldr r0, =_g_task_running; \
+    ldr r0, [r0]; \
+	cmp r0, #0;  \
+	beq 1f; \
+    ; \
+	ldr r1, [sp, #CF_SPSR]; \
+	and	r1, r1, #PSR_MODE_MASK; \
+	cmp r1, #PSR_MODE_USR; \
+	bne 1f; \
+	; \
+	ldr r0, [r0]; \
+	sub r0, r0, #FRAME_SIZE; \
+	mov r2, r0; \
+	mov r1, sp; \
+    ; \
+	ldmia r1!, {r3, r4, r5, r6, r7, r8, r9}; \
+	stmia r0!, {r3, r4, r5, r6, r7, r8, r9}; \
+	ldmia r1!, {r3, r4, r5, r6, r7, r8, r9}; \
+	stmia r0!, {r3, r4, r5, r6, r7, r8, r9}; \
+	ldmia r1!, {r3, r4, r5, r6, r7}; \
+	stmia r0!, {r3, r4, r5, r6, r7}; \
+    ; \
+	mov sp, r2; \
+1:
+
+#define EPILOGUE						\
+	ldr r0, =_g_task_running; \
+    ldr r0, [r0]; \
+	cmp r0, #0;  \
+	beq 1f; \
+    ; \
+	ldr r1, [sp, #CF_SPSR]; \
+	and	r1, r1, #PSR_MODE_MASK; \
+	cmp r1, #PSR_MODE_USR; \
+	bne 1f; \
+	; \
+	ldr r0, =(KERNBASE+0x1000-36); \
+	sub r0, r0, #FRAME_SIZE; \
+	mov r2, r0; \
+	mov r1, sp; \
+    ; \
+	ldmia r1!, {r3, r4, r5, r6, r7, r8, r9}; \
+	stmia r0!, {r3, r4, r5, r6, r7, r8, r9}; \
+	ldmia r1!, {r3, r4, r5, r6, r7, r8, r9}; \
+	stmia r0!, {r3, r4, r5, r6, r7, r8, r9}; \
+	ldmia r1!, {r3, r4, r5, r6, r7}; \
+	stmia r0!, {r3, r4, r5, r6, r7}; \
+    ; \
+	mov sp, r2; \
+1:
 
     .text
     .globl _entry
@@ -169,18 +220,17 @@ zeroify.1:
 
 	orr	r1, r0, #PSR_MODE_SVC|PSR_I|PSR_F
 	msr	cpsr_cxsf, r1
-	ldr r0, =(0x1000-36)
-	sub sp, r0, #4
+	ldr sp, =(0x1000-36)
+
+    mov r0, #0
+    mov r1, #0
 
     /* Now enter the C main function... */
-    bl _cstart
-
-halt:
-	wfe
-	b halt
+    b _cstart
 
 prefetch_abort:
 	PUSHFRAMEINSVC
+    PROLOGUE
 	mov		r0, sp
 
     mrc  p15, 0, r1, c6, c0, 2        @get IFAR
@@ -188,11 +238,12 @@ prefetch_abort:
 
 	bl _abort_handler
 
-	PULLFRAMEANDEXIT
+    b _ret_from_syscall
 
 data_abort:
 	sub		lr, lr, #4                @https://stackoverflow.com/questions/6292620/why-are-the-return-addresses-of-prefetch-abort-and-data-abort-different-in-arm-e
 	PUSHFRAMEINSVC
+    PROLOGUE
 	mov		r0, sp
 
     mrc p15, 0, r1, c6, c0, 0         @get DFAR
@@ -200,29 +251,42 @@ data_abort:
 
 	bl _abort_handler
 
-	PULLFRAMEANDEXIT
+    b _ret_from_syscall
 
 irq:
 	PUSHFRAMEINSVC
+    PROLOGUE
 	mov		r0, sp
 
 	bl		_irq_handler
 
-	PULLFRAMEANDEXIT
+	ldr r0, =_g_resched
+    cmp r0, #0
+    beq 4f
+    bl _schedule
+4:
+
+    b _ret_from_syscall
 
 undefined:
 	PUSHFRAMEINSVC
+    PROLOGUE
 	mov		r0, sp
 
 	bl		_undefined_handler
 
-	PULLFRAMEANDEXIT
+    b _ret_from_syscall
+
 swi:
 	PUSHFRAMEINSVC
+    PROLOGUE
 	mov		r0, sp
 
 	bl		_swi_handler
 
+.globl _ret_from_syscall
+_ret_from_syscall:
+    EPILOGUE
 	PULLFRAMEANDEXIT
 
 	.globl	_sti, _cli

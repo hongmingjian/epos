@@ -72,12 +72,42 @@ struct context {
     *((uint32_t *)(sp)) = (uint32_t)(value); \
 } while(0)
 
-#define INIT_TASK_CONTEXT(ustack, kstack, entry) do { \
-    ; \
+#define INIT_TASK_CONTEXT(ustack, kstack, entry, pv) do { \
+    STACK_PUSH(kstack, entry);\
+    STACK_PUSH(kstack, 0); \
+    STACK_PUSH(kstack, 0); \
+    STACK_PUSH(kstack, 0); \
+    STACK_PUSH(kstack, ustack); \
+    STACK_PUSH(kstack, 0xCCCCCCCC); \
+    STACK_PUSH(kstack, 0xBBBBBBBB); \
+    STACK_PUSH(kstack, 0xAAAAAAAA); \
+    STACK_PUSH(kstack, 0x99999999); \
+    STACK_PUSH(kstack, 0x88888888); \
+    STACK_PUSH(kstack, 0x77777777); \
+    STACK_PUSH(kstack, 0x66666666); \
+    STACK_PUSH(kstack, 0x55555555); \
+    STACK_PUSH(kstack, 0x44444444); \
+    STACK_PUSH(kstack, 0x33333333); \
+    STACK_PUSH(kstack, 0x22222222); \
+    STACK_PUSH(kstack, 0x11111111); \
+    STACK_PUSH(kstack, pv); \
+    STACK_PUSH(kstack, (ustack)?0x50:0x53); \
+    STACK_PUSH(kstack, &ret_from_syscall); \
 } while(0)
 
 #define run_as_task0() do { \
     g_task_running = task0; \
+    __asm__ __volatile__ ( \
+            "ldr r0, %0\n\t" \
+            "ldr r0, [r0]\n\t" \
+            "ldr r1, =1f\n\t" \
+            "str r1, [r0, #76]\n\t" \
+            "mov sp, r0\n\t" \
+            "ldmia sp!, {pc}\n\t" \
+            "1:\n\t" \
+            : \
+            : "m"(g_task_running) \
+            : "r0", "r1");\
 } while(0)
 
 void sti(), cli();

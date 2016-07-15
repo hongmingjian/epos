@@ -178,25 +178,7 @@ void mi_startup()
      */
     run_as_task0();
     start_user_task();
-//    sti();
 
-/*    uint32_t val;
-    __asm__ __volatile__("str r0, %0" : : "m" (val)); printk("r0=0x%08x\r\n", val);
-    __asm__ __volatile__("str r1, %0" : : "m" (val)); printk("r1=0x%08x\r\n", val);
-    __asm__ __volatile__("str r2, %0" : : "m" (val)); printk("r2=0x%08x\r\n", val);
-    __asm__ __volatile__("str r3, %0" : : "m" (val)); printk("r3=0x%08x\r\n", val);
-    __asm__ __volatile__("str r4, %0" : : "m" (val)); printk("r4=0x%08x\r\n", val);
-    __asm__ __volatile__("str r5, %0" : : "m" (val)); printk("r5=0x%08x\r\n", val);
-    __asm__ __volatile__("str r6, %0" : : "m" (val)); printk("r6=0x%08x\r\n", val);
-    __asm__ __volatile__("str r7, %0" : : "m" (val)); printk("r7=0x%08x\r\n", val);
-    __asm__ __volatile__("str r8, %0" : : "m" (val)); printk("r8=0x%08x\r\n", val);
-    __asm__ __volatile__("str r9, %0" : : "m" (val)); printk("r9=0x%08x\r\n", val);
-    __asm__ __volatile__("str r10, %0" : : "m" (val)); printk("r10=0x%08x\r\n", val);
-    __asm__ __volatile__("str r11, %0" : : "m" (val)); printk("r11=0x%08x\r\n", val);
-    __asm__ __volatile__("str r12, %0" : : "m" (val)); printk("r12=0x%08x\r\n", val);
-    __asm__ __volatile__("str r13, %0" : : "m" (val)); printk("r13=0x%08x\r\n", val);
-    __asm__ __volatile__("str r14, %0" : : "m" (val)); printk("r14=0x%08x\r\n", val);
-*/
     while(1)
         cpu_idle();
 }

@@ -326,12 +326,6 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
         return -1;
     }
 
-    if(vaddr == 0x08047fc0)
-        return -1;
-
-    if(vaddr == 0x08070398)
-        return -1;
-
     /*检查地址是否合法*/
     prot = page_prot(vaddr);
     if(prot == -1 || prot == VM_PROT_NONE) {

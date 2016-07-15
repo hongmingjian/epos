@@ -179,12 +179,12 @@ vector_fiq:
 	.word 0
 
 reset:
-   	mov r0, #0x8000
-  	mov	r1, #0x0000
-  	ldmia r0!, {r2, r3, r4, r5, r6, r7, r8, r9}
-  	stmia r1!, {r2, r3, r4, r5, r6, r7, r8, r9}
-  	ldmia r0!, {r2, r3, r4, r5, r6, r7, r8, r9}
-  	stmia r1!, {r2, r3, r4, r5, r6, r7, r8, r9}
+	mov r0, #0x8000
+	mov	r1, #0x0000
+	ldmia r0!, {r2, r3, r4, r5, r6, r7, r8, r9}
+	stmia r1!, {r2, r3, r4, r5, r6, r7, r8, r9}
+	ldmia r0!, {r2, r3, r4, r5, r6, r7, r8, r9}
+	stmia r1!, {r2, r3, r4, r5, r6, r7, r8, r9}
 
 	@ zeroify bss
 	ldr r0, =_edata

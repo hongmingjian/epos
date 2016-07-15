@@ -38,69 +38,35 @@ void isr_default(uint32_t irq, struct context *ctx)
 void start_user_task()
 {
     uint32_t addr=0x08048000;
-    uint8_t *p = (uint8_t *)addr;
+    uint32_t *p = (uint32_t *)addr;
     page_alloc_in_addr(addr, 1, VM_PROT_RW);
     printk("pte(0x%08x)=0x%08x\r\n", addr, *vtopte(addr));
-    *(p + 0) = 0xe9;
-    *(p + 1) = 0x2d;
-    *(p + 2) = 0x40;
-    *(p + 3) = 0x08;
 
-    *(p + 4) = 0xe3;
-    *(p + 5) = 0xa0;
-    *(p + 6) = 0x00;
-    *(p + 7) = 0x5a;
+    *p++ = 0xe92d4008;
+    *p++ = 0xe3a0005a;
+    *p++ = 0xeb000003;
+    *p++ = 0xe3a0005a;
+    *p++ = 0xeb000001;
+    *p++ = 0xeafffffe;
 
-    *(p + 8) = 0xeb;
-    *(p + 9) = 0x00;
-    *(p + 10) = 0x00;
-    *(p + 11) = 0x01;
+    *p++ = 0xeafffff8;
 
-    *(p + 12) = 0xea;
-    *(p + 13) = 0xff;
-    *(p + 14) = 0xff;
-    *(p + 15) = 0xfe;
-
-    *(p + 16) = 0xea;
-    *(p + 17) = 0xff;
-    *(p + 18) = 0xff;
-    *(p + 19) = 0xfa;
-
-    *(p + 20) = 0xe9;
-    *(p + 21) = 0x2d;
-    *(p + 22) = 0x40;
-    *(p + 23) = 0x80;
-
-    *(p + 24) = 0xe3;
-    *(p + 25) = 0xa0;
-    *(p + 26) = 0x7f;
-    *(p + 27) = 0xfa;
-
-    *(p + 28) = 0xef;
-    *(p + 29) = 0x00;
-    *(p + 30) = 0x00;
-    *(p + 31) = 0x00;
-
-    *(p + 32) = 0xe8;
-    *(p + 33) = 0xbd;
-    *(p + 34) = 0x40;
-    *(p + 35) = 0x80;
-
-    *(p + 36) = 0xe1;
-    *(p + 37) = 0x2f;
-    *(p + 38) = 0xff;
-    *(p + 39) = 0x1e;
+    *p++ = 0xe52d7004;
+    *p++ = 0xe3a07ffa;
+    *p++ = 0xef000000;
+    *p++ = 0xe49d7004;
+    *p++ = 0xe12fff1e;
 
     if(0){
-        uint8_t *q = p;
+        uint32_t *q = (uint32_t *)addr;
         int i;
-        for(i = 0; i < 40; i++)
-            printk("%02x ", *q++);
+        for(i = 0; i < 12; i++)
+            printk("%08x ", *q++);
 
     }
     page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE, VM_PROT_RW);
     printk("pte(0x%08x)=0x%08x\r\n", USER_MAX_ADDR - (1024*1024), *vtopte(USER_MAX_ADDR - (1024*1024)));
-    if(sys_task_create((void *)USER_MAX_ADDR, (void *)(addr), (void *)0x12345678) == NULL)
+    if(sys_task_create((void *)USER_MAX_ADDR, (void *)(addr+0x18), (void *)0x12345678) == NULL)
         printk("Failed\r\n");
 }
 

@@ -91,7 +91,7 @@ void disable_irq(uint32_t irq)
 void switch_to(struct tcb *new)
 {
     __asm__ __volatile__ (
-            "stmdb sp!, {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r14}\n\t"
+            "stmdb sp!, {r0-r12,r14}\n\t"
             "ldr r0, =1f\n\t"
             "stmdb sp!, {r0}\n\t"
             "ldr r0, %0\n\t"
@@ -102,22 +102,14 @@ void switch_to(struct tcb *new)
             :"r0"
             );
 
-    if(0) printk("0x%08x, kstack=0x%08x\r\n", g_task_running, g_task_running->kstack);
     g_task_running = new;
-    if(0) printk("0x%08x, kstack=0x%08x\r\n", g_task_running, g_task_running->kstack);
-    if(0){
-        int i;
-        uint32_t *xp=(uint32_t *)g_task_running->kstack;
-        for(i = 0; i < 20; i++)
-            printk("kstack[%d]=0x%08x\r\n", i, *xp++);
-    }
 
     __asm__ __volatile__ (
             "ldr r0, %0\n\t"
             "ldr sp, [r0]\n\t"
             "ldmia sp!, {pc}\n\t"
             "1:\n\t"
-            "ldmia sp!, {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r14}\n\t"
+            "ldmia sp!, {r0-r12,r14}\n\t"
             :
             :"m"(g_task_running)
             :"r0"
@@ -259,11 +251,6 @@ void undefined_handler(struct context *ctx)
 {
     printk("undefined exception\r\n");
     exception(ctx);
-}
-
-void swi_handler(struct context *ctx)
-{
-    syscall(ctx);
 }
 
 /**

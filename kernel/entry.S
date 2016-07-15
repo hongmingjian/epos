@@ -19,7 +19,7 @@
 # $Id: entry.S,v 1.1.1.1 2007/06/22 03:20:53 hmj Exp $
 #
     .extern _edata, _end
-    .extern _abort_handler, _swi_handler, _undefined_handler, _irq_handler
+    .extern _abort_handler, _syscall, _undefined_handler, _irq_handler
 	.extern _cstart, _schedule, _g_resched, _g_task_running
 
 #define KERNBASE 0xC0000000
@@ -114,20 +114,17 @@
 	; \
 	ldr r0, [r0]; \
 	sub r0, r0, #FRAME_SIZE; \
-	mov r2, r0; \
 	mov r1, sp; \
+	mov sp, r0; \
     ; \
-	ldmia r1!, {r3, r4, r5, r6, r7, r8, r9}; \
-	stmia r0!, {r3, r4, r5, r6, r7, r8, r9}; \
-	ldmia r1!, {r3, r4, r5, r6, r7, r8, r9}; \
-	stmia r0!, {r3, r4, r5, r6, r7, r8, r9}; \
-	ldmia r1!, {r3, r4, r5, r6, r7}; \
-	stmia r0!, {r3, r4, r5, r6, r7}; \
+	ldmia r1!, {r2-r11}; \
+	stmia r0!, {r2-r11}; \
+	ldmia r1!, {r2-r10}; \
+	stmia r0!, {r2-r10}; \
     ; \
-	mov sp, r2; \
 1:
 
-#define EPILOGUE						\
+#define EPILOGUE \
 	ldr r0, =_g_task_running; \
     ldr r0, [r0]; \
 	cmp r0, #0;  \
@@ -138,19 +135,18 @@
 	cmp r1, #PSR_MODE_USR; \
 	bne 1f; \
 	; \
+    add r1, r0, #4096; \
+    str r1, [r0]; \
 	ldr r0, =(KERNBASE+0x1000-36); \
 	sub r0, r0, #FRAME_SIZE; \
-	mov r2, r0; \
 	mov r1, sp; \
+	mov sp, r0; \
     ; \
-	ldmia r1!, {r3, r4, r5, r6, r7, r8, r9}; \
-	stmia r0!, {r3, r4, r5, r6, r7, r8, r9}; \
-	ldmia r1!, {r3, r4, r5, r6, r7, r8, r9}; \
-	stmia r0!, {r3, r4, r5, r6, r7, r8, r9}; \
-	ldmia r1!, {r3, r4, r5, r6, r7}; \
-	stmia r0!, {r3, r4, r5, r6, r7}; \
+	ldmia r1!, {r2-r11}; \
+	stmia r0!, {r2-r11}; \
+	ldmia r1!, {r2-r10}; \
+	stmia r0!, {r2-r10}; \
     ; \
-	mov sp, r2; \
 1:
 
     .text
@@ -261,10 +257,9 @@ irq:
 	bl		_irq_handler
 
 	ldr r0, =_g_resched
+    ldr r0, [r0]
     cmp r0, #0
-    beq 4f
-    bl _schedule
-4:
+    blne _schedule
 
     b _ret_from_syscall
 
@@ -278,11 +273,19 @@ undefined:
     b _ret_from_syscall
 
 swi:
-	PUSHFRAMEINSVC
-    PROLOGUE
-	mov		r0, sp
+	sub	sp, sp, #FRAME_SIZE
+	str	lr, [sp, #CF_PC]
+	mrs	lr, spsr
+	str	lr, [sp, #CF_SPSR]
+	add	r14, sp, #4
+	stmia r14!, {r0-r12}
+	stmia r14, {r13, r14}^
+	str	sp, [sp, #CF_SVC_SP]
 
-	bl		_swi_handler
+    PROLOGUE
+	mov	r0, sp
+
+	bl		_syscall
 
 .globl _ret_from_syscall
 _ret_from_syscall:

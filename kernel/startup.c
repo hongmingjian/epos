@@ -40,16 +40,13 @@ void start_user_task()
     uint32_t addr=0x08048000;
     uint32_t *p = (uint32_t *)addr;
     page_alloc_in_addr(addr, 1, VM_PROT_RW);
-    printk("pte(0x%08x)=0x%08x\r\n", addr, *vtopte(addr));
 
     *p++ = 0xe92d4008;
     *p++ = 0xe3a0005a;
-    *p++ = 0xeb000003;
-    *p++ = 0xe3a0005a;
     *p++ = 0xeb000001;
-    *p++ = 0xeafffffe;
+    *p++ = 0xeafffffc;
 
-    *p++ = 0xeafffff8;
+    *p++ = 0xeafffffa;
 
     *p++ = 0xe52d7004;
     *p++ = 0xe3a07ffa;
@@ -57,16 +54,8 @@ void start_user_task()
     *p++ = 0xe49d7004;
     *p++ = 0xe12fff1e;
 
-    if(0){
-        uint32_t *q = (uint32_t *)addr;
-        int i;
-        for(i = 0; i < 12; i++)
-            printk("%08x ", *q++);
-
-    }
     page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE, VM_PROT_RW);
-    printk("pte(0x%08x)=0x%08x\r\n", USER_MAX_ADDR - (1024*1024), *vtopte(USER_MAX_ADDR - (1024*1024)));
-    if(sys_task_create((void *)USER_MAX_ADDR, (void *)(addr+0x18), (void *)0x12345678) == NULL)
+    if(sys_task_create((void *)USER_MAX_ADDR, (void *)(addr+0x10), (void *)0x12345678) == NULL)
         printk("Failed\r\n");
 }
 

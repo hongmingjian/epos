@@ -305,25 +305,43 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
         return -1;
     }
 
-    if((code & 0xf)/*FS[0:3]*/ != 0x7/*translation fault (page)*/) {
+    switch((code & 0xf)/*FS[0:3]*/) {
+    case 0x1:/*Alignment fault*/
 #if !VERBOSE
         printk("PF:0x%08x(0x%04x)", vaddr, code);
 #endif
-        switch(code & 0xf) {
-        case 0x1: //alignment fault
-            printk("->ALIGNMENT FAULT\r\n");
-            break;
-        case 0x6: //access flag fault (page)
-        case 0xb: //domain fault (page)
-        case 0xf: //permission fault (page)
-            printk("->PROTECTION VIOLATION\r\n");
-            break;
-        default:
-            printk("->UNKNOWN ABORT\r\n");
-            break;
-        }
-
+        printk("->ALIGNMENT FAULT\r\n");
         return -1;
+        break;
+    case 0x5:/*translation fault (section)*/
+        /*
+         * A section translation fault occurs if:
+         *  • The TLB fetches a first level translation table descriptor,
+         *    and this first level descriptor is invalid. This is the case
+         *    when bits[1:0] of this descriptor are b00 or b11.
+         *            -- ARM1176JZF-S, Revision: r0p7, Technical Reference Manual, 6.9.3
+         */
+    case 0x7:/*translation fault (page)*/
+        break;
+    case 0x3:/*access bit fault (section)*/
+    case 0x6:/*access bit fault (page)*/
+    case 0x9:/*domain fault (section)*/
+    case 0xb:/*domain fault (page)*/
+    case 0xd:/*permission fault (section)*/
+    case 0xf:/*permission fault (page)*/
+#if !VERBOSE
+        printk("PF:0x%08x(0x%04x)", vaddr, code);
+#endif
+        printk("->PROTECTION VIOLATION\r\n");
+        return -1;
+        break;
+    default:
+#if !VERBOSE
+        printk("PF:0x%08x(0x%04x)", vaddr, code);
+#endif
+        printk("->UNKNOWN ABORT\r\n");
+        return -1;
+        break;
     }
 
     /*检查地址是否合法*/

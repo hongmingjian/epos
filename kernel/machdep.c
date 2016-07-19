@@ -419,8 +419,7 @@ static uint32_t init_paging(uint32_t physfree)
      * 用于映射页表自身所占的虚拟内存范围，即[0xbfc00000, 0xc0000000]
      */
     uint32_t *ptpte = (uint32_t *)physfree;
-    for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++)
-    {
+    for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++) {
         pgdir[i+(((uint32_t)PT)>>PGDR_SHIFT)] = (physfree)|L1E_V;
         memset((void *)physfree, 0, L2_TABLE_SIZE);
         physfree+=L2_TABLE_SIZE;
@@ -430,8 +429,7 @@ static uint32_t init_paging(uint32_t physfree)
      * 分配NR_KERN_PAGETABLE张小页表，并填充到页目录，也填充到ptpte
      */
     pte = (uint32_t *)physfree;
-    for(i = 0; i < NR_KERN_PAGETABLE; i++)
-    {
+    for(i = 0; i < NR_KERN_PAGETABLE; i++) {
         pgdir[i] = pgdir[i+(KERNBASE>>PGDR_SHIFT)] = (physfree)|L1E_V;
 
         if((i & 3) == 0)

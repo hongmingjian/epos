@@ -37,6 +37,8 @@ void isr_default(uint32_t irq, struct context *ctx)
 
 void start_user_task()
 {
+    calibrate_delay();
+
     uint32_t addr=0x08048000;
     uint32_t *p = (uint32_t *)addr;
     page_alloc_in_addr(addr, 1, VM_PROT_RW);

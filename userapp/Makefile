@@ -3,7 +3,7 @@ include ../Makefile.inc
 PROG=	a
 
 .PHONY: all
-all: make.dep run
+all: make.dep $(PROG).out
 
 CPPFLAGS=-nostdinc -I../include -Iinclude
 ASFLAGS=-Wall -O2 -D__ASSEMBLY__
@@ -22,18 +22,9 @@ OBJS=	lib/crt0.o lib/syscall-wrapper.o $(COBJS)
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-make.dep: *.c
-	$(CC) $(CPPFLAGS) -M $(COBJS:.o=.c) >make.dep
-
 .DELETE_ON_ERROR: make.dep
-
-.PHONY: debug
-debug: CFLAGS+=-O0 -ggdb
-debug: $(PROG).out
-
-.PHONY: run
-run: CFLAGS+=-O2 -ggdb
-run: $(PROG).out
+make.dep: $(COBJS:.o=.c)
+	$(CC) $(CPPFLAGS) -M $^ >make.dep
 
 .PHONY: clean
 clean:

@@ -6,8 +6,8 @@ PROG=		kernel
 all: make.dep $(PROG).img
 
 CPPFLAGS=-DVERBOSE=1 -nostdinc -I../include
-ASFLAGS=-Wall -D__ASSEMBLY__
-CFLAGS=	-O2 -Wall \
+ASFLAGS=-Wall -O2 -D__ASSEMBLY__
+CFLAGS=	-Wall -O2  \
 	-fomit-frame-pointer \
 	-ffreestanding -fno-stack-check -fleading-underscore
 LDFLAGS+=-Tldscript -nostdlib -nostartfiles -nodefaultlibs \
@@ -24,8 +24,9 @@ OBJS=entry.o $(COBJS)
 .PHONY: .FORCE
 .FORCE:
 
-make.dep: *.c *.h
-	$(CC) $(CPPFLAGS) -M $(COBJS:.o=.c) >make.dep
+.DELETE_ON_ERROR: make.dep
+make.dep: $(COBJS:.o=.c)
+	$(CC) $(CPPFLAGS) -M $^ >make.dep
 	
 $(PROG).img: $(PROG).elf
 	$(OBJCOPY) $^ -O binary $@

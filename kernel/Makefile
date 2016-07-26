@@ -2,6 +2,9 @@ include ../Makefile.inc
 
 PROG=		eposkrnl
 
+.PHONY: all
+all: run
+
 CPPFLAGS=-DUSE_FLOPPY=0 -DVERBOSE=0 -nostdinc -I../include
 ASFLAGS=-m32 -Wall -D__ASSEMBLY__
 CFLAGS=	-m32 -Wall \
@@ -18,8 +21,9 @@ OBJS=	entry.o ide.o floppy.o e1000.o pci.o vm86.o \
 OBJS+=	../lib/softfloat.o ../lib/string.o ../lib/memcpy.o \
 		../lib/memset.o ../lib/snprintf.o ../lib/tlsf/tlsf.o
 
-.PHONY: all
-all: run
+../lib/snprintf.o:   .FORCE
+.PHONY: .FORCE
+.FORCE:
 
 $(PROG).bin: ldscript $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)

@@ -7,7 +7,7 @@ all: run
 
 CPPFLAGS=-nostdinc -I../include -Iinclude
 ASFLAGS=-m32 -Wall -D__ASSEMBLY__
-CFLAGS=	-m32 -Wall \
+CFLAGS=	-m32 -Wall -DSNPRINTF_FLOATPOINT \
 	-ffreestanding -fno-stack-check -fleading-underscore \
 	-mno-ms-bitfields -mno-stack-arg-probe
 LDFLAGS=-m32 -nostdlib -nostartfiles -nodefaultlibs \
@@ -20,6 +20,10 @@ OBJS+=	lib/sysconf.o lib/math.o lib/stdio.o lib/stdlib.o \
 OBJS+=	../lib/softfloat.o ../lib/string.o ../lib/memcpy.o \
 		../lib/memset.o ../lib/snprintf.o
 OBJS+=	lib/malloc.o ../lib/tlsf/tlsf.o
+
+../lib/snprintf.o:   .FORCE
+.PHONY: .FORCE
+.FORCE:
 
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

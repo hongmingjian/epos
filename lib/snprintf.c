@@ -97,8 +97,10 @@ static void fmtstr (char *buffer, size_t *currlen, size_t maxlen,
 		    char *value, int flags, int min, int max);
 static void fmtint (char *buffer, size_t *currlen, size_t maxlen,
 		    long value, int base, int min, int max, int flags);
+#ifdef SNPRINTF_FLOATPOINT
 static void fmtfp (char *buffer, size_t *currlen, size_t maxlen,
 		   LDOUBLE fvalue, int min, int max, int flags);
+#endif
 static void dopr_outch (char *buffer, size_t *currlen, size_t maxlen, char c );
 
 /*
@@ -127,7 +129,9 @@ static void dopr_outch (char *buffer, size_t *currlen, size_t maxlen, char c );
 /* Conversion Flags */
 #define DP_C_SHORT   1
 #define DP_C_LONG    2
+#ifdef SNPRINTF_FLOATPOINT
 #define DP_C_LDOUBLE 3
+#endif
 
 #define char_to_int(p) (p - '0')
 #define MAX(p,q) ((p >= q) ? p : q)
@@ -136,7 +140,9 @@ static void dopr (char *buffer, size_t maxlen, const char *format, va_list args)
 {
   char ch;
   long value;
+#ifdef SNPRINTF_FLOATPOINT
   LDOUBLE fvalue;
+#endif
   char *strvalue;
   int min;
   int max;
@@ -245,10 +251,12 @@ static void dopr (char *buffer, size_t maxlen, const char *format, va_list args)
 	cflags = DP_C_LONG;
 	ch = *format++;
 	break;
+#ifdef SNPRINTF_FLOATPOINT
       case 'L':
 	cflags = DP_C_LDOUBLE;
 	ch = *format++;
 	break;
+#endif
       default:
 	break;
       }
@@ -303,6 +311,7 @@ static void dopr (char *buffer, size_t maxlen, const char *format, va_list args)
 	  value = va_arg (args, unsigned int);
 	fmtint (buffer, &currlen, maxlen, value, 16, min, max, flags);
 	break;
+#ifdef SNPRINTF_FLOATPOINT
       case 'f':
 	if (cflags == DP_C_LDOUBLE)
 	  fvalue = va_arg (args, LDOUBLE);
@@ -327,6 +336,7 @@ static void dopr (char *buffer, size_t maxlen, const char *format, va_list args)
 	else
 	  fvalue = va_arg (args, double);
 	break;
+#endif
       case 'c':
 	dopr_outch (buffer, &currlen, maxlen, va_arg (args, int));
 	break;
@@ -518,6 +528,7 @@ static void fmtint (char *buffer, size_t *currlen, size_t maxlen,
   }
 }
 
+#ifdef SNPRINTF_FLOATPOINT
 static LDOUBLE abs_val (LDOUBLE value)
 {
   LDOUBLE result = value;
@@ -691,6 +702,7 @@ static void fmtfp (char *buffer, size_t *currlen, size_t maxlen,
     ++padlen;
   }
 }
+#endif
 
 static void dopr_outch (char *buffer, size_t *currlen, size_t maxlen, char c)
 {

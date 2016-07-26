@@ -15,11 +15,15 @@ LDFLAGS= -nostdlib -nostartfiles -nodefaultlibs \
 COBJS=	main.o
 OBJS=	lib/crt0.o lib/syscall-wrapper.o $(COBJS)
 
+../lib/snprintf.o:   .FORCE
+.PHONY: .FORCE
+.FORCE:
+
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 make.dep: *.c
-	gcc $(CPPFLAGS) -M $(COBJS:.o=.c) >make.dep
+	$(CC) $(CPPFLAGS) -M $(COBJS:.o=.c) >make.dep
 
 .DELETE_ON_ERROR: make.dep
 

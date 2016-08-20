@@ -20,13 +20,15 @@
 #include "cpu.h"
 #include "../lib/tlsf/tlsf.h"
 
+static tlsf_t g_kheap;
+
 void *kmalloc(size_t bytes)
 {
     uint32_t flags;
     void *ptr;
 
     save_flags_cli(flags);
-    ptr = tlsf_malloc(bytes);
+    ptr = tlsf_malloc(g_kheap, bytes);
     restore_flags(flags);
 
     return ptr;
@@ -38,7 +40,7 @@ void *krealloc(void *oldptr, size_t bytes)
     void *ptr;
 
     save_flags_cli(flags);
-    ptr = tlsf_realloc(oldptr, bytes);
+    ptr = tlsf_realloc(g_kheap, oldptr, bytes);
     restore_flags(flags);
 
     return ptr;
@@ -49,26 +51,23 @@ void kfree(void *ptr)
     uint32_t flags;
 
     save_flags_cli(flags);
-    tlsf_free(ptr);
+    tlsf_free(g_kheap, ptr);
     restore_flags(flags);
 }
 
-void *aligned_kmalloc(size_t bytes, size_t align)
+void *kmemalign(size_t align, size_t bytes)
 {
-    void *mem = kmalloc(bytes+align-1+sizeof(void*));
-	if(mem == NULL)
-		return mem;
-    uint32_t ptr = ((size_t)((char*)mem+sizeof(void*)+align-1)) & ~ (align-1);
-	((void**)ptr)[-1] = mem;
-    return (void *)ptr;
-}
+    uint32_t flags;
+	void *ptr;
 
-void aligned_kfree(void *ptr)
-{
-    kfree(((void**)ptr)[-1]);
+    save_flags_cli(flags);
+    ptr = tlsf_memalign(g_kheap, align, bytes);
+    restore_flags(flags);
+
+	return ptr;
 }
 
 void init_kmalloc(void *mem, size_t bytes)
 {
-    init_memory_pool(bytes, mem);
+	g_kheap = tlsf_create_with_pool(mem, bytes);
 }

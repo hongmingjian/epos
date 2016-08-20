@@ -1,18 +1,24 @@
 #include "../lib/tlsf/tlsf.h"
 
-void *malloc(size_t size)
+tlsf_t g_heap;
+
+void *malloc(size_t bytes)
 {
-    return tlsf_malloc(size);
+    return tlsf_malloc(g_heap, bytes);
 }
-void *calloc(size_t num, size_t size)
+void *calloc(size_t num, size_t bytes)
 {
-    return tlsf_calloc(num, size);
+    return malloc(num*bytes);
 }
-void *realloc(void *oldptr, size_t size)
+void* memalign(size_t align, size_t bytes)
 {
-    return tlsf_realloc(oldptr, size);
+	return tlsf_memalign(g_heap, align, bytes);
+}
+void *realloc(void *oldptr, size_t bytes)
+{
+    return tlsf_realloc(g_heap, oldptr, bytes);
 }
 void free(void *ptr)
 {
-    tlsf_free(ptr);
+    tlsf_free(g_heap, ptr);
 }

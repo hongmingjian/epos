@@ -144,8 +144,8 @@ static void e1000_init_txbuf(int n)
 {
 	int i;
 	g_e1000.tx_desc_cnt = n;
-	uint8_t *mem = aligned_kmalloc(g_e1000.tx_desc_cnt*(sizeof(struct tdesc)+PACKET_BUF_SIZE), 16);
-	                memset(mem, 0, g_e1000.tx_desc_cnt*(sizeof(struct tdesc)+PACKET_BUF_SIZE));
+	uint8_t *mem = kmemalign(16, g_e1000.tx_desc_cnt*(sizeof(struct tdesc)+PACKET_BUF_SIZE));
+	              memset(mem, 0, g_e1000.tx_desc_cnt*(sizeof(struct tdesc)+PACKET_BUF_SIZE));
 
 	g_e1000.tx_desc_ring = (struct tdesc *)(mem);
 	g_e1000.tx_buf_ring = (uint8_t *)(g_e1000.tx_desc_ring+g_e1000.tx_desc_cnt);
@@ -163,8 +163,8 @@ static void e1000_init_rxbuf(int n)
 {
 	int i;
 	g_e1000.rx_desc_cnt = n;
-	uint8_t *mem = aligned_kmalloc(g_e1000.rx_desc_cnt*(sizeof(struct rdesc)+PACKET_BUF_SIZE), 16);
-	                memset(mem, 0, g_e1000.rx_desc_cnt*(sizeof(struct rdesc)+PACKET_BUF_SIZE));
+	uint8_t *mem = kmemalign(16, g_e1000.rx_desc_cnt*(sizeof(struct rdesc)+PACKET_BUF_SIZE));
+	              memset(mem, 0, g_e1000.rx_desc_cnt*(sizeof(struct rdesc)+PACKET_BUF_SIZE));
 
 	g_e1000.rx_desc_ring = (struct rdesc *)(mem);
 	g_e1000.rx_buf_ring = (uint8_t *)(g_e1000.rx_desc_ring+g_e1000.rx_desc_cnt);

@@ -11,7 +11,8 @@
 #include <stdlib.h>
 #include "graphics.h"
 
-extern size_t init_memory_pool(size_t mem_pool_size, void *mem_pool);
+extern void *tlsf_create_with_pool(void* mem, size_t bytes);
+extern void *g_heap;
 
 /**
  * GCC insists on __main
@@ -21,7 +22,7 @@ void __main()
 {
     size_t heap_size = 32*1024*1024;
     void  *heap_base = mmap(NULL, heap_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
-    init_memory_pool(heap_size, heap_base);
+	g_heap = tlsf_create_with_pool(heap_base, heap_size);
 }
 
 /**

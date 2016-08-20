@@ -177,7 +177,7 @@ struct tcb *sys_task_create(void *tos,
     if(ustack & 3)
         return NULL;
 
-    p = (char *)kmalloc(PAGE_SIZE);
+    p = (char *)kmemalign(PAGE_SIZE, PAGE_SIZE);
     if(p == NULL)
         return NULL;
 

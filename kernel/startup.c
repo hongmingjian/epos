@@ -101,7 +101,7 @@ void mi_startup()
     /*
      * 把[MMIO_BASE, MMIO_BASE+16M)保留下来
      */
-    page_alloc_in_addr(MMIO_BASE, 4096, VM_PROT_RW);
+    page_alloc_in_addr(MMIO_BASE_VA, 4096, VM_PROT_RW);
 
     /*
      * 把[0xffff0000, 0xffff1000)保留下来，并映射到0x0

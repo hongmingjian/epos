@@ -34,7 +34,7 @@ time_t g_startup_time;
 static void init_pit(uint32_t freq)
 {
     uint32_t timer_clock = 1000000;
-    armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE+ARMTIMER_REG_BASE);
+    armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE_VA+ARMTIMER_REG);
     pit->Load = timer_clock/freq;
     pit->Reload = pit->Load;
     pit->PreDivider = (SYS_CLOCK_FREQ/timer_clock)-1;
@@ -49,7 +49,7 @@ static void init_pit(uint32_t freq)
  */
 static void init_pic()
 {
-    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE+INTR_REG_BASE);
+    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE_VA+INTR_REG);
     pic->Disable_basic_IRQs = 0xffffffff;
     pic->Disable_IRQs_1 = 0xffffffff;
     pic->Disable_IRQs_2 = 0xffffffff;
@@ -60,7 +60,7 @@ static void init_pic()
  */
 void enable_irq(uint32_t irq)
 {
-    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE+INTR_REG_BASE);
+    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE_VA+INTR_REG);
     if(irq  < 8) {
         pic->Enable_basic_IRQs = 1 << irq;
     } else if(irq < 40) {
@@ -75,7 +75,7 @@ void enable_irq(uint32_t irq)
  */
 void disable_irq(uint32_t irq)
 {
-    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE+INTR_REG_BASE);
+    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE_VA+INTR_REG);
     if(irq  < 8) {
         pic->Disable_basic_IRQs = 1 << irq;
     } else if(irq < 40) {
@@ -121,8 +121,8 @@ void switch_to(struct tcb *new)
  */
 static void init_uart(uint32_t baud)
 {
-    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE+AUX_REG_BASE);
-    gpio_reg_t *gpio = (gpio_reg_t *)(MMIO_BASE+GPIO_REG_BASE);
+    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
+    gpio_reg_t *gpio = (gpio_reg_t *)(MMIO_BASE_VA+GPIO_REG);
 
     aux->enables = 1;
     aux->mu_ier = 0;
@@ -147,7 +147,7 @@ static void init_uart(uint32_t baud)
 
 void uart_putc ( int c )
 {
-    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE+AUX_REG_BASE);
+    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
     while(1) {
         if(aux->mu_lsr&0x20)
             break;
@@ -157,7 +157,7 @@ void uart_putc ( int c )
 
 int uart_getc()
 {
-    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE+AUX_REG_BASE);
+    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
     while(1) {
         if(aux->mu_lsr&0x1)
             break;
@@ -215,7 +215,7 @@ void irq_handler(struct context *ctx)
 {
 
     int irq;
-    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE+INTR_REG_BASE);
+    intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE_VA+INTR_REG);
 
     for(irq = 0 ; irq < 8; irq++)
         if(pic->IRQ_basic_pending & (1<<irq))
@@ -240,7 +240,7 @@ void irq_handler(struct context *ctx)
 
     switch(irq) {
     case 0: {
-        armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE+ARMTIMER_REG_BASE);
+        armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE_VA+ARMTIMER_REG);
         pit->IRQClear = 1;
         break;
     }
@@ -486,10 +486,10 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
     init_ram(physfree);
 
     /*
-     * 映射虚拟地址[MMIO_BASE, MMIO_BASE+16M)和[MMIO_BASE-KERNBASE, MMIO_BASE-KERNBASE+16M)
+     * 映射虚拟地址[MMIO_BASE_VA, MMIO_BASE_VA+16M)和[MMIO_BASE_VA-KERNBASE, MMIO_BASE_VA-KERNBASE+16M)
      * 到物理地址[0x20000000, 0x20000000+16M)
      */
-    page_map(MMIO_BASE, 0x20000000, 4096, L2E_V|L2E_W);
+    page_map(MMIO_BASE_VA, MMIO_BASE_PA, 4096, L2E_V|L2E_W);
 
     init_pic();
     init_pit(HZ);

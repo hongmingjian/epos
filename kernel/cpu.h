@@ -22,7 +22,9 @@
 
 #include "arch.h"
 
-#define ARMTIMER_REG_BASE (0xB400)
+#define MMIO_BASE_PA 0x20000000
+
+#define ARMTIMER_REG (0xB400)
 typedef struct {
 	volatile unsigned int Load;
 	volatile unsigned int Value;
@@ -42,7 +44,7 @@ typedef struct {
 	volatile unsigned int FreeRunningCounter;
 } armtimer_reg_t;
 
-#define INTR_REG_BASE (0xB200)
+#define INTR_REG (0xB200)
 typedef struct {
 	volatile unsigned int IRQ_basic_pending;
 	volatile unsigned int IRQ_pending_1;
@@ -56,7 +58,7 @@ typedef struct {
 	volatile unsigned int Disable_basic_IRQs;
 } intr_reg_t;
 
-#define AUX_REG_BASE (0x215000)
+#define AUX_REG (0x215000)
 typedef struct {
 	volatile unsigned int IRQ;
 	volatile unsigned int enables;
@@ -88,7 +90,7 @@ typedef struct {
 	volatile unsigned int spi1_peek;
 } aux_reg_t;
 
-#define GPIO_REG_BASE (0x200000)
+#define GPIO_REG (0x200000)
 typedef struct {
 	volatile unsigned int gpfsel0;
 	volatile unsigned int gpfsel1;

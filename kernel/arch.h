@@ -72,23 +72,24 @@ extern void invlpg(uint32_t page);
 
 #define L1_TABLE_SIZE      0x4000 /* 16K */
 #define L2_TABLE_SIZE      0x400  /* 1K */
-#define L1_ENTRY_COUNT     (L1_TABLE_SIZE / 4)
-#define L2_ENTRY_COUNT     (L2_TABLE_SIZE / 4)
+#define L1_ENTRY_COUNT     (L1_TABLE_SIZE / 4) /* 4096 */
+#define L2_ENTRY_COUNT     (L2_TABLE_SIZE / 4) /* 256 */
 
 #define _L1_TYPE_C       0x01      /* Coarse L2 */
 #define _L1_C_NS         (1 << 3)  /* Non-secure */
 #define _L1_C_DOM(x)     (((x) & 0xf) << 5)      /* domain */
+#define _L1_C_P          (1<<9)    /* ECC */
 
-#define _L2_S_XN         0x01
+#define _L2_S_XN         0x01      /* Execute-Never */
 #define _L2_TYPE_S       0x02      /* Small Page */
 #define _L2_B            0x04      /* Bufferable page */
 #define _L2_C            0x08      /* Cacheable page */
-#define _L2_AP0          (1 << 4) /* AP[0]:  Access permission bit 0 */
-#define _L2_AP1          (1 << 5) /* AP[1]:  Access permission bit 1 */
+#define _L2_AP0          (1 << 4)  /* AP[0]:  Access permission bit 0 */
+#define _L2_AP1          (1 << 5)  /* AP[1]:  Access permission bit 1 */
 #define _L2_S_TEX(x)     (((x) & 0x7) << 6)
-#define _L2_AP2          (1 << 9) /* Bit 15: AP[2]:  Access permission bit 2 */
-#define _L2_S            (1 << 10)
-#define _L2_nG           (1 << 11)
+#define _L2_AP2          (1 << 9)  /* Bit 15: AP[2]:  Access permission bit 2 */
+#define _L2_S            (1 << 10) /* Shared */
+#define _L2_nG           (1 << 11) /* Not-Global */
 
 
 #define ROUNDUP(x, y) (((x)+((y)-1))&(~((y)-1)))
@@ -100,7 +101,7 @@ extern void invlpg(uint32_t page);
 #define PAGE_TRUNCATE(x)  ((x)&(~PAGE_MASK))
 #define PAGE_ROUNDUP(x)   ROUNDUP(x, PAGE_SIZE)
 
-#define L1E_V   (_L1_C_DOM(0)|_L1_TYPE_C)
+#define L1E_V   (_L1_C_DOM(1)|_L1_TYPE_C) /* D1 = Client */
 #define L1E_W   0
 #define L1E_U   0
 #define L1E_C   0

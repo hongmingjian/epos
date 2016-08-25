@@ -124,32 +124,27 @@ static void init_uart(uint32_t baud)
     aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
     gpio_reg_t *gpio = (gpio_reg_t *)(MMIO_BASE_VA+GPIO_REG);
 
-    aux->enables = 1;
-    aux->mu_ier = 0;
-    aux->mu_cntl = 0;
-    aux->mu_lcr = 3;
-    aux->mu_mcr = 0;
+    aux->enables = 1; //Enable Mini UART
+    aux->mu_cntl = 0; //Disable transmitter & receiver
+    aux->mu_lcr = 3;  //8 data bits
     aux->mu_baud = (SYS_CLOCK_FREQ/(8*baud))-1;
 
     uint32_t ra=gpio->gpfsel1;
-    ra&=~(7<<12); //gpio14
-    ra|=2<<12;    //alt5
-    ra&=~(7<<15); //gpio15
-    ra|=2<<15;    //alt5
+    ra&=~(7<<12); //GPIO Pin 14 takes
+    ra|=2<<12;    // alternate function 5, i.e., TxD1
+    ra&=~(7<<15); //GPIO Pin 15 takes
+    ra|=2<<15;    // alternate function 5, i.e., RxD1
     gpio->gpfsel1 = ra;
+    gpio->gppud = 0; //Disable pull-up/down
 
-    gpio->gppud = 0;
-    gpio->gppudclk0 = (1<<14)|(1<<15);
-    gpio->gppudclk0 = 0;
-
-    aux->mu_cntl = 3;
+    aux->mu_cntl = 3; //Enable transmitter & receiver
 }
 
 void uart_putc ( int c )
 {
     aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
     while(1) {
-        if(aux->mu_lsr&0x20)
+        if(aux->mu_lsr&0x20) //Transmitter empty?
             break;
     }
     aux->mu_io = c;
@@ -449,17 +444,23 @@ static uint32_t init_paging(uint32_t physfree)
 
     /*
      * 打开分页
+     * ARM1176JZF-S TRM, r0p7, p. 3-57,59,60,63,44 and 6-37
      */
     __asm__ __volatile__ (
             "mcr p15,0,%0,c2,c0,0 @TTBR0\n\t"
             "mcr p15,0,%0,c2,c0,1 @TTBR1\n\t"
             "mcr p15,0,%1,c2,c0,2 @TTBCR\n\t"
-            "mcr p15,0,%2,c3,c0,0 @Client\n\t"
+            "\n\t"
+            "mcr p15,0,%2,c3,c0,0 @DACR\n\t"
+            "\n\t"
             "mrc p15,0,r0,c1,c0,0\n\t"
-            "orr r0, r0, %3\n\t"
+            "orr r0,r0,%3\n\t"
             "mcr p15,0,r0,c1,c0,0\n\t"
             :
-            : "r" (pgdir), "r"(0), "r"(0x55555555), "r"(1|(1<<23))
+            : "r"(pgdir),
+              "r"(0),        /* Always use TTBR0 */
+              "r"(0x7),      /* D0=Manager, D1=Client, D2-D15=No access */
+              "r"(1|(1<<23)) /* SCTLR.M=1, SCTLR.XP=1*/
             : "r0"
     );
 

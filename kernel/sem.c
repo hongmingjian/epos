@@ -4,22 +4,22 @@
 #include <stddef.h>
 #include "kernel.h"
 
-void *sys_sem_create(int value)
-{
-    return NULL;
-}
-
-int sys_sem_destroy(void *hsem)
+int sys_sem_create(int value)
 {
     return -1;
 }
 
-int sys_sem_wait(void *hsem)
+int sys_sem_destroy(int semid)
 {
     return -1;
 }
 
-int sys_sem_signal(void *hsem)
+int sys_sem_wait(int semid)
+{
+    return -1;
+}
+
+int sys_sem_signal(int semid)
 {
     return -1;
 }

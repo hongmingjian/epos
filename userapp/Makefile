@@ -3,7 +3,7 @@ include ../Makefile.inc
 PROG=	a
 
 .PHONY: all
-all: run
+all: make.dep run
 
 CPPFLAGS=-nostdinc -I../include -Iinclude
 ASFLAGS=-m32 -Wall -D__ASSEMBLY__
@@ -13,20 +13,22 @@ CFLAGS=	-m32 -Wall -DSNPRINTF_FLOATPOINT \
 LDFLAGS=-m32 -nostdlib -nostartfiles -nodefaultlibs \
 		-Wl,-Map,$(PROG).map
 
-OBJS=	lib/crt0.o
-OBJS+=	vm86call.o graphics.o main.o
-OBJS+=	lib/sysconf.o lib/math.o lib/stdio.o lib/stdlib.o \
-		lib/qsort.o lib/setjmp.o lib/syscall-wrapper.o
-OBJS+=	../lib/softfloat.o ../lib/string.o ../lib/memcpy.o \
+COBJS=	vm86call.o graphics.o main.o
+COBJS+=	lib/sysconf.o lib/math.o lib/stdio.o lib/stdlib.o \
+		lib/qsort.o
+COBJS+=	../lib/softfloat.o ../lib/string.o ../lib/memcpy.o \
 		../lib/memset.o ../lib/snprintf.o
-OBJS+=	lib/malloc.o ../lib/tlsf/tlsf.o
+COBJS+=	lib/malloc.o ../lib/tlsf/tlsf.o
 
-../lib/snprintf.o:   .FORCE
-.PHONY: .FORCE
-.FORCE:
+OBJS=	lib/crt0.o lib/setjmp.o lib/syscall-wrapper.o $(COBJS)
 
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+make.dep: *.c *.h
+	$(CC) $(CPPFLAGS) -M $(COBJS:.o=.c) >make.dep
+
+.DELETE_ON_ERROR: make.dep
 
 .PHONY: debug
 debug: CFLAGS+=-O0 -ggdb
@@ -38,4 +40,6 @@ run: $(PROG).out
 
 .PHONY: clean
 clean:
-	-$(RM) $(OBJS) $(PROG).out $(PROG).map *.*~
+	-$(RM) $(OBJS) $(PROG).out $(PROG).map make.dep *.*~
+
+-include make.dep

@@ -148,8 +148,7 @@ void  init_kmalloc(void *mem, size_t bytes);
 void *kmalloc(size_t bytes);
 void *krealloc(void *oldptr, size_t size);
 void  kfree(void *ptr);
-void *aligned_kmalloc(size_t bytes, size_t align);
-void  aligned_kfree(void *ptr);
+void *kmemalign(size_t align, size_t bytes);
 
 #define RAM_ZONE_LEN (2 * 8)
 extern uint32_t g_ram_zone[RAM_ZONE_LEN];

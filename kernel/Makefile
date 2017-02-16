@@ -5,13 +5,13 @@ PROG=		eposkrnl
 .PHONY: all
 all: make.dep run
 
-CPPFLAGS=-DUSE_FLOPPY=0 -DVERBOSE=0 -nostdinc -I../include
+CPPFLAGS=-DVERBOSE=0 -nostdinc -I../include
 ASFLAGS=-m32 -Wall -D__ASSEMBLY__
 CFLAGS=	-m32 -Wall \
 	-fomit-frame-pointer \
 	-ffreestanding -fno-stack-check -fleading-underscore \
 	-mno-ms-bitfields -mno-stack-arg-probe
-LDFLAGS=-m32 -Tldscript -nostdlib -nostartfiles -nodefaultlibs \
+LDFLAGS=-m32 -Tkernel.ld -nostdlib -nostartfiles -nodefaultlibs \
 		-Wl,-Map,$(PROG).map
 
 COBJS=	ide.o floppy.o e1000.o pci.o vm86.o \
@@ -28,11 +28,11 @@ make.dep: *.c *.h
 
 .DELETE_ON_ERROR: make.dep
 
-$(PROG).bin: ldscript $(OBJS)
+$(PROG).bin: kernel.ld $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
 	$(OBJCOPY) -S -O binary $(PROG).out $@
 
-ldscript: ldscript.in
+kernel.ld: kernel.ld.in
 	$(CC) -E -P -x c-header -o $@ $^
 
 .PHONY: debug
@@ -45,6 +45,6 @@ run: $(PROG).bin
 
 .PHONY: clean
 clean:
-	-$(RM) ldscript $(OBJS) $(PROG).bin $(PROG).out $(PROG).map make.dep *.*~
+	-$(RM) kernel.ld $(OBJS) $(PROG).bin $(PROG).out $(PROG).map make.dep *.*~
 
 -include make.dep

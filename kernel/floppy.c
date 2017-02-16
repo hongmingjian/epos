@@ -1,4 +1,4 @@
-#if USE_FLOPPY
+#ifdef USE_FLOPPY
 
 #include "kernel.h"
 

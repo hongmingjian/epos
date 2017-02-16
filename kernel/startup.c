@@ -48,7 +48,7 @@ uint32_t DFS_ReadSector(uint8_t unit, uint8_t *buffer,
     unsigned long i;
 
     for (i=0;i<count;i++) {
-#if USE_FLOPPY
+#ifdef USE_FLOPPY
         unsigned char *p;
         if((p=floppy_read_sector(sector)) == NULL) {
             printk("floppy_read_sector failed\r\n");
@@ -72,7 +72,7 @@ uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
     unsigned long i;
 
     for (i=0;i<count;i++) {
-#if USE_FLOPPY
+#ifdef USE_FLOPPY
         if(floppy_write_sector(sector, buffer) < 0) {
             printk("floppy_write_sector failed\r\n");
             return -1;
@@ -97,7 +97,7 @@ void start_user_task()
 
     calibrate_delay();
 
-#if USE_FLOPPY
+#ifdef USE_FLOPPY
     printk("task #%d: Initializing floppy disk controller...", sys_task_getid());
     init_floppy();        //初始化软盘控制器
     printk("Done\r\n");
@@ -122,7 +122,7 @@ void start_user_task()
 
         printk("task #%d: Initializing FAT file system...", sys_task_getid());
 
-#if USE_FLOPPY
+#ifdef USE_FLOPPY
         pstart = 0;
 #else
         pstart = DFS_GetPtnStart(0, scratch, 0, NULL, NULL, NULL);

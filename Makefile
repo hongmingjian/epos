@@ -19,8 +19,8 @@ ifeq ($(OS),Windows_NT)
 else
 ifeq ($(shell uname -s),Linux)
 	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
-	sudo mount -o loop,offset=32256 -t vfat $@ /mnt
-	sudo cp kernel/eposkrnl.bin userapp/a.out /mnt
+	sudo mount -o loop,offset=32256,umask=0022,gid=$(shell id -g),uid=$(shell id -u) -t vfat $@ /mnt
+	cp kernel/eposkrnl.bin userapp/a.out /mnt
 	sudo umount /mnt
 endif
 ifeq ($(shell uname -s),Darwin)

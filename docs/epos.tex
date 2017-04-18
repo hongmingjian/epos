@@ -1,79 +1,71 @@
 \documentclass[CJKutf8,xcolor=pdftex,dvipsnames,table]{report}
-\usepackage{hyperref}
-\hypersetup{
-  pdftitle={Operating System Concepts},
-  pdfauthor={Hong MingJian},
-  pdfsubject={The EPOS Source code},
-%  pdfpagemode={FullScreen},
-  colorlinks={true},
-  linkcolor={blue},
-}
 \usepackage{CJKutf8}
-\usepackage{epic} % for \dashline
-\usepackage{listings}
-\usepackage{courier}
+\usepackage{minted} %  -shell-escape
+\usepackage{caption} % for \captionof
 \usepackage{pgffor} % for \foreach
-
-\lstset{
-  basicstyle=\small\ttfamily,
-  tabsize=2,
-  breaklines=false,
-%  keywordstyle=\color{blue},
-%  identifierstyle=,
-%  commentstyle=\color{green},
-%  stringstyle=,
-%  showstringspaces=false,
-%  extendedchars=false
-%  numberstyle=\tiny,
-  numbers=left,
-  stepnumber=1,
-  firstnumber=1,
-  numberfirstline=true,
-  frame=tb
-}
-
-%\renewcommand\lstlistingname{File}
-%\renewcommand\lstlistlistingname{The EPOS source code}
 
 \title{THE EPOS SOURCE CODE}
 \author{洪明坚\ 重庆大学软件学院}
 \date{2014年10月}
 
 \begin{document}
-\begin{CJK*}{UTF8}{songti}
+\begin{CJK*}{UTF8}{song}
 
 \maketitle
 
-\lstlistoflistings
+\renewcommand\listoflistingscaption{List of source codes}
+\listoflistings
 
 \newpage
-\lstinputlisting[language={[gnu]make},label=Makefile,caption=Makefile]{../Makefile}
-\newpage
-\lstinputlisting[language={[gnu]make},label=Makefile.inc,caption=Makefile.inc]{../Makefile.inc}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{make}{../Makefile}
+\captionof{listing}{Makefile}
 
 \newpage
-\lstinputlisting[label=include/syscall-nr.h,caption=include/syscall-nr.h]{../include/syscall-nr.h}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{make}{../Makefile.inc}
+\captionof{listing}{Makefile.inc}
 
 \newpage
-\lstinputlisting[language={[gnu]make},label=kernel/Makefile,caption=kernel/Makefile]{../kernel/Makefile}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{c}{../include/syscall-nr.h}
+\captionof{listing}{include/syscall-nr.h}
+
 \newpage
-\lstinputlisting[label=kernel/ldscript,caption=kernel/ldscript]{../kernel/ldscript}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{make}{../kernel/Makefile}
+\captionof{listing}{kernel/Makefile}
+
 \newpage
-\lstinputlisting[label=kernel/entry.S,caption=kernel/entry.S]{../kernel/entry.S}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{c}{../kernel/kernel.ld.in}
+\captionof{listing}{kernel/kernel.ld.in}
+
+\newpage
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{gas}{../kernel/entry.S}
+\captionof{listing}{kernel/entry.S}
+
 \foreach \n in
-{machdep.c,startup.c,task.c,page.c,frame.c,timer.c,kbd.c,cpu.h,kernel.h,machdep.h}{\newpage
-\lstinputlisting[language=C,label=kernel/\n,caption=kernel/\n]{../kernel/\n}}
+{machdep.c,startup.c,task.c,page.c,frame.c,timer.c,kbd.c,cpu.h,kernel.h,machdep.h}{
+    \newpage
+    \inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{c}{../kernel/\n}
+    \captionof{listing}{kernel/\n}
+}
 
 \newpage
-\lstinputlisting[language={[gnu]make},label=userapp/Makefile,caption=userapp/Makefile]{../userapp/Makefile}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{make}{../userapp/Makefile}
+\captionof{listing}{userapp/Makefile}
+
 \newpage
-\lstinputlisting[label=userapp/lib/crt0.S,caption=userapp/lib/crt0.S]{../userapp/lib/crt0.S}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{gas}{../userapp/lib/crt0.S}
+\captionof{listing}{userapp/lib/crt0.S}
+
 \newpage
-\lstinputlisting[language=C,label=userapp/main.c,caption=userapp/main.c]{../userapp/main.c}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{c}{../userapp/main.c}
+\captionof{listing}{userapp/main.c}
+
 \newpage
-\lstinputlisting[label=userapp/lib/syscall-wrapper.S,caption=userapp/lib/syscall-wrapper.S]{../userapp/lib/syscall-wrapper.S}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{gas}{../userapp/lib/syscall-wrapper.S}
+\captionof{listing}{userapp/lib/syscall-wrapper.S}
+
 \newpage
-\lstinputlisting[language=C,label=userapp/include/syscall.h,caption=userapp/include/syscall.h]{../userapp/include/syscall.h}
+\inputminted[linenos,numbersep=5pt,frame=lines,framesep=2mm]{c}{../userapp/include/syscall.h}
+\captionof{listing}{userapp/include/syscall.h}
 
 \end{CJK*}
 \end{document}

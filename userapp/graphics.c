@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <syscall.h>
 #include <stdio.h>
+#include <string.h>
 #include "graphics.h"
 
 #define LOWORD(l) ((uint16_t)(l))

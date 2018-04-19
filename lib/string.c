@@ -88,9 +88,9 @@ int strncmp(const char *cs, const char *ct, size_t count)
 
 char *strchr(const char *s, int c)
 {
-   for (; *s != (char)c; ++s)
-	if (*s == '\0')
-		return NULL;
+	for (; *s != (char)c; ++s)
+		if (*s == '\0')
+			return NULL;
 	return (char *)s;
 }
 
@@ -142,12 +142,12 @@ strlen(const char *str)
 char *
 strncpy(char *dest, const char *src, size_t n)
 {
-    unsigned i;
+	unsigned i;
 
-   for (i = 0; i < n && src[i] != '\0'; i++)
-        dest[i] = src[i];
-    for ( ; i < n; i++)
-        dest[i] = '\0';
+	for (i = 0; i < n && src[i] != '\0'; i++)
+		dest[i] = src[i];
+	for ( ; i < n; i++)
+		dest[i] = '\0';
 
-   return dest;
+	return dest;
 }

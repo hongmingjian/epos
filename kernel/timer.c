@@ -164,6 +164,12 @@ unsigned sys_sleep(unsigned seconds)
     return 0;
 }
 
+unsigned sys_msleep(unsigned millseconds)
+{
+    do_sleep(millseconds, 1000);
+    return 0;
+}
+
 int sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
     if(rqtp->tv_sec > 0)

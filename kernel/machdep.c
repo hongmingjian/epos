@@ -717,6 +717,9 @@ void syscall(struct context *ctx)
     case SYSCALL_sleep:
         ctx->eax = sys_sleep((*((int *)(ctx->esp+4))));
         break;
+    case SYSCALL_msleep:
+        ctx->eax = sys_msleep((*((int *)(ctx->esp+4))));
+        break;
     case SYSCALL_nanosleep:
         {
             ctx->eax = -1;

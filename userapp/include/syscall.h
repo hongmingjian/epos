@@ -15,6 +15,7 @@ int reboot(int howto);
 void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
 int   munmap(void *addr, size_t len);
 unsigned sleep(unsigned seconds);
+unsigned msleep(unsigned millseconds);
 int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 
 void beep(int freq);

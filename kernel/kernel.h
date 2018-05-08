@@ -188,6 +188,7 @@ void     frame_free(uint32_t paddr, uint32_t npages);
 
 void     calibrate_delay(void);
 unsigned sys_sleep(unsigned seconds);
+unsigned sys_msleep(unsigned millseconds);
 int      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 
 void     mi_startup();

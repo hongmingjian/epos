@@ -242,8 +242,8 @@ int sys_task_wait(int tid, int *pcode_exit)
     if(g_task_running == NULL)
         return -1;
 
-	if(tid == 0)
-		return -1;
+    if(tid == 0)
+        return -1;
 
     save_flags_cli(flags);
 

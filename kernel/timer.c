@@ -168,7 +168,16 @@ int sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 {
     if(rqtp->tv_sec > 0)
         do_sleep(rqtp->tv_sec, 1);
-    if(rqtp->tv_nsec > 0)
-        do_sleep(rqtp->tv_nsec, 1000 * 1000 * 1000);
+
+    long nsec = rqtp->tv_nsec,
+         nhz  = 1000*1000*1000 / HZ,
+         ticks= nsec / nhz;
+    if(ticks > 0) {
+        do_sleep(ticks, HZ);
+        nsec %= nhz;
+    }
+    if(nsec > 0)
+        do_sleep(nsec, 1000 * 1000 * 1000);
+
     return 0;
 }

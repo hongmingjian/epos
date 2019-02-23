@@ -27,6 +27,10 @@ make.dep: *.c *.h
 	$(CC) $(CPPFLAGS) -M $(COBJS:.o=.c) >make.dep
 
 .DELETE_ON_ERROR: make.dep
+.FORCE:
+.PHONY: .FORCE
+
+../lib/snprintf.o: .FORCE
 
 $(PROG).bin: kernel.ld $(OBJS)
 	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)

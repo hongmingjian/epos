@@ -29,6 +29,10 @@ make.dep: *.c *.h
 	$(CC) $(CPPFLAGS) -M $(COBJS:.o=.c) >make.dep
 
 .DELETE_ON_ERROR: make.dep
+.FORCE:
+.PHONY: .FORCE
+
+../lib/snprintf.o: .FORCE
 
 .PHONY: debug
 debug: CFLAGS+=-O0 -ggdb

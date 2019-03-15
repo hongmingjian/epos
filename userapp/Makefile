@@ -8,10 +8,10 @@ all: make.dep run
 CPPFLAGS=-nostdinc -I../include -Iinclude
 ASFLAGS=-m32 -Wall -D__ASSEMBLY__
 CFLAGS=	-m32 -Wall -DSNPRINTF_FLOATPOINT \
-	-ffreestanding -fno-stack-check -fleading-underscore \
-	-mno-ms-bitfields -mno-stack-arg-probe
+	-ffreestanding -fleading-underscore \
+	-mno-ms-bitfields -fno-stack-check -fno-pie #-mno-stack-arg-probe
 LDFLAGS=-m32 -nostdlib -nostartfiles -nodefaultlibs \
-		-Wl,-Map,$(PROG).map
+		-Wl,-Map,$(PROG).map -static
 
 COBJS=	vm86call.o graphics.o main.o
 COBJS+=	lib/sysconf.o lib/math.o lib/stdio.o lib/stdlib.o \

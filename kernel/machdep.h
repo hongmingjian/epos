@@ -24,6 +24,17 @@
 #include "cpu.h"
 
 /**
+ * 31          24         19   16                 7           0
+ * ------------------------------------------------------------
+ * |             | |B| |A|       | |   |1|0|E|W|A|            |
+ * | BASE 31..24 |G|/|L|V| LIMIT |P|DPL|  TYPE   | BASE 23:16 |  4
+ * |             | |D| |L| 19..16| |   |1|1|C|R|A|            |
+ * ------------------------------------------------------------
+ * |                             |                            |
+ * |        BASE 15..0           |       LIMIT 15..0          |  0
+ * |                             |                            |
+ * ------------------------------------------------------------
+ *
  * `struct segment_descriptor' comes from FreeBSD
  */
 #define SEL_KPL 0  /* kernel priority level */
@@ -178,6 +189,7 @@ struct vm86_context {
 void sys_vm86(struct vm86_context *vm86ctx);
 void vm86_init();
 int  vm86_emulate(struct vm86_context *vm86ctx);
+int  vm86call(int fintr, uint32_t n, struct vm86_context *vm86ctx);
 
 #if USE_FLOPPY
 void     init_floppy();

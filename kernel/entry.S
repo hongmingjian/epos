@@ -264,8 +264,16 @@ exception_common:
     cmpl $0, %eax
     je 4f
 
+    movl %esp, %esi
+    movl $22, %ecx
     addl $(22*4), %esp
-    ret # return from sys_vm86 to syscall
+    movl %esp, %eax
+    addl $4, %eax
+    movl (%eax), %edi
+    cld
+    rep movsd
+
+    ret # return from sys_vm86
 
 4:
     jmp _ret_from_syscall

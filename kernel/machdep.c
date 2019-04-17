@@ -521,10 +521,7 @@ int exception(struct context *ctx)
                 //This exception was eaten by vm86mon and return to vm86 mode
                 return 0;
             else {
-                //This exception cannot be eaten by vm86mon, return to user mode
-                struct context *c=(struct context *)(((uint8_t *)g_task_running)+PAGE_SIZE-
-                                                     sizeof(struct context));
-                **((struct vm86_context **)(c->esp+4)) = *((struct vm86_context *)ctx);
+                //This exception cannot be eaten by vm86mon, return to caller
                 return 1;
             }
         }
@@ -561,6 +558,16 @@ int exception(struct context *ctx)
             printk("fpu.foo=0x%08x\r\n", g_task_own_fpu->fpu.foo);
             printk("fpu.fos=0x%04x\r\n", g_task_own_fpu->fpu.fos);
         }
+    }
+
+    /**
+     * Return to text mode to show the exception.
+     */
+    {
+        struct vm86_context vm86ctx = {.ss = 0x0000, .esp = 0x1000};
+        vm86ctx.eax=0x4f02;
+        vm86ctx.ebx=0x3;
+        vm86call(1, 0x10, &vm86ctx);
     }
 
     printk("Un-handled exception!\r\n");

@@ -359,3 +359,62 @@ int vm86_emulate(struct vm86_context *vm86ctx)
 
     return eaten;
 }
+
+int vm86call(int fintr, uint32_t n, struct vm86_context *vm86ctx)
+{
+    int fStop = 0, res = 0;
+    uint16_t ip, sp;
+
+    /*http://stanislavs.org/helppc/bios_data_area.html*/
+    uint16_t ret_cs = 0x50, ret_ip = 0x34;
+
+    *(uint8_t *)LADDR(ret_cs, ret_ip) = 0xf4/*=HLT*/;
+
+    sp = LOWORD(vm86ctx->esp);
+    if(fintr) {
+        sp -= 2; *(uint16_t *)LADDR(vm86ctx->ss, sp) = 0;
+    }
+    sp -= 2; *(uint16_t *)LADDR(vm86ctx->ss, sp) = ret_cs;
+    sp -= 2; *(uint16_t *)LADDR(vm86ctx->ss, sp) = ret_ip;
+
+    if(fintr) {
+        uint16_t *ivt = (uint16_t *)0;
+
+        n = n & 0xff;
+        ip = ivt[n * 2 + 0];
+        vm86ctx->cs = ivt[n * 2 + 1];
+    } else {
+        ip = LOWORD(n);
+        vm86ctx->cs = HIWORD(n);
+    }
+
+    vm86ctx->eip = (vm86ctx->eip & 0xffff0000) | ip;
+    vm86ctx->esp = (vm86ctx->esp & 0xffff0000) | sp;
+    vm86ctx->eflags &= 0x0ffff;
+    vm86ctx->eflags |= 0x20000;
+    do {
+        sys_vm86(vm86ctx);
+
+        ip = LOWORD(vm86ctx->eip);
+        sp = LOWORD(vm86ctx->esp);
+
+        switch(*(uint8_t *)LADDR(vm86ctx->cs, ip)) {
+        case 0xf4: /*HLT*/
+            if(LADDR(vm86ctx->cs, ip)==LADDR(ret_cs, ret_ip))
+                fStop = 1;
+            ip++;
+            break;
+        default:
+            fStop = 1;
+            printk("Unknown opcode: 0x%02x at 0x%04x:0x%04x\r\n",
+                    *(uint8_t *)LADDR(vm86ctx->cs, ip),
+                    vm86ctx->cs, ip);
+            res = -1;
+            break;
+        }
+        vm86ctx->eip = (vm86ctx->eip & 0xffff0000) | ip;
+        vm86ctx->esp = (vm86ctx->esp & 0xffff0000) | sp;
+    } while(!fStop);
+
+    return res;
+}

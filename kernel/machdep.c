@@ -550,13 +550,6 @@ int exception(struct context *ctx)
     case 16://x87 FPU Floating-Point Error
         if(g_task_own_fpu) {
             __asm__ __volatile__("fnsave %0\t\n"::"m"(g_task_own_fpu->fpu));
-            printk("fpu.cwd=0x%04x\r\n", g_task_own_fpu->fpu.cwd);
-            printk("fpu.swd=0x%04x\r\n", g_task_own_fpu->fpu.swd);
-            printk("fpu.twd=0x%04x\r\n", g_task_own_fpu->fpu.twd);
-            printk("fpu.fip=0x%08x\r\n", g_task_own_fpu->fpu.fip);
-            printk("fpu.fcs=0x%04x\r\n", g_task_own_fpu->fpu.fcs);
-            printk("fpu.foo=0x%08x\r\n", g_task_own_fpu->fpu.foo);
-            printk("fpu.fos=0x%04x\r\n", g_task_own_fpu->fpu.fos);
         }
     }
 
@@ -583,6 +576,87 @@ int exception(struct context *ctx)
             ctx->eip, ctx->cs, ctx->eflags);
     if(ctx->cs & SEL_UPL)
         printk("esp=0x%08x,  ss=0x%04x\r\n", ctx->esp, ctx->ss);
+
+    printk("\r\n");
+
+    switch(ctx->exception) {
+    case 0:
+        printk("Divide Error\r\n");
+        break;
+    case 1:
+        printk("Debug\r\n");
+        break;
+    case 2:
+        printk("NMI\r\n");
+        break;
+    case 3:
+        printk("Breakpoint\r\n");
+        break;
+    case 4:
+        printk("Overflow\r\n");
+        break;
+    case 5:
+        printk("Bound Range\r\n");
+        break;
+    case 6:
+        printk("Invalid Opcode\r\n");
+        break;
+    case 7:
+        printk("Device Not Available\r\n");
+        break;
+    case 8:
+        printk("Double Fault\r\n");
+        break;
+    case 9:
+        printk("Coprocessor Segment Overrun\r\n");
+        break;
+    case 10:
+        printk("Invalid TSS\r\n");
+        break;
+    case 11:
+        printk("Segment Not Present\r\n");
+        break;
+    case 12:
+        printk("Stack Fault\r\n");
+        break;
+    case 13:
+        printk("General Protection\r\n");
+        break;
+    case 14:
+        {
+            uint32_t vaddr;
+            __asm__ __volatile__("movl %%cr2,%0" : "=r" (vaddr));
+            printk("Page Fault when %s 0x%08x in %s mode\r\n",
+                    (ctx->errorcode&2)?"writing":"reading",
+                    vaddr,
+                    (ctx->errorcode&4)?"user":"kernel");
+        }
+        break;
+    case 16:
+        printk("x87 FPU Floating-Point Error\r\n");
+        if(g_task_own_fpu) {
+            printk("fpu.cwd=0x%04x\r\n", g_task_own_fpu->fpu.cwd);
+            printk("fpu.swd=0x%04x\r\n", g_task_own_fpu->fpu.swd);
+            printk("fpu.twd=0x%04x\r\n", g_task_own_fpu->fpu.twd);
+            printk("fpu.fip=0x%08x\r\n", g_task_own_fpu->fpu.fip);
+            printk("fpu.fcs=0x%04x\r\n", g_task_own_fpu->fpu.fcs);
+            printk("fpu.foo=0x%08x\r\n", g_task_own_fpu->fpu.foo);
+            printk("fpu.fos=0x%04x\r\n", g_task_own_fpu->fpu.fos);
+        }
+        break;
+    case 17:
+        printk("Alignment Check\r\n");
+        break;
+    case 18:
+        printk("Machine-Check\r\n");
+        break;
+    case 19:
+        printk("SIMD Floating-Point\r\n");
+        break;
+    default:
+        printk("Unknown exception %d\r\n", ctx->exception);
+        break;
+    }
 
     while(1);
 }
@@ -804,19 +878,17 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     /*检查地址是否合法*/
     prot = page_prot(vaddr);
     if(prot == -1 || prot == VM_PROT_NONE) {
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
+#if VERBOSE
         printk("->ILLEGAL MEMORY ACCESS\r\n");
+#endif
         return -1;
     }
 
     if(code & L2E_V) {
         /*页面保护引起PF*/
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
+#if VERBOSE
         printk("->PROTECTION VIOLATION\r\n");
+#endif
 		return -1;
     }
 
@@ -846,10 +918,9 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
             return 0;
         } else {
             /*物理内存已耗尽*/
-#if !VERBOSE
-            printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
+#if VERBOSE
             printk("->OUT OF RAM\r\n");
+#endif
         }
     }
 

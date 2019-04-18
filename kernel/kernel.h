@@ -189,6 +189,16 @@ void     frame_free(uint32_t paddr, uint32_t npages);
 void     calibrate_delay(void);
 unsigned sys_sleep(unsigned seconds);
 int      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+struct timeval {
+	long tv_sec;
+	long tv_usec;
+};
+
+struct timezone {
+	int tz_minuteswest;
+	int tz_dsttime;
+};
+int sys_gettimeofday(struct timeval *tv, struct timezone *tz);
 
 void     mi_startup();
 #endif /*_KERNEL_H*/

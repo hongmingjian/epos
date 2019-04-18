@@ -856,6 +856,13 @@ void syscall(struct context *ctx)
             }
         }
         break;
+    case SYSCALL_gettimeofday:
+        {
+            struct timeval *tv = *( struct timeval **)(ctx->esp+4);
+            struct timezone *tz = *( struct timezone **)(ctx->esp+8);
+            ctx->eax = sys_gettimeofday(tv, tz);
+        }
+        break;
     default:
         printk("syscall #%d not implemented.\r\n", ctx->eax);
         ctx->eax = -ctx->eax;

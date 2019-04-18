@@ -181,3 +181,12 @@ int sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
 
     return 0;
 }
+
+int sys_gettimeofday(struct timeval *tv, struct timezone *tz)
+{
+    if(tv == NULL)
+        return -1;
+    tv->tv_sec = g_startup_time + g_timer_ticks/HZ;
+    tv->tv_usec = (g_timer_ticks%HZ) * 1000;
+    return 0;
+}

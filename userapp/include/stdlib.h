@@ -37,6 +37,9 @@ void *malloc(size_t size);
 void *calloc(size_t num, size_t size);
 void *realloc(void *oldptr, size_t size);
 void  free(void *ptr);
+#ifdef  __GNUC__
+# define alloca(size) __builtin_alloca (size)
+#endif /*__GNUC__*/
 
 #define	EXIT_FAILURE	1
 #define	EXIT_SUCCESS	0
@@ -45,6 +48,7 @@ void exit(int);
 long strtol(const char *nptr, char **endptr, register int base);
 unsigned long strtoul(const char *nptr, char **endptr, register int base);
 long atol(const char *str);
+char *strdup (const char *s);
 
 void qsort(void *a, size_t n, size_t es, int (*cmp)(const void *, const void *));
 

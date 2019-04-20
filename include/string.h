@@ -16,9 +16,10 @@ char *strcpy(char *to, const char *from);
 size_t strlen(const char *str);
 char *strncpy(char *dest, const char *src, size_t n);
 int strncmp(const char *cs, const char *ct, size_t count);
-int strcasecmp (const char *s1, const char *s2);
 char *strchr(const char *s, int c);
 char *strstr(const char *s1, const char *s2);
 char *strrchr(const char *s, int c);
+int strcasecmp(const char *s1, const char *s2);
+int strncasecmp(const char *s1, const char *s2, size_t length);
 
 #endif /* _STRING_H */

@@ -15,6 +15,7 @@ double log2(double x, double y);
 double atan2(double y,double x);
 double tan(double x);
 double cot(double x);
+double atan(double x);
 
 double pow(double a, double b);
 double exp(double x);

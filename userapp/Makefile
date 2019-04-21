@@ -32,7 +32,12 @@ make.dep: *.c *.h
 .FORCE:
 .PHONY: .FORCE
 
+../lib/tlsf/tlsf.o: .FORCE
+../lib/memcpy.o: .FORCE
+../lib/memset.o: .FORCE
 ../lib/snprintf.o: .FORCE
+../lib/softfloat.o: .FORCE
+../lib/string.o: .FORCE
 
 .PHONY: debug
 debug: CFLAGS+=-O0 -ggdb

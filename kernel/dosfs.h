@@ -366,6 +366,24 @@ void DFS_Seek(PFILEINFO fileinfo, uint32_t offset, uint8_t *scratch);
 */
 uint32_t DFS_UnlinkFile(PVOLINFO volinfo, char *path, uint8_t *scratch);
 
+/*
+        Fetch FAT entry for specified cluster number
+        You must provide a scratch buffer for one sector (SECTOR_SIZE) and a populated VOLINFO
+        Returns a FAT32 BAD_CLUSTER value for any error, otherwise the contents of the desired
+        FAT entry.
+        scratchcache should point to a UINT32. This variable caches the physical sector number
+        last read into the scratch buffer for performance enhancement reasons.
+*/
+uint32_t DFS_GetFAT(PVOLINFO volinfo, uint8_t *scratch, uint32_t *scratchcache, uint32_t cluster);
+
+/*
+// TK: added 2009-02-12
+        Close a file
+        No original function of DosFS driver
+        It has no effect if writing to SD Card, it's only used by the DosFS wrapper in emulation
+*/
+uint32_t DFS_Close(PFILEINFO fileinfo);
+
 // If we are building a host-emulation version, include host support
 #ifdef HOSTVER
 #include "hostemu.h"

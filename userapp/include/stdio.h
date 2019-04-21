@@ -14,6 +14,7 @@ typedef struct {
 #define stdout  ((FILE *)1)
 #define stderr  ((FILE *)2)
 
+int sprintf(char *buf, const char *fmt, ...);
 int snprintf (char *str, size_t count, const char *fmt, ...);
 int vsnprintf (char *str, size_t count, const char *fmt, va_list args);
 int printf(const char *fmt,...);

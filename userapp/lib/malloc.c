@@ -1,3 +1,4 @@
+#include <string.h>
 #include "../lib/tlsf/tlsf.h"
 
 tlsf_t g_heap;

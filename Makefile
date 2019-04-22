@@ -51,7 +51,7 @@ ifeq ($(shell uname -s),Linux)
 endif
 ifeq ($(shell uname -s),Darwin)
 	-osascript -e 'on run argv' \
-			   -e '  tell application "Terminal" to do script "cd $(shell pwd); $(GDB)"' \
+			   -e '  tell application "Terminal" to do script "cd $(shell pwd); $(GDB); exit"' \
 			   -e 'end run'
 endif
 	-qemu-system-i386  -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 32 -boot order=c -vga std -drive format=raw,file=$^,index=0,media=disk

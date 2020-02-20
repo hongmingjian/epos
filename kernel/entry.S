@@ -267,11 +267,14 @@ exception_common:
     movl %esp, %esi
     movl $22, %ecx
     addl $(22*4), %esp
-    movl %esp, %eax
-    addl $4, %eax
-    movl (%eax), %edi
+    movl 20(%esp), %edi
     cld
     rep movsd
+
+    popl %edi
+    popl %esi
+    popl %ebx
+    popl %ebp
 
     ret # return from sys_vm86
 
@@ -447,7 +450,11 @@ _lidt:
 
     .globl _sys_vm86
 _sys_vm86:
-    movl 4(%esp), %esi
+    pushl %ebp
+    pushl %ebx
+    pushl %esi
+    pushl %edi
+    movl 20(%esp), %esi
     subl $(22*4), %esp
     movl %esp, %edi
     movl $22, %ecx

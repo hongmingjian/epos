@@ -360,7 +360,7 @@ int vm86_emulate(struct vm86_context *vm86ctx)
     return eaten;
 }
 
-int vm86call(int fintr, uint32_t n, struct vm86_context *vm86ctx)
+int vm86_call(int fintr, uint32_t n, struct vm86_context *vm86ctx)
 {
     int fStop = 0, res = 0;
     uint16_t ip, sp;

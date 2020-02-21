@@ -557,10 +557,31 @@ int exception(struct context *ctx)
      * Return to text mode to show the exception.
      */
     {
-        struct vm86_context vm86ctx = {.ss = 0x0000, .esp = 0x1000};
-        vm86ctx.eax=0x4f02;
-        vm86ctx.ebx=0x3;
-        vm86call(1, 0x10, &vm86ctx);
+        struct vm86_context vm86ctx;
+        int mode;
+
+        memset(&vm86ctx, 0, sizeof(vm86ctx));
+        vm86ctx.esp=0x1000;
+        vm86ctx.eax=0x4f03;
+        vm86_call(1, 0x10, &vm86ctx);
+        mode = vm86ctx.ebx & 0x3fff;
+
+        memset(&vm86ctx, 0, sizeof(vm86ctx));
+        vm86ctx.esp=0x1000;
+        vm86ctx.eax=0x4f01;
+        vm86ctx.ecx=mode;
+        vm86ctx.es=0x70; /*XXX*/
+        vm86ctx.edi=0x36;/*XXX*/
+        vm86_call(1, 0x10, &vm86ctx);
+        uint16_t ma = *(uint16_t *)0x736;/*XXX*/
+
+        if((ma>>4)&1) {
+            memset(&vm86ctx, 0, sizeof(vm86ctx));
+            vm86ctx.esp=0x1000;
+            vm86ctx.eax=0x4f02;
+            vm86ctx.ebx=0x8003;/*XXX*/
+            vm86_call(1, 0x10, &vm86ctx);
+        }
     }
 
     printk("Un-handled exception!\r\n");

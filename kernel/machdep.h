@@ -189,7 +189,7 @@ struct vm86_context {
 void sys_vm86(struct vm86_context *vm86ctx);
 void vm86_init();
 int  vm86_emulate(struct vm86_context *vm86ctx);
-int  vm86call(int fintr, uint32_t n, struct vm86_context *vm86ctx);
+int  vm86_call(int fintr, uint32_t n, struct vm86_context *vm86ctx);
 
 #if USE_FLOPPY
 void     init_floppy();

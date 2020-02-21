@@ -9,8 +9,8 @@ CPPFLAGS=-DVERBOSE=0 -nostdinc -I../include
 ASFLAGS=-m32 -Wall -D__ASSEMBLY__
 CFLAGS=	-m32 -Wall \
 	-fomit-frame-pointer \
-	-ffreestanding -fleading-underscore \
-	-mno-ms-bitfields -fno-stack-check -fno-pie #-mno-stack-arg-probe
+	-ffreestanding -fleading-underscore -mno-ms-bitfields \
+	-fno-pie #-fno-stack-check -mno-stack-arg-probe -fno-stack-protector
 LDFLAGS=-m32 -Tkernel.ld -nostdlib -nostartfiles -nodefaultlibs \
 		-Wl,-Map,$(PROG).map -static
 

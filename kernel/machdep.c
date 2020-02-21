@@ -971,7 +971,7 @@ static uint32_t init_paging(uint32_t physfree)
     memset(pgdir, 0, L1_TABLE_SIZE);
 
     /*
-     * 分配NR_KERN_PAGETABLE张小页表，并填充到页目录
+     * 分配小页表，并填充页目录
      */
     for(i = 0; i < NR_KERN_PAGETABLE; i++) {
         pgdir[i                       ]=

@@ -1,7 +1,7 @@
 include Makefile.inc
 
 .PHONY: all
-all: hd.img
+all: subdirs
 
 MODE = run
 SUBDIRS = kernel userapp

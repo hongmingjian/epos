@@ -143,21 +143,23 @@ PRIVATE uint16_t scan_ascii[][8] =
 
 PRIVATE uint16_t kbd_translate(uint8_t scan)
 {
+    int brk = 0;
     if (scan == 0xE0 || scan == 0xE1)   return 0x0000 ; /* ignore */
-    if (scan & 0x80)                    return scan << 8 ; /* KeyUp */
+//    if (scan & 0x80)                    return scan << 8 ; /* KeyUp */
+    if(scan & 0x80) { scan &= 0x7f; brk = 0x80<<8; }
     if (scan >= ENTRIES(scan_ascii))    return 0x0000 ; /* ignore */
 
-    if (state.alt)  return scan_ascii[scan][3] ;
-    if (state.ctrl) return scan_ascii[scan][2] ;
+    if (state.alt)  return scan_ascii[scan][3] | brk ;
+    if (state.ctrl) return scan_ascii[scan][2] | brk ;
     if (scan >= 0x47)
     {
         if (state.num)
         {
             if (state.lshift || state.rshift)
             {
-                return scan_ascii[scan][7] ;
+                return scan_ascii[scan][7] | brk ;
             }
-            return scan_ascii[scan][4] ;
+            return scan_ascii[scan][4] | brk ;
         }
     }
 
@@ -165,17 +167,17 @@ PRIVATE uint16_t kbd_translate(uint8_t scan)
     {
         if (state.lshift || state.rshift)
         {
-            return scan_ascii[scan][6] ;
+            return scan_ascii[scan][6] | brk ;
         }
-        return scan_ascii[scan][5] ;
+        return scan_ascii[scan][5] | brk ;
     }
 
     if (state.lshift || state.rshift)
     {
-        return scan_ascii[scan][1] ;
+        return scan_ascii[scan][1] | brk ;
     }
 
-    return scan_ascii[scan][0] ;
+    return scan_ascii[scan][0] | brk ;
 }
 
 PRIVATE int kbd_set_state(uint8_t scan)
@@ -230,7 +232,7 @@ void isr_keyboard(uint32_t irq, struct context *ctx)
     /*再次确认用户是否按键*/
     if(inportb(PORT_KBD_STS) & KBD_STS_RDY) {
         uint8_t scan;
-        uint16_t ascii;
+        uint16_t key;
 
         /*是的。把按键的扫描码读进来*/
         scan = inportb(PORT_KBD_DAT);
@@ -239,12 +241,12 @@ void isr_keyboard(uint32_t irq, struct context *ctx)
         if(kbd_set_state(scan))
             return;
 
-        /*把键盘扫描码转为ASCII码*/
-        if((ascii = kbd_translate(scan)) == 0)
+        /*转换扫描码*/
+        if((key = kbd_translate(scan)) == 0)
             return;
 
         /*放到键盘缓冲区*/
-        buf_kbd = ascii;
+        buf_kbd = key;
 
         /*唤醒一个等待键盘输入的线程*/
         wake_up(&wq_kbd, 1);

@@ -3,11 +3,11 @@ include ../Makefile.inc
 PROG=	a
 
 .PHONY: all
-all: make.dep run
+all: run
 
 CPPFLAGS=-nostdinc -I../include -Iinclude
 ASFLAGS=-m32 -Wall -D__ASSEMBLY__
-CFLAGS=	-m32 -Wall \
+CFLAGS=	-m32 -Wall -pipe\
 	-DSNPRINTF_FLOATPOINT \
 	-ffreestanding -fleading-underscore -mno-ms-bitfields \
 	-fno-pie #-fno-stack-check -mno-stack-arg-probe -fno-stack-protector
@@ -42,11 +42,11 @@ make.dep: *.c *.h
 
 .PHONY: debug
 debug: CFLAGS+=-O0 -ggdb
-debug: $(PROG).out
+debug: make.dep $(PROG).out
 
 .PHONY: run
 run: CFLAGS+=-O2 -ggdb
-run: $(PROG).out
+run: make.dep $(PROG).out
 
 .PHONY: clean
 clean:

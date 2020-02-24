@@ -3,11 +3,11 @@ include ../Makefile.inc
 PROG=		eposkrnl
 
 .PHONY: all
-all: make.dep run
+all: run
 
 CPPFLAGS=-DVERBOSE=0 -nostdinc -I../include
 ASFLAGS=-m32 -Wall -D__ASSEMBLY__
-CFLAGS=	-m32 -Wall \
+CFLAGS=	-m32 -Wall -pipe \
 	-fomit-frame-pointer \
 	-ffreestanding -fleading-underscore -mno-ms-bitfields \
 	-fno-pie #-fno-stack-check -mno-stack-arg-probe -fno-stack-protector
@@ -46,11 +46,11 @@ kernel.ld: kernel.ld.in
 
 .PHONY: debug
 debug: CFLAGS+=-O0 -ggdb
-debug: $(PROG).bin
+debug: make.dep $(PROG).bin
 
 .PHONY: run
 run: CFLAGS+=-O2 -ggdb
-run: $(PROG).bin
+run: make.dep $(PROG).bin
 
 .PHONY: clean
 clean:

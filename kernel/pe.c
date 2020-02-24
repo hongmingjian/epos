@@ -17,7 +17,7 @@
  * purpose.
  *
  */
-#ifdef __WIN32__
+#if defined(__WIN32__) || defined(__CYGWIN__)
 #include <stddef.h>
 #include <string.h>
 #include "kernel.h"

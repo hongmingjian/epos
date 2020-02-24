@@ -20,7 +20,7 @@
 #define LOADADDR 0x100000
 #define KERNBASE 0xC0000000
 
-#if defined __WIN32__
+#if defined(__WIN32__) || defined(__CYGWIN__)
 OUTPUT_FORMAT("pei-i386")
 #elif defined __ELF__
 OUTPUT_FORMAT("elf32-i386")

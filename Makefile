@@ -107,6 +107,10 @@ clean:
 	@for subdir in $(SUBDIRS); do $(MAKE) -C $${subdir} $@; done
 	$(RM) hd.img hd.vmdk tags
 
+.PHONY: diff
+diff:
+	@svn diff -x --ignore-eol-style | tr -d '\r' | gvim -u NONE -c "set enc=utf-8" -c "set go-=T" -c "syn on" -c "set ft=diff" -dmMnR - 2>&1 >/dev/null
+	
 .PHONY: submit
 submit: clean
 	@all=`svn status | grep '^[M?]' | cut -c9- | tr '\\\\' '/' | tr '\n' ' '`; \

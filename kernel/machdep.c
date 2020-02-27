@@ -278,6 +278,7 @@ static void init_gdt(void)
     memset(&tss, 0, sizeof(struct tss));
     tss.ss0  = GSEL_KDATA*sizeof(gdt[0]);
     tss.esp0 = (uint32_t)&tmp_stack;
+    tss.iomap_base = limit; /*no I/O permission map*/
 
     __asm__ __volatile__(
             "movw %0, %%ax\n\t"

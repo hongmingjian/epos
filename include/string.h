@@ -19,5 +19,7 @@ int strncmp(const char *cs, const char *ct, size_t count);
 char *strchr(const char *s, int c);
 char *strstr(const char *s1, const char *s2);
 char *strrchr(const char *s, int c);
+int strcasecmp(const char *s1, const char *s2);
+int strncasecmp(const char *s1, const char *s2, size_t length);
 
 #endif /* _STRING_H */

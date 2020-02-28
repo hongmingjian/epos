@@ -30,10 +30,10 @@
 /*中断向量表*/
 extern void (*g_intr_vector[])(uint32_t irq, struct context *ctx);
 
-/*让中断控制器打开某个中断*/
+/*让中断控制器关闭某个中断*/
 void disable_irq(uint32_t irq);
 
-/*让中断控制器关闭某个中断*/
+/*让中断控制器打开某个中断*/
 void enable_irq(uint32_t irq);
 
 /*定时器以HZ的频率中断CPU*/
@@ -147,8 +147,7 @@ void  init_kmalloc(void *mem, size_t bytes);
 void *kmalloc(size_t bytes);
 void *krealloc(void *oldptr, size_t size);
 void  kfree(void *ptr);
-void *aligned_kmalloc(size_t bytes, size_t align);
-void  aligned_kfree(void *ptr);
+void *kmemalign(size_t align, size_t bytes);
 
 #define RAM_ZONE_LEN (2 * 8)
 extern uint32_t g_ram_zone[RAM_ZONE_LEN];
@@ -189,6 +188,16 @@ void     frame_free(uint32_t paddr, uint32_t npages);
 void     calibrate_delay(void);
 unsigned sys_sleep(unsigned seconds);
 int      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+struct timeval {
+	long tv_sec;
+	long tv_usec;
+};
+
+struct timezone {
+	int tz_minuteswest;
+	int tz_dsttime;
+};
+int sys_gettimeofday(struct timeval *tv, struct timezone *tz);
 
 void     mi_startup();
 #endif /*_KERNEL_H*/

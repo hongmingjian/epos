@@ -1,5 +1,11 @@
 include Makefile.inc
 
+ifeq ($(OS),Windows_NT)
+W=w
+else
+W=
+endif
+
 .PHONY: all
 all: subdirs
 
@@ -33,18 +39,13 @@ endif
 
 .PHONY: qemu
 qemu: hd.img
-ifeq ($(OS),Windows_NT)
-	-qemu-system-i386w -m 32 -boot order=c -vga std -drive format=raw,file=$^,index=0,media=disk -L $(QEMUHOME)/Bios
-else
-	-qemu-system-i386  -m 32 -boot order=c -vga std -drive format=raw,file=$^,index=0,media=disk
-endif
+	-qemu-system-i386$(W) -m 32 -boot order=c -vga std -drive format=raw,file=$^,index=0,media=disk
 
 .PHONY: qemudbg
 qemudbg: MODE=debug
 qemudbg: hd.img
 ifeq ($(OS),Windows_NT)
 	-start $(GDB)
-	-qemu-system-i386w -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 32 -boot order=c -vga std -drive format=raw,file=$^,index=0,media=disk -L $(QEMUHOME)/Bios
 else
 ifeq ($(shell uname -s),Linux)
 	-/usr/bin/x-terminal-emulator -e $(GDB)
@@ -54,8 +55,8 @@ ifeq ($(shell uname -s),Darwin)
 			   -e '  tell application "Terminal" to do script "cd $(shell pwd); $(GDB); exit"' \
 			   -e 'end run'
 endif
-	-qemu-system-i386  -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 32 -boot order=c -vga std -drive format=raw,file=$^,index=0,media=disk
 endif
+	-qemu-system-i386$(W) -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 32 -boot order=c -vga std -drive format=raw,file=$^,index=0,media=disk
 
 .PHONY: bochs
 bochs: hd.img
@@ -109,7 +110,11 @@ clean:
 
 .PHONY: diff
 diff:
-	@svn diff -x --ignore-eol-style | tr -d '\r' | gvim -u NONE -c "set enc=utf-8" -c "set go-=T" -c "syn on" -c "set ft=diff" -dmMnR - 2>&1 >/dev/null
+	@svn diff -x --ignore-eol-style | tr -d '\r' | gvim -u NONE -c "set titlestring=$(shell pwd)" \
+																-c "set enc=utf-8" \
+																-c "set go-=T" \
+																-c "syn on" \
+																-c "set ft=diff" -dmMnR - 2>&1 >/dev/null
 	
 .PHONY: submit
 submit: clean

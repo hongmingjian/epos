@@ -415,7 +415,7 @@ static uint32_t init_paging(uint32_t physfree)
      */
     uint32_t *ptpte = (uint32_t *)physfree;
     for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++) {
-        pgdir[i+(((uint32_t)PT)>>PGDR_SHIFT)] = (physfree)|L1E_V;
+        pgdir[i+(/*((uint32_t)PT)*/USER_MAX_ADDR>>PGDR_SHIFT)] = (physfree)|L1E_V;
         memset((void *)physfree, 0, L2_TABLE_SIZE);
         physfree+=L2_TABLE_SIZE;
     }

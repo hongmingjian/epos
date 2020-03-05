@@ -22,7 +22,10 @@
     .extern _abort_handler, _syscall, _undefined_handler, _irq_handler
 	.extern _cstart, _schedule, _g_resched, _g_task_running
 
+#include "config.h"
+
 #define KERNBASE 0xC0000000
+#define R(x) ((x)-KERNBASE)
 
 #define PSR_MODE_USR  0x10
 #define PSR_MODE_FIQ  0x11
@@ -162,7 +165,7 @@ _entry:
     b   .
 
 vector_reset:
-	.word reset
+	.word R(reset)
 vector_undefined:
 	.word undefined
 vector_swi:
@@ -179,7 +182,19 @@ vector_fiq:
 	.word 0
 
 reset:
-	mov r0, #0x8000
+#if RPI_MODEL > 1
+    # shutdown other cores
+    mrc p15, #0, r1, c0, c0, #5
+    and r1, r1, #3
+    cmp r1, #0
+    bne .
+#endif
+
+	ldr r0, vector_reset
+	add r0, r0, #KERNBASE
+	str r0, vector_reset
+	
+	mov r0, #LOADADDR
 	mov	r1, #0x0000
 	ldmia r0!, {r2, r3, r4, r5, r6, r7, r8, r9}
 	stmia r1!, {r2, r3, r4, r5, r6, r7, r8, r9}

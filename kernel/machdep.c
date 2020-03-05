@@ -33,6 +33,7 @@ time_t g_startup_time;
  */
 static void init_pit(uint32_t freq)
 {
+#if 0
     uint32_t timer_clock = 1000000;
     armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE_VA+ARMTIMER_REG);
     pit->Load = timer_clock/freq;
@@ -42,6 +43,17 @@ static void init_pit(uint32_t freq)
                 ARMTIMER_CTRL_PRESCALE_1 |
                 ARMTIMER_CTRL_INTR_ENABLE |
                 ARMTIMER_CTRL_ENABLE;
+#else
+/*
+ * [1] https://embedded-xinu.readthedocs.io/en/latest/arm/rpi/BCM2835-System-Timer.html
+ * [2] https://jsandler18.github.io/extra/sys-time.html
+ * [3] https://github.com/jncronin/rpi-boot
+ * [4] http://www.airspayce.com/mikem/bcm2835/
+ * [5] https://www.raspberrypi.org/forums/viewtopic.php?f=72&t=72260
+ */
+ 	systimer_reg_t *pst = (systimer_reg_t *)(MMIO_BASE_VA+SYSTIMER_REG);
+	pst->c1 = pst->clo + 1000000/HZ;
+#endif
 }
 
 /**
@@ -117,9 +129,9 @@ void switch_to(struct tcb *new)
 }
 
 /**
- * 初始化串口
+ * 初始化串口(Mini UART)
  */
-static void init_uart(uint32_t baud)
+static void init_uart1(uint32_t baud)
 {
     aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
     gpio_reg_t *gpio = (gpio_reg_t *)(MMIO_BASE_VA+GPIO_REG);
@@ -140,7 +152,7 @@ static void init_uart(uint32_t baud)
     aux->mu_cntl = 3; //Enable transmitter & receiver
 }
 
-void uart_putc ( int c )
+void uart1_putc ( int c )
 {
     aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
     while(1) {
@@ -150,7 +162,7 @@ void uart_putc ( int c )
     aux->mu_io = c;
 }
 
-int uart_getc()
+int uart1_getc()
 {
     aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
     while(1) {
@@ -161,13 +173,71 @@ int uart_getc()
 }
 
 /**
+ * 初始化串口(PL011)
+ *    [1] https://qiita.com/fireflower0/items/602130c0ff0625f62ddc
+ *    [2] https://www.raspberrypi.org/documentation/configuration/uart.md
+ */
+void init_uart0(uint32_t baud)
+{
+	uart_reg_t *uart = (uart_reg_t *)(MMIO_BASE_VA+UART_REG);
+    gpio_reg_t *gpio = (gpio_reg_t *)(MMIO_BASE_VA+GPIO_REG);
+
+    uart->cr/*PL011_CR*/ = 0;
+
+    uint32_t ra = gpio->gpfsel1/*GPFSEL1*/;
+    ra &= ~((7 << 12) | (7 << 15)); // gpio14/gpio15
+    ra |= (4 << 12) | (4 << 15);    // alt0
+    gpio->gpfsel1/*GPFSEL1*/ = ra;
+    gpio->gppud/*GPPUD*/ = 0;
+
+    ra = 150;
+    while(ra--) __asm__ __volatile__("nop");
+
+    gpio->gppudclk0/*GPPUDCLK0*/ = (1 << 14) | (1 << 15);
+
+    ra = 150;
+    while(ra--) __asm__ __volatile__("nop");
+
+    gpio->gppudclk0/*GPPUDCLK0*/ = 0;
+
+    uart->icr/*PL011_ICR*/  = 0x7FF;
+    uart->ibrd/*PL011_IBRD*/ = 24/*9600*/;         // 2 for 115200 baud
+    uart->fbrd/*PL011_FBRD*/ = 0xB;
+    uart->lcrh/*PL011_LCRH*/ = 0b11 << 5; // 8N1
+    uart->cr/*PL011_CR*/   = 0x301;
+}
+
+void uart0_putc ( int c )
+{
+	uart_reg_t *uart = (uart_reg_t *)(MMIO_BASE_VA+UART_REG);
+    do {
+        __asm__ __volatile__("nop");
+    } while(uart->fr/*PL011_FR*/ & 0x20);
+    uart->dr/*PL011_DR*/ = c & 0xff;
+}
+
+int uart0_getc()
+{
+	uart_reg_t *uart = (uart_reg_t *)(MMIO_BASE_VA+UART_REG);
+    while(1) {
+        if(uart->fr&0x10)
+            break;
+    }
+    return uart->dr/*PL011_DR*/ & 0xff;
+}
+
+/**
  * 系统调用putchar的执行函数
  *
  * 往屏幕上的当前光标位置打印一个字符，相应地移动光标的位置
  */
 int sys_putchar(int c)
 {
-    uart_putc(c);
+#ifdef RPI_QEMU
+    uart0_putc(c);
+#else
+    uart1_putc(c);
+#endif
     return c;
 }
 
@@ -208,7 +278,6 @@ void abort_handler(struct context *ctx, uint32_t far, uint32_t fsr)
 
 void irq_handler(struct context *ctx)
 {
-
     int irq;
     intr_reg_t *pic = (intr_reg_t *)(MMIO_BASE_VA+INTR_REG);
 
@@ -223,7 +292,7 @@ void irq_handler(struct context *ctx)
 
         if(irq == 40) {
             for( ; irq < 72; irq++)
-                if(pic->IRQ_pending_1 & (1<<(irq-40)))
+                if(pic->IRQ_pending_2 & (1<<(irq-40)))
                     break;
 
             if(irq == 72)
@@ -238,6 +307,12 @@ void irq_handler(struct context *ctx)
         armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE_VA+ARMTIMER_REG);
         pit->IRQClear = 1;
         break;
+	}
+	case IRQ_TIMER: {
+		systimer_reg_t *pst = (systimer_reg_t *)(MMIO_BASE_VA+SYSTIMER_REG);
+		pst->cs |= (1<<1);
+		pst->c1 = pst->clo + 1000000/HZ;
+		break;
     }
     }
 }
@@ -368,7 +443,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
             /*如果是小页表引起的缺页，需要填充页目录*/
             if(vaddr >= USER_MAX_ADDR && vaddr < KERNBASE) {
                 for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++) {
-                    PTD[i+((PAGE_TRUNCATE(vaddr)-USER_MAX_ADDR))/L2_TABLE_SIZE] = (paddr+i*L2_TABLE_SIZE)|L1E_V;
+                    *(PTD+i+((PAGE_TRUNCATE(vaddr)-USER_MAX_ADDR))/L2_TABLE_SIZE) = (paddr+i*L2_TABLE_SIZE)|L1E_V;
                 }
             }
 
@@ -406,7 +481,7 @@ static uint32_t init_paging(uint32_t physfree)
     /*
      * 页目录放在物理地址[0x4000, 0x8000]
      */
-    pgdir=(uint32_t *)0x4000;
+    pgdir=(uint32_t *)(LOADADDR-L1_TABLE_SIZE);
     memset(pgdir, 0, L1_TABLE_SIZE);
 
     /*
@@ -494,7 +569,17 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
 
     init_pic();
     init_pit(HZ);
-    init_uart(9600);
+#ifdef RPI_QEMU
+    init_uart0(9600);
+#else	
+    init_uart1(9600);
+#endif
+}
+
+__attribute__((optimize("O0")))
+static void trampoline()
+{
+    __asm__ __volatile__("add lr, lr, %0" : : "r" (KERNBASE));
 }
 
 /**
@@ -512,7 +597,8 @@ void cstart(uint32_t magic, uint32_t mbi)
     /*
      * 分页已经打开，切换到虚拟地址运行
      */
-    __asm__ __volatile__("add sp, sp, %0" : : "r" (KERNBASE));
+	__asm__ __volatile__("add sp, sp, %0" : : "r" (KERNBASE));
+	trampoline();
 
     /*
      * 机器无关（Machine Independent）的初始化

@@ -17,7 +17,8 @@
  * purpose.
  *
  */
-#define LOADADDR 0x8000
+#include "config.h"
+
 #define KERNBASE 0xC0000000
 
 OUTPUT_FORMAT("elf32-littlearm")

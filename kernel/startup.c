@@ -69,7 +69,7 @@ void mi_startup()
     uint32_t i, brk;
 
     printk("Welcome to EPOS\r\n");
-    printk("Copyright (C) 2005-2015 MingJian Hong<hongmingjian@gmail.com>\r\n");
+    printk("Copyright (C) 2005-2015, 2020 MingJian Hong<hongmingjian@gmail.com>\r\n");
     printk("All rights reserved.\r\n\r\n");
 
     {
@@ -126,7 +126,7 @@ void mi_startup()
     /*
      * 取消[KERNBASE+0x1000, KERNBASE+0x4000)的地址映射
      */
-    for(i = 0x1000; i < 0x4000; i+=PAGE_SIZE)
+    for(i = 0x1000; i < LOADADDR-L1_TABLE_SIZE; i+=PAGE_SIZE)
         *vtopte(i+KERNBASE)=0;
 
     /* Invalidate the translation lookaside buffer (TLB)

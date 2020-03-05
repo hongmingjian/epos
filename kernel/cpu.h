@@ -21,8 +21,13 @@
 #define _CPU_H
 
 #include "arch.h"
+#include "config.h"
 
+#if RPI_MODEL > 1
+#define MMIO_BASE_PA 0x3f000000
+#else
 #define MMIO_BASE_PA 0x20000000
+#endif
 
 #define ARMTIMER_REG (0xB400)
 typedef struct {
@@ -134,7 +139,43 @@ typedef struct {
 	volatile unsigned int gppudclk1;
 } gpio_reg_t;
 
-#define IRQ_TIMER     0
+#define UART_REG (0x201000)
+typedef struct {
+	volatile unsigned int dr;
+	volatile unsigned int rsrecr;
+	volatile unsigned int UNUSED1[5];
+	volatile unsigned int fr;
+	volatile unsigned int reserved1;	
+	volatile unsigned int ilpr;
+	volatile unsigned int ibrd;
+	volatile unsigned int fbrd;
+	volatile unsigned int lcrh;
+	volatile unsigned int cr;
+	volatile unsigned int ifls;
+	volatile unsigned int imsc;
+	volatile unsigned int ris;
+	volatile unsigned int mis;
+	volatile unsigned int icr;
+	volatile unsigned int dmacr;
+	volatile unsigned int UNUSED2[13];	
+	volatile unsigned int itcr;
+	volatile unsigned int itip;
+	volatile unsigned int itop;
+	volatile unsigned int tdr;
+} uart_reg_t;
+
+#define SYSTIMER_REG (0x3000)
+typedef struct {
+	volatile unsigned int cs;
+	volatile unsigned int clo;
+	volatile unsigned int chi;
+	volatile unsigned int c0;	
+	volatile unsigned int c1;
+	volatile unsigned int c2;
+	volatile unsigned int c3;
+} systimer_reg_t;
+
+#define IRQ_TIMER     9
 #define NR_IRQ        (8+64)
 
 #endif /* _CPU_H */

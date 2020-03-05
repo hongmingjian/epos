@@ -43,18 +43,18 @@ void start_user_task()
     uint32_t *p = (uint32_t *)addr;
     page_alloc_in_addr(addr, 1, VM_PROT_RW);
 
-    *p++ = 0xe92d4008;
-    *p++ = 0xe3a0005a;
-    *p++ = 0xeb000001;
-    *p++ = 0xeafffffc;
+    *p++ = 0xe92d4008;/*push    {r3, lr}*/
+    *p++ = 0xe3a0005a;/*mov     r0, #90 ; ='Z'*/
+    *p++ = 0xeb000001;/*bl      0x8048014*/
+    *p++ = 0xeafffffc;/*b       0x8048004*/
 
-    *p++ = 0xeafffffa;
+    *p++ = 0xeafffffa;/*b       0x8048000*/
 
-    *p++ = 0xe52d7004;
-    *p++ = 0xe3a07ffa;
-    *p++ = 0xef000000;
-    *p++ = 0xe49d7004;
-    *p++ = 0xe12fff1e;
+    *p++ = 0xe52d7004;/*push    {r7}*/
+    *p++ = 0xe3a07ffa;/*mov     r7, #1000 ; =SYSCALL_putchar*/
+    *p++ = 0xef000000;/*svc     0x00000000*/
+    *p++ = 0xe49d7004;/*pop     {r7}*/
+    *p++ = 0xe12fff1e;/*bx      lr*/
 
     page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE, VM_PROT_RW);
     if(sys_task_create((void *)USER_MAX_ADDR, (void *)(addr+0x10), (void *)0x12345678) == NULL)

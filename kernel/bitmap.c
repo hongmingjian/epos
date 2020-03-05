@@ -242,6 +242,18 @@ bitmap_set_multiple (struct bitmap *b, size_t start, size_t cnt, bool value)
   ASSERT (start <= b->bit_cnt);
   ASSERT (start + cnt <= b->bit_cnt);
 
+  for (; (start % ELEM_BITS) && (cnt > 0); start++, cnt--)
+    bitmap_set (b, start, value);
+
+  if(cnt > ELEM_BITS) {
+    size_t k = cnt / ELEM_BITS;
+
+	memset(b->bits+(start/ELEM_BITS), value?0xff:0x00, byte_cnt(k * ELEM_BITS));
+
+	cnt -= k * ELEM_BITS;
+	start += k * ELEM_BITS;
+  }
+
   for (i = 0; i < cnt; i++)
     bitmap_set (b, start + i, value);
 }

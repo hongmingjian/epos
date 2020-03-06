@@ -8,7 +8,7 @@ W=
 SERIAL=stdio
 endif
 
-QFLAGS =-M raspi2 -cpu arm1176 -m 512 -dtb bcm2709-rpi-2-b.dtb -serial $(SERIAL)
+QFLAGS =-M raspi2 -cpu arm1176 -m 512 -serial $(SERIAL)
 QFLAGS+=-nographic
 
 .PHONY: all

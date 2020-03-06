@@ -99,12 +99,13 @@ void mi_startup()
     init_kmalloc((uint8_t *)brk, 1024*PAGE_SIZE);
 
     /*
-     * 把[MMIO_BASE, MMIO_BASE+16M)保留下来
+     * 把[MMIO_BASE_VA, MMIO_BASE_VA+16M)保留下来
      */
     page_alloc_in_addr(MMIO_BASE_VA, 4096, VM_PROT_RW);
 
     /*
-     * 把[0xffff0000, 0xffff1000)保留下来，并映射到0x0
+     * 把[0xffff0000, 0xffff1000)保留下来，并映射到0x0。
+     * 然后打开hivecs模式(ARM720T TRM, Rev 3, p. 3-5)
      */
     page_alloc_in_addr(0xffff0000, 1, VM_PROT_RW);
     page_map(0xffff0000, 0x0, 1, L2E_V|L2E_W|L2E_C);

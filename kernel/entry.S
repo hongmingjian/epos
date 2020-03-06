@@ -190,10 +190,12 @@ reset:
     bne .
 #endif
 
+	@ restore the address in vector_reset
 	ldr r0, vector_reset
 	add r0, r0, #KERNBASE
 	str r0, vector_reset
 	
+	@ copy exception vector table and related vector_* to 0
 	mov r0, #LOADADDR
 	mov	r1, #0x0000
 	ldmia r0!, {r2, r3, r4, r5, r6, r7, r8, r9}
@@ -214,6 +216,7 @@ zeroify:
 	b		zeroify
 zeroify.1:
 
+	@ setup stack for modes to be used
 	mrs	r0, cpsr
 	bic	r0, r0, #PSR_MODE_MASK
 

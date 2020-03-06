@@ -496,7 +496,7 @@ static uint32_t init_paging(uint32_t physfree)
     }
 
     /*
-     * 分配NR_KERN_PAGETABLE张小页表，并填充到页目录，也填充到ptpte
+     * 分配小页表，并填充到页目录，也填充到ptpte
      */
     pte = (uint32_t *)physfree;
     for(i = 0; i < NR_KERN_PAGETABLE; i++) {
@@ -563,7 +563,7 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
 
     /*
      * 映射虚拟地址[MMIO_BASE_VA, MMIO_BASE_VA+16M)和[MMIO_BASE_VA-KERNBASE, MMIO_BASE_VA-KERNBASE+16M)
-     * 到物理地址[0x20000000, 0x20000000+16M)
+     * 到物理地址[MMIO_BASE_PA, MMIO_BASE_PA+16M)
      */
     page_map(MMIO_BASE_VA, MMIO_BASE_PA, 4096, L2E_V|L2E_W);
 

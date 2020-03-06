@@ -139,7 +139,7 @@ void mi_startup()
      *
      * 0xffff 0000 - 0xffff 1000 = Hivecs
      * 0xc400 0000 - 0xc500 0000 = Memory-mapped I/O
-     * 0xc000 8000 - 0xc0?? ???? = kernel.img
+     * 0xc000 8000 - 0xc0xx x000 = kernel.img
      * 0xc000 4000 - 0xc000 8000 = Page directory (PTD)
      * 0xc000 1000 - 0xc000 4000 = Unused
      * 0xc000 0000 - 0xc000 1000 = Stacks for modes UND/ABT/IRQ/SVC

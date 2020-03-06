@@ -33,7 +33,7 @@ time_t g_startup_time;
  */
 static void init_pit(uint32_t freq)
 {
-#if 0
+#if IRQ_TIMER == 0
     uint32_t timer_clock = 1000000;
     armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE_VA+ARMTIMER_REG);
     pit->Load = timer_clock/freq;
@@ -308,7 +308,7 @@ void irq_handler(struct context *ctx)
         pit->IRQClear = 1;
         break;
 	}
-	case IRQ_TIMER: {
+	case 9: {
 		systimer_reg_t *pst = (systimer_reg_t *)(MMIO_BASE_VA+SYSTIMER_REG);
 		pst->cs |= (1<<1);
 		pst->c1 = pst->clo + 1000000/HZ;

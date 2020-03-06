@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <limits.h>
+#include <string.h>
 #include "bitmap.h"
 
 #define ASSERT(CONDITION) ((void) 0)

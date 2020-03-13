@@ -1418,10 +1418,12 @@ static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp)
 	fp->file.fs = this;
 
 	uint32_t ret = DFS_OpenFile(&fs->volinfo, name, DFS_READ, &scratch[0], &fp->fi);
-	if(ret == DFS_OK)
+	if(ret == DFS_OK) {
 		*_fpp = (struct file *)fp;
+		return 0;
+	}
 
-	return ret;
+	return -1;
 }
 
 static int fat_close  (struct fs *this, struct file *_fp)
@@ -1447,7 +1449,7 @@ static int fat_read   (struct fs *this, struct file *_fp, uint8_t *buf, size_t s
 	}
 
 	unsigned char scratch[SECTOR_SIZE];
-	uint32_t successcount = -1;
+	uint32_t successcount;
 	uint32_t ret = DFS_ReadFile(&fp->fi, &scratch[0], buf, &successcount, size);
 	if(ret == DFS_OK || ret == DFS_EOF)
 		return successcount;
@@ -1464,8 +1466,10 @@ static int fat_write  (struct fs *this, struct file *_fp, uint8_t *buf, size_t s
 
 	unsigned char scratch[SECTOR_SIZE];
 	uint32_t successcount;
-	DFS_WriteFile(&fp->fi, &scratch[0], buf, &successcount, size);
-	return successcount;
+	uint32_t ret = DFS_WriteFile(&fp->fi, &scratch[0], buf, &successcount, size);
+	if(ret == DFS_OK)
+		return successcount;
+	return -1;
 }
 
 static int fat_seek   (struct fs *this, struct file *_fp, int offset, int whence)

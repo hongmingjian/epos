@@ -328,29 +328,77 @@ void undefined_handler(struct context *ctx)
  */
 void syscall(struct context *ctx)
 {
-    //printk("task #%d syscalling #%d.\r\n", sys_task_getid(), ctx->cf_r7);
-    switch(ctx->cf_r7) {
+    //printk("task #%d syscalling #%d.\r\n", sys_task_getid(), ctx->cf_r4);
+    switch(ctx->cf_r4) {
+    case SYSCALL_task_exit:
+        sys_task_exit(ctx->cf_r0);
+        break;
+    case SYSCALL_task_create:
+        {
+            uint32_t user_stack = ctx->cf_r0;
+            uint32_t user_entry = ctx->cf_r1;
+            uint32_t user_pvoid = ctx->cf_r2;
+            struct tcb *tsk;
+
+            //printk("stack: 0x%08x, entry: 0x%08x, pvoid: 0x%08x\r\n",
+            //       user_stack, user_entry, user_pvoid);
+            if(!IN_USER_VM(user_stack, 0) ||
+               !IN_USER_VM(user_entry, 0)) {
+                ctx->cf_r0 = -1;
+                break;
+            }
+            tsk = sys_task_create((void *)user_stack,
+                                  (void (*)(void *))user_entry,
+                                  (void *)user_pvoid);
+            ctx->cf_r0 = (tsk==NULL)?-1:tsk->tid;
+        }
+        break;
+    case SYSCALL_task_getid:
+        ctx->cf_r0=sys_task_getid();
+        break;
+    case SYSCALL_task_yield:
+        sys_task_yield();
+        break;
+    case SYSCALL_task_wait:
+        {
+            int tid    = ctx->cf_r0;
+            int *pcode = (int *)(ctx->cf_r1);
+            if((pcode != NULL) && !IN_USER_VM(pcode, sizeof(int))) {
+                ctx->cf_r0 = -1;
+                break;
+            }
+
+            ctx->cf_r0 = sys_task_wait(tid, pcode);
+        }
+        break;
+    case SYSCALL_sleep:
+        ctx->cf_r0 = sys_sleep(ctx->cf_r0);
+        break;
+    case SYSCALL_nanosleep:
+        {
+            struct timespec *rqtp = (struct timespec *)(ctx->cf_r0);
+            struct timespec *rmtp = (struct timespec *)(ctx->cf_r1);
+            if(IN_USER_VM(rqtp, sizeof(struct timespec)) &&
+               ((rmtp == NULL) || IN_USER_VM(rmtp, sizeof(struct timespec))))
+                ctx->cf_r0 = sys_nanosleep(rqtp, rmtp);
+			else
+	            ctx->cf_r0 = -1;
+        }
+        break;
+    case SYSCALL_gettimeofday:
+        {
+            struct timeval *tv = ( struct timeval *)(ctx->cf_r0);
+            struct timezone *tz = ( struct timezone *)(ctx->cf_r1);
+            ctx->cf_r0 = sys_gettimeofday(tv, tz);
+        }
+        break;		
     case SYSCALL_putchar:
         ctx->cf_r0 = sys_putchar(ctx->cf_r0 & 0xff);
         break;
-    case SYSCALL_task_exit:
-    case SYSCALL_task_create:
-    case SYSCALL_task_getid:
-    case SYSCALL_task_yield:
-    case SYSCALL_task_wait:
-    case SYSCALL_reboot:
-    case SYSCALL_mmap:
-    case SYSCALL_munmap:
-    case SYSCALL_sleep:
-    case SYSCALL_nanosleep:
-    case SYSCALL_beep:
-    case SYSCALL_vm86:
-    case SYSCALL_getchar:
-    case SYSCALL_recv:
-    case SYSCALL_send:
-    case SYSCALL_ioctl:
+		
     default:
-        printk("syscall #%d not implemented.\r\n", ctx->cf_r7);
+        printk("syscall #%d not implemented.\r\n", ctx->cf_r4);
+		ctx->cf_r0 = -ctx->cf_r4;
         break;
     }
 }

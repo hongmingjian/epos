@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 #include <syscall.h>
+#include <stdio.h>
 
 /**
  * GCC insists on __main
@@ -18,7 +19,13 @@ void __main()
  */
 void main(void *pv)
 {
-    while(1)
+    printf("task #%d: I'm the first user task(pv=0x%08x)!\r\n",
+            task_getid(), pv);
+    while(1) {
         putchar('Z');
+		nanosleep((const struct timespec[]){{5, 0}}, NULL);
+        putchar('A');
+		sleep(1);
+	}
 }
 

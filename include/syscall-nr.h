@@ -25,20 +25,11 @@
 #define SYSCALL_task_getid    3
 #define SYSCALL_task_yield    4
 #define SYSCALL_task_wait     5
-#define SYSCALL_reboot        6
-#define SYSCALL_mmap          7
-#define SYSCALL_munmap        8
+
 #define SYSCALL_sleep         9
 #define SYSCALL_nanosleep     10
 #define SYSCALL_gettimeofday  11
 
-#define SYSCALL_beep          181
-#define SYSCALL_vm86          182
-#define SYSCALL_recv          183
-#define SYSCALL_send          184
-#define SYSCALL_ioctl         185
-
 #define SYSCALL_putchar       1000
-#define SYSCALL_getchar       1001
 
 #endif /*_SYSCALLNR_H*/

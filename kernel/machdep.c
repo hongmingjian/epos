@@ -371,6 +371,74 @@ void syscall(struct context *ctx)
             ctx->cf_r0 = sys_task_wait(tid, pcode);
         }
         break;
+    case SYSCALL_mmap:
+        {
+            void *addr = (void *)(ctx->cf_r0);
+            size_t len = ctx->cf_r1;
+            int prot = ctx->cf_r2;
+            int flags = ctx->cf_r3;
+            int fd = *(int *)(ctx->cf_usr_sp+4);
+            off_t offset = *(off_t *)(ctx->cf_usr_sp+8);
+            uint32_t npages = PAGE_ROUNDUP(len)/PAGE_SIZE;
+            uint32_t va = (uint32_t)addr;
+
+            ctx->cf_r0 = -1;
+            if(len == 0)
+                break;
+            if(fd == -1) {
+                 if(!(flags & MAP_ANON))
+                     break;
+            } else {
+                if(flags & MAP_ANON)
+                    break;
+            }
+            if(!(flags & MAP_PRIVATE))
+                break;
+
+            if(flags & MAP_FIXED) {
+                if(!IN_USER_VM(va, len) ||
+                   (va & PAGE_MASK)) {
+                    break;
+                }
+                ctx->cf_r0 = page_alloc_in_addr(va, npages, prot);
+            } else {
+                ctx->cf_r0 = page_alloc(npages, prot, 1);
+            }
+        }
+        break;
+    case SYSCALL_munmap:
+        {
+            void *addr = (void *)(ctx->cf_r0);
+            size_t len = ctx->cf_r1;
+            uint32_t npages = PAGE_ROUNDUP(len)/PAGE_SIZE;
+            uint32_t va = (uint32_t)addr;
+
+            ctx->cf_r0 = -1;
+            if(len == 0)
+                break;
+
+            if(!IN_USER_VM(va, len)) {
+                break;
+            }
+
+            ctx->cf_r0 = page_free(va, npages);
+
+            if(ctx->cf_r0 != -1) {
+                uint32_t i, x;
+                for(i = 0; i < npages; i++) {
+                    x = *vtopte(va);
+                    if(x & L2E_V) {
+                        *vtopte(va) = 0;
+                        invlpg(va);
+
+                        //XXX - 可能不是RAM，不能用frame_free
+                        frame_free(PAGE_TRUNCATE(x), 1);
+                    }
+                    va += PAGE_SIZE;
+                }
+            }
+        }
+        break;
     case SYSCALL_sleep:
         ctx->cf_r0 = sys_sleep(ctx->cf_r0);
         break;
@@ -391,11 +459,11 @@ void syscall(struct context *ctx)
             struct timezone *tz = ( struct timezone *)(ctx->cf_r1);
             ctx->cf_r0 = sys_gettimeofday(tv, tz);
         }
-        break;		
+        break;
     case SYSCALL_putchar:
         ctx->cf_r0 = sys_putchar(ctx->cf_r0 & 0xff);
         break;
-		
+
     default:
         printk("syscall #%d not implemented.\r\n", ctx->cf_r4);
 		ctx->cf_r0 = -ctx->cf_r4;
@@ -619,7 +687,7 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
     init_pit(HZ);
 #ifdef RPI_QEMU
     init_uart0(9600);
-#else	
+#else
     init_uart1(9600);
 #endif
 }

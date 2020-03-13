@@ -15,6 +15,8 @@ WRAPPER(task_getid)
 WRAPPER(task_yield)
 WRAPPER(task_wait)
 
+WRAPPER(mmap)
+WRAPPER(munmap)
 WRAPPER(sleep)
 WRAPPER(nanosleep)
 WRAPPER(gettimeofday)

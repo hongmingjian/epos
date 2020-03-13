@@ -3,8 +3,15 @@
  */
 #include <inttypes.h>
 #include <stddef.h>
-#include <syscall.h>
 #include <stdio.h>
+#include <sys/mman.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <syscall.h>
+
+extern void *tlsf_create_with_pool(void* mem, size_t bytes);
+extern void *g_heap;
 
 /**
  * GCC insists on __main
@@ -12,6 +19,9 @@
  */
 void __main()
 {
+    size_t heap_size = 32*1024*1024;
+    void  *heap_base = mmap(NULL, heap_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+	g_heap = tlsf_create_with_pool(heap_base, heap_size);
 }
 
 /**
@@ -21,11 +31,9 @@ void main(void *pv)
 {
     printf("task #%d: I'm the first user task(pv=0x%08x)!\r\n",
             task_getid(), pv);
-    while(1) {
-        putchar('Z');
-		nanosleep((const struct timespec[]){{5, 0}}, NULL);
-        putchar('A');
-		sleep(1);
-	}
-}
+			
+    //TODO: Your code goes here
 
+	while(1)
+		;
+}

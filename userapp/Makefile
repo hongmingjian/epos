@@ -15,9 +15,10 @@ LDFLAGS= -nostdlib \
 COBJS=	main.o lib/stdio.o ../lib/snprintf.o ../lib/softfloat.o ../lib/string.o
 
 COBJS=	main.o
-COBJS+=	lib/stdio.o
+COBJS+=	lib/stdio.o lib/qsort.o
 COBJS+=	../lib/softfloat.o ../lib/string.o ../lib/memcpy.o \
 		../lib/memset.o ../lib/snprintf.o
+COBJS+=	lib/malloc.o ../lib/tlsf/tlsf.o
 
 OBJS=	lib/crt0.o lib/syscall-wrapper.o $(COBJS)
 

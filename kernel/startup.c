@@ -54,7 +54,7 @@ void start_user_task()
 	    g_dev_vector[0] = &sd_dev;
 	    g_fs_vector[0] = &fat_fs;
 
-        printk("task #%d: Initializing SD Card...", sys_task_getid());
+        printk("task #%d: Initializing SD card...", sys_task_getid());
     	if(g_dev_vector[0]->init(g_dev_vector[0], 0)) {
             printk("Failed\r\n");
             return;

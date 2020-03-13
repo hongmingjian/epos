@@ -303,7 +303,9 @@ swi:
     PROLOGUE
 	mov	r0, sp
 
-	bl		_syscall
+	bl _sti
+	bl _syscall
+	bl _cli
 
 .globl _ret_from_syscall
 _ret_from_syscall:

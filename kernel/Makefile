@@ -8,15 +8,13 @@ all: release
 CPPFLAGS=-DVERBOSE=0 -nostdinc -I../include
 ASFLAGS=-Wall -D__ASSEMBLY__
 CFLAGS=	-Wall -pipe \
-	-fomit-frame-pointer \
-	-ffreestanding -fleading-underscore \
-	-fno-pie #-fno-stack-check -mno-stack-arg-probe -fno-stack-protector
-LDFLAGS+=-Tkernel.ld -nostdlib -nostartfiles -nodefaultlibs \
-		-Wl,-Map,$(PROG).map -static
+	-ffreestanding -fleading-underscore
+LDFLAGS+=-Tkernel.ld -nostdlib \
+		-Wl,-Map,$(PROG).map
 
 COBJS=timer.o machdep.o task.o \
 	startup.o kmalloc.o page.o frame.o bitmap.o \
-	printk.o
+	printk.o sdcard.o dosfs.o elf.o
 COBJS+= ../lib/string.o ../lib/memcpy.o \
 		../lib/memset.o  ../lib/tlsf/tlsf.o ../lib/snprintf.o ../lib/softfloat.o
 OBJS=entry.o $(COBJS)

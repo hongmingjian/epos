@@ -1,7 +1,7 @@
 /**
  * vim: filetype=c:fenc=utf-8:ts=4:et:sw=4:sts=4
  *
- * Copyright (C) 2005, 2008, 2013 Hong MingJian<hongmingjian@gmail.com>
+ * Copyright (C) 2005, 2008, 2013, 2020 Hong MingJian<hongmingjian@gmail.com>
  * All rights reserved.
  *
  * This file is part of the EPOS.
@@ -24,9 +24,15 @@
 #include "config.h"
 
 #if RPI_MODEL > 1
-#define MMIO_BASE_PA 0x3f000000
+#define MMIO_BASE_PA	0x3f000000
 #else
-#define MMIO_BASE_PA 0x20000000
+#define MMIO_BASE_PA	0x20000000
+#endif
+
+#if RPI_MODEL == 3
+#define SYS_CLOCK_FREQ	300000000UL
+#else
+#define SYS_CLOCK_FREQ	250000000UL
 #endif
 
 #define ARMTIMER_REG (0xB400)
@@ -145,7 +151,7 @@ typedef struct {
 	volatile unsigned int rsrecr;
 	volatile unsigned int UNUSED1[5];
 	volatile unsigned int fr;
-	volatile unsigned int reserved1;	
+	volatile unsigned int reserved1;
 	volatile unsigned int ilpr;
 	volatile unsigned int ibrd;
 	volatile unsigned int fbrd;
@@ -157,7 +163,7 @@ typedef struct {
 	volatile unsigned int mis;
 	volatile unsigned int icr;
 	volatile unsigned int dmacr;
-	volatile unsigned int UNUSED2[13];	
+	volatile unsigned int UNUSED2[13];
 	volatile unsigned int itcr;
 	volatile unsigned int itip;
 	volatile unsigned int itop;
@@ -169,11 +175,49 @@ typedef struct {
 	volatile unsigned int cs;
 	volatile unsigned int clo;
 	volatile unsigned int chi;
-	volatile unsigned int c0;	
+	volatile unsigned int c0;
 	volatile unsigned int c1;
 	volatile unsigned int c2;
 	volatile unsigned int c3;
 } systimer_reg_t;
+
+
+#define EMMC_REG (0x300000)
+typedef struct {
+	volatile unsigned int arg2;
+	volatile unsigned int blksizecnt;
+	volatile unsigned int arg1;
+	volatile unsigned int cmdtm;
+	volatile unsigned int resp0;
+	volatile unsigned int resp1;
+	volatile unsigned int resp2;
+	volatile unsigned int resp3;
+	volatile unsigned int data;
+	volatile unsigned int status;
+	volatile unsigned int control0;
+	volatile unsigned int control1;
+	volatile unsigned int interrupt;
+	volatile unsigned int irpt_mask;
+	volatile unsigned int irpt_en;
+	volatile unsigned int control2;
+	volatile unsigned int capabilities_0;
+	volatile unsigned int capabilities_1;
+	volatile unsigned int UNUSED1[2];
+	volatile unsigned int force_irpt;
+	volatile unsigned int UNUSED2[7];
+	volatile unsigned int boot_timeout;
+	volatile unsigned int dbg_sel;
+	volatile unsigned int UNUSED3[2];
+	volatile unsigned int exrdfifo_cfg;
+	volatile unsigned int exrdfifo_en;
+	volatile unsigned int tune_step;
+	volatile unsigned int tune_steps_std;
+	volatile unsigned int tune_steps_ddr;
+	volatile unsigned int UNUSED4[23];
+	volatile unsigned int spi_int_spt;
+	volatile unsigned int UNUSED5[2];
+	volatile unsigned int slotisr_ver;
+} emmc_reg_t;
 
 #define IRQ_TIMER     9
 #define NR_IRQ        (8+64)

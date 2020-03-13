@@ -200,4 +200,28 @@ struct timezone {
 int sys_gettimeofday(struct timeval *tv, struct timezone *tz);
 
 void     mi_startup();
+
+struct dev {
+	int (*init)  (struct dev *this, int minor);
+   void (*uninit)(struct dev *this);
+	int (*read)  (struct dev *this, uint8_t *buf, size_t size, uint32_t addr);
+	int (*write) (struct dev *this, uint8_t *buf, size_t size, uint32_t addr);
+	int (*poll)  (struct dev *this, int events);
+	int (*ioctl) (struct dev *this, int cmd, int arg);
+};
+
+struct file;
+struct fs {
+	int (*mount)  (struct fs *this, struct dev *dev, size_t offset);
+	int (*unmount)(struct fs *this);	
+	int (*open)   (struct fs *this, char *path, int mode, struct file **_fpp);
+	int (*close)  (struct fs *this, struct file *_fp);
+	int (*read)   (struct fs *this, struct file *_fp, uint8_t *buf, size_t size);
+	int (*write)  (struct fs *this, struct file *_fp, uint8_t *buf, size_t size);
+	int (*seek)   (struct fs *this, struct file *_fp, int offset, int whence);
+	int (*mmap)   (struct fs *this, struct file *_fp, int offset);
+};
+struct file {
+	struct fs *fs;
+};
 #endif /*_KERNEL_H*/

@@ -22,6 +22,4 @@
 
 #include "cpu.h"
 
-#define SYS_CLOCK_FREQ 250000000UL
-
 #endif /*_BOARD_H*/

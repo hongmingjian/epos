@@ -194,7 +194,7 @@ reset:
 	ldr r0, vector_reset
 	add r0, r0, #KERNBASE
 	str r0, vector_reset
-	
+
 	@ copy exception vector table and related vector_* to 0
 	mov r0, #LOADADDR
 	mov	r1, #0x0000
@@ -369,10 +369,8 @@ _atomic_xor:
 _invlpg:
 	mcr p15, 0, r0, c8, c7, 1
 	mov pc, lr
-	
-	.globl	___aeabi_idivmod
-	.align	4
 
+	.globl	___aeabi_idivmod
 ___aeabi_idivmod:
 	stmfd	sp!, {r0, r1, ip, lr}
 	bl	___aeabi_idiv

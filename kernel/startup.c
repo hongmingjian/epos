@@ -35,30 +35,59 @@ void isr_default(uint32_t irq, struct context *ctx)
     //printk("IRQ=0x%02x\r\n", irq);
 }
 
+extern struct fs  fat_fs;
+extern struct dev sd_dev;
+struct dev *g_dev_vector[16];
+struct fs  *g_fs_vector[16];
+
 void start_user_task()
 {
+    char *filename="a.out";
+    uint32_t entry;
+
     calibrate_delay();
 
-    uint32_t addr=0x08048000;
-    uint32_t *p = (uint32_t *)addr;
-    page_alloc_in_addr(addr, 1, VM_PROT_RW);
+    /*
+     * 初始化SD卡和FAT文件系统
+     */
+    {
+	    g_dev_vector[0] = &sd_dev;
+	    g_fs_vector[0] = &fat_fs;
 
-    *p++ = 0xe92d4008;/*push    {r3, lr}*/
-    *p++ = 0xe3a0005a;/*mov     r0, #90 ; ='Z'*/
-    *p++ = 0xeb000001;/*bl      0x8048014*/
-    *p++ = 0xeafffffc;/*b       0x8048004*/
+        printk("task #%d: Initializing SD Card...", sys_task_getid());
+    	if(g_dev_vector[0]->init(g_dev_vector[0], 0)) {
+            printk("Failed\r\n");
+            return;
+        }
+        printk("Done\r\n");
 
-    *p++ = 0xeafffffa;/*b       0x8048000*/
+        printk("task #%d: Initializing FAT file system...", sys_task_getid());
+    	if(g_fs_vector[0]->mount(g_fs_vector[0], g_dev_vector[0], -1)) {
+            printk("Failed\r\n");
+            return;
+        }
+        printk("Done\r\n");
+    }
 
-    *p++ = 0xe52d7004;/*push    {r7}*/
-    *p++ = 0xe3a07ffa;/*mov     r7, #1000 ; =SYSCALL_putchar*/
-    *p++ = 0xef000000;/*svc     0x00000000*/
-    *p++ = 0xe49d7004;/*pop     {r7}*/
-    *p++ = 0xe12fff1e;/*bx      lr*/
+    /*
+     * 加载a.out，并创建第一个用户级线程执行a.out中的main函数
+     */
+    {
+        printk("task #%d: Loading %s...", sys_task_getid(), filename);
+        entry = load_aout(g_fs_vector[0], filename);
 
-    page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE, VM_PROT_RW);
-    if(sys_task_create((void *)USER_MAX_ADDR, (void *)(addr+0x10), (void *)0x12345678) == NULL)
-        printk("Failed\r\n");
+        if(entry) {
+            printk("Done\r\n");
+
+            printk("task #%d: Creating first user task...", sys_task_getid());
+
+            /* XXX - 为第一个用户级线程准备栈，大小1MiB */
+            page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE, VM_PROT_RW);
+            if(sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678) == NULL)
+                printk("Failed\r\n");
+        } else
+            printk("Failed\r\n");
+    }
 }
 
 /**

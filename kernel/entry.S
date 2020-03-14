@@ -183,19 +183,19 @@ vector_fiq:
 
 reset:
 #if RPI_MODEL > 1
-    # shutdown other cores
+    @shutdown other cores
     mrc p15, #0, r1, c0, c0, #5
     and r1, r1, #3
     cmp r1, #0
     bne .
 #endif
 
-	@ restore the address in vector_reset
+	@restore the address in vector_reset
 	ldr r0, vector_reset
 	add r0, r0, #KERNBASE
 	str r0, vector_reset
 
-	@ copy exception vector table and related vector_* to 0
+	@copy exception vector table and related vector_* to 0
 	mov r0, #LOADADDR
 	mov	r1, #0x0000
 	ldmia r0!, {r2-r9}
@@ -203,7 +203,7 @@ reset:
 	ldmia r0!, {r2-r9}
 	stmia r1!, {r2-r9}
 
-	@ zeroify bss
+	@zeroify bss
 	ldr r0, =_edata
 	ldr r1, =_end
 	sub r0, r0, #KERNBASE
@@ -216,7 +216,7 @@ zeroify:
 	b		zeroify
 zeroify.1:
 
-	@ setup stack for modes to be used
+	@setup stack for modes to be used
 	mrs	r0, cpsr
 	bic	r0, r0, #PSR_MODE_MASK
 
@@ -245,34 +245,39 @@ zeroify.1:
 prefetch_abort:
 	PUSHFRAMEINSVC
     PROLOGUE
-	mov		r0, sp
+	
+	mov	r0, sp
+    mrc p15, 0, r1, c6, c0, 2        @get IFAR
+    mrc p15, 0, r2, c5, c0, 1        @get IFSR
 
-    mrc  p15, 0, r1, c6, c0, 2        @get IFAR
-    mrc  p15, 0, r2, c5, c0, 1        @get IFSR
-
+	bl _sti
 	bl _abort_handler
+	bl _cli
 
     b _ret_from_syscall
 
 data_abort:
-	sub		lr, lr, #4                @https://stackoverflow.com/questions/6292620/why-are-the-return-addresses-of-prefetch-abort-and-data-abort-different-in-arm-e
+    @https://stackoverflow.com/questions/6292620/why-are-the-return-addresses-of-prefetch-abort-and-data-abort-different-in-arm-e
+	sub lr, lr, #4
 	PUSHFRAMEINSVC
     PROLOGUE
-	mov		r0, sp
-
+	
+	mov	r0, sp
     mrc p15, 0, r1, c6, c0, 0         @get DFAR
     mrc p15, 0, r2, c5, c0, 0         @get DFSR
 
+	bl _sti
 	bl _abort_handler
+	bl _cli
 
     b _ret_from_syscall
 
 irq:
 	PUSHFRAMEINSVC
     PROLOGUE
-	mov		r0, sp
-
-	bl		_irq_handler
+	
+	mov	r0, sp
+	bl _irq_handler
 
 	ldr r0, =_g_resched
     ldr r0, [r0]
@@ -284,9 +289,9 @@ irq:
 undefined:
 	PUSHFRAMEINSVC
     PROLOGUE
-	mov		r0, sp
-
-	bl		_undefined_handler
+	
+	mov r0, sp
+	bl _undefined_handler
 
     b _ret_from_syscall
 
@@ -301,8 +306,8 @@ swi:
 	str	sp, [sp, #CF_SVC_SP]
 
     PROLOGUE
-	mov	r0, sp
 
+	mov	r0, sp
 	bl _sti
 	bl _syscall
 	bl _cli

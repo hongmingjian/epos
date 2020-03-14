@@ -3,7 +3,7 @@ include ../Makefile.inc
 PROG=	a
 
 .PHONY: all
-all: make.dep $(PROG).out
+all: release
 
 CPPFLAGS=-nostdinc -I../include -Iinclude
 ASFLAGS=-Wall -O2 -D__ASSEMBLY__
@@ -37,6 +37,20 @@ $(PROG).out: $(OBJS)
 .DELETE_ON_ERROR: make.dep
 make.dep: $(COBJS:.o=.c)
 	$(CC) $(CPPFLAGS) -M $^ >make.dep
+
+.PHONY: release
+release: CFLAGS+=-O2 -ggdb
+release: make.dep $(PROG).out
+
+.PHONY: debug
+debug: CFLAGS+=-O0 -ggdb
+debug: make.dep $(PROG).out
+
+.PHONY: qemu
+qemu: release
+
+.PHONY: qemudbg
+qemudbg: debug
 
 .PHONY: clean
 clean:

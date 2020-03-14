@@ -10,8 +10,8 @@ ASFLAGS=-m32 -Wall -D__ASSEMBLY__
 CFLAGS=	-m32 -Wall -pipe\
 	-DSNPRINTF_FLOATPOINT \
 	-ffreestanding -fleading-underscore -mno-ms-bitfields \
-	-fno-pie #-fno-stack-check -mno-stack-arg-probe -fno-stack-protector
-LDFLAGS=-m32 -nostdlib -nostartfiles -nodefaultlibs \
+	-fno-pie
+LDFLAGS=-m32 -nostdlib \
 		-Wl,-Map,$(PROG).map -static
 
 COBJS=	vm86call.o graphics.o main.o

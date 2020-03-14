@@ -8,10 +8,9 @@ all: run
 CPPFLAGS=-DVERBOSE=0 -nostdinc -I../include
 ASFLAGS=-m32 -Wall -D__ASSEMBLY__
 CFLAGS=	-m32 -Wall -pipe \
-	-fomit-frame-pointer \
 	-ffreestanding -fleading-underscore -mno-ms-bitfields \
-	-fno-pie #-fno-stack-check -mno-stack-arg-probe -fno-stack-protector
-LDFLAGS=-m32 -Tkernel.ld -nostdlib -nostartfiles -nodefaultlibs \
+	-fno-pie
+LDFLAGS=-m32 -Tkernel.ld -nostdlib \
 		-Wl,-Map,$(PROG).map -static
 
 COBJS=	ide.o floppy.o e1000.o pci.o vm86.o \

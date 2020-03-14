@@ -219,7 +219,16 @@ typedef struct {
 	volatile unsigned int slotisr_ver;
 } emmc_reg_t;
 
+/*
+ * QEMU(v4.1)只能模拟System Timer，不能模拟Timer(ARM side)
+ * 但是，因为ARM Timer不稳定，建议用System Timer作为时钟
+ */
+#ifdef RPI_QEMU
 #define IRQ_TIMER     9
+#else
+#define IRQ_TIMER     0	
+#endif
+
 #define NR_IRQ        (8+64)
 
 #endif /* _CPU_H */

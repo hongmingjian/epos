@@ -273,7 +273,7 @@ void abort_handler(struct context *ctx, uint32_t far, uint32_t fsr)
     if(do_page_fault(ctx, far, fsr) == 0)
         return;
 	
-	cli();
+    cli();
     exception(ctx);
 }
 

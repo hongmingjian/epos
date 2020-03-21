@@ -130,7 +130,7 @@ static void _delay (unsigned num, unsigned denom)
 {
   /* Scale the numerator and denominator down by 1000 to avoid
      the possibility of overflow. */
-  busy_wait (loops_per_tick * num / 1000 * HZ / (denom / 1000));
+  busy_wait (loops_per_tick / (denom / 1000) * (num / 1000) * HZ );
 }
 
 static void do_sleep (unsigned num, unsigned denom)

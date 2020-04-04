@@ -36,19 +36,22 @@ make.dep: $(COBJS:.o=.c)
 $(PROG).img: $(PROG).elf
 	$(OBJCOPY) $^ -O binary $@
 
-$(PROG).elf: kernel.ld $(OBJS)
+$(PROG).elf: $(PROG).ld $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) -o $@
 
-kernel.ld: kernel.ld.in
+$(PROG).ld: $(PROG).ld.in
 	$(CC) $(CPPFLAGS) -E -P -x c-header -o $@ $^
+
+$(PROG).uue: $(PROG).img
+	uuencode $^ $^ >$@
 
 .PHONY: release
 release: CFLAGS+=-O2 -ggdb
-release: make.dep $(PROG).img
+release: make.dep $(PROG).uue
 
 .PHONY: debug
 debug: CFLAGS+=-O0 -ggdb
-debug: make.dep $(PROG).img
+debug: make.dep $(PROG).uue
 
 .PHONY: qemu
 qemu: CPPFLAGS+=-DRPI_QEMU
@@ -60,6 +63,6 @@ qemudbg: debug
 
 .PHONY: clean
 clean:
-	-$(RM) kernel.ld $(OBJS) $(PROG).img $(PROG).elf $(PROG).map make.dep *.*~
+	-$(RM) $(OBJS) $(PROG).{ld,img,elf,map,uue} make.dep *.*~
 
 -include make.dep

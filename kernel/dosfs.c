@@ -1334,10 +1334,10 @@ struct fat_file {
 static int fat_mount(struct fs *this, struct dev *dev, size_t offset);
 static int fat_unmount(struct fs *this);
 static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp);
-static int fat_close  (struct fs *this, struct file *_fp);
-static int fat_read   (struct fs *this, struct file *fp, uint8_t *buf, size_t size);
-static int fat_write  (struct fs *this, struct file *_fp, uint8_t *buf, size_t size);
-static int fat_seek   (struct fs *this, struct file *_fp, int offset, int whence);
+static int fat_close  (struct file *_fp);
+static int fat_read   (struct file *_fp, uint8_t *buf, size_t size);
+static int fat_write  (struct file *_fp, uint8_t *buf, size_t size);
+static int fat_seek   (struct file *_fp, int offset, int whence);
 
 struct fat_fs {
 	struct fs fs;
@@ -1426,13 +1426,9 @@ static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp)
 	return -1;
 }
 
-static int fat_close  (struct fs *this, struct file *_fp)
+static int fat_close  (struct file *_fp)
 {
-	struct fat_fs *fs = (struct fat_fs *)this;
 	struct fat_file *fp = (struct fat_file *)_fp;
-	if(fp->file.fs != this) {
-		return -1;
-	}
 
 	DFS_Close(&fp->fi);
 
@@ -1440,13 +1436,9 @@ static int fat_close  (struct fs *this, struct file *_fp)
 	return 0;
 }
 
-static int fat_read   (struct fs *this, struct file *_fp, uint8_t *buf, size_t size)
+static int fat_read   (struct file *_fp, uint8_t *buf, size_t size)
 {
-	struct fat_fs *fs = (struct fat_fs *)this;
 	struct fat_file *fp = (struct fat_file *)_fp;
-	if(fp->file.fs != this) {
-		return -1;
-	}
 
 	unsigned char scratch[SECTOR_SIZE];
 	uint32_t successcount;
@@ -1456,13 +1448,9 @@ static int fat_read   (struct fs *this, struct file *_fp, uint8_t *buf, size_t s
 	return -1;
 }
 
-static int fat_write  (struct fs *this, struct file *_fp, uint8_t *buf, size_t size)
+static int fat_write  (struct file *_fp, uint8_t *buf, size_t size)
 {
-	struct fat_fs *fs = (struct fat_fs *)this;
 	struct fat_file *fp = (struct fat_file *)_fp;
-	if(fp->file.fs != this) {
-		return -1;
-	}
 
 	unsigned char scratch[SECTOR_SIZE];
 	uint32_t successcount;
@@ -1472,13 +1460,9 @@ static int fat_write  (struct fs *this, struct file *_fp, uint8_t *buf, size_t s
 	return -1;
 }
 
-static int fat_seek   (struct fs *this, struct file *_fp, int offset, int whence)
+static int fat_seek   (struct file *_fp, int offset, int whence)
 {
-	struct fat_fs *fs = (struct fat_fs *)this;
 	struct fat_file *fp = (struct fat_file *)_fp;
-	if(fp->file.fs != this) {
-		return -1;
-	}
 
 	unsigned char scratch[SECTOR_SIZE];
 	DFS_Seek(&fp->fi, offset, &scratch[0]);

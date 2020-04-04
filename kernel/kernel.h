@@ -215,11 +215,11 @@ struct fs {
 	int (*mount)  (struct fs *this, struct dev *dev, size_t offset);
 	int (*unmount)(struct fs *this);	
 	int (*open)   (struct fs *this, char *path, int mode, struct file **_fpp);
-	int (*close)  (struct fs *this, struct file *_fp);
-	int (*read)   (struct fs *this, struct file *_fp, uint8_t *buf, size_t size);
-	int (*write)  (struct fs *this, struct file *_fp, uint8_t *buf, size_t size);
-	int (*seek)   (struct fs *this, struct file *_fp, int offset, int whence);
-	int (*mmap)   (struct fs *this, struct file *_fp, int offset);
+	int (*close)  (struct file *_fp);
+	int (*read)   (struct file *_fp, uint8_t *buf, size_t size);
+	int (*write)  (struct file *_fp, uint8_t *buf, size_t size);
+	int (*seek)   (struct file *_fp, int offset, int whence);
+	int (*mmap)   (struct file *_fp, int offset);
 };
 struct file {
 	struct fs *fs;

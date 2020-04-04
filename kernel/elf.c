@@ -98,7 +98,7 @@ uint32_t load_aout(struct fs *fs, char *filename)
         return 0;
     }
 
-    read = fs->read(fs, fp, (uint8_t *)&ehdr, sizeof(ehdr));
+    read = fs->read(fp, (uint8_t *)&ehdr, sizeof(ehdr));
     if(
        (read != sizeof(ehdr)) ||
        (ehdr.e_ident[EI_MAG0] != ELFMAG0) ||
@@ -114,17 +114,17 @@ uint32_t load_aout(struct fs *fs, char *filename)
        (ehdr.e_machine != EM_386)
 #endif
       ) {
-        fs->close(fs, fp);
+        fs->close(fp);
         printk("task #%d: invalid executable file %s\r\n",
             sys_task_getid(), filename);
         return 0;
     }
 
     Elf32_Phdr *phdr = (Elf32_Phdr *)kmalloc(ehdr.e_phentsize*ehdr.e_phnum);
-    fs->seek(fs, fp, ehdr.e_phoff, 0);
-    read = fs->read(fs, fp, (uint8_t *)phdr, ehdr.e_phentsize*ehdr.e_phnum);
+    fs->seek(fp, ehdr.e_phoff, 0);
+    read = fs->read(fp, (uint8_t *)phdr, ehdr.e_phentsize*ehdr.e_phnum);
     if(read != ehdr.e_phentsize*ehdr.e_phnum) {
-        fs->close(fs, fp);
+        fs->close(fp);
         printk("task #%d: bad executable file %s\r\n",
             sys_task_getid(), filename);
         kfree(phdr);
@@ -145,7 +145,7 @@ uint32_t load_aout(struct fs *fs, char *filename)
             npages = PAGE_ROUNDUP((phdr[i].p_vaddr&PAGE_MASK)+phdr[i].p_memsz)/PAGE_SIZE;
             va = page_alloc_in_addr(PAGE_TRUNCATE(phdr[i].p_vaddr), npages, prot);
             if(va != PAGE_TRUNCATE(phdr[i].p_vaddr)) {
-                fs->close(fs, fp);
+                fs->close(fp);
                 printk("task #%d: Address 0x%08x of %d pages has already been used!\r\n",
                     sys_task_getid(),
                     PAGE_TRUNCATE(phdr[i].p_vaddr),
@@ -154,10 +154,10 @@ uint32_t load_aout(struct fs *fs, char *filename)
                 return 0;
             }
 
-            fs->seek(fs, fp, phdr[i].p_offset, 0);
-            read = fs->read(fs, fp, (uint8_t *)phdr[i].p_vaddr, phdr[i].p_filesz);
+            fs->seek(fp, phdr[i].p_offset, 0);
+            read = fs->read(fp, (uint8_t *)phdr[i].p_vaddr, phdr[i].p_filesz);
             if(read != phdr[i].p_filesz) {
-                fs->close(fs, fp);
+                fs->close(fp);
                 printk("task #%d: bad executable file %s\r\n",
                     sys_task_getid(), filename);
                 kfree(phdr);
@@ -172,7 +172,7 @@ uint32_t load_aout(struct fs *fs, char *filename)
         }
     }
 
-    fs->close(fs, fp);
+    fs->close(fp);
     kfree(phdr);
     return ehdr.e_entry;
 }

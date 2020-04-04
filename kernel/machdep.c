@@ -103,28 +103,27 @@ void disable_irq(uint32_t irq)
 void switch_to(struct tcb *new)
 {
     __asm__ __volatile__ (
-            "stmdb sp!, {r0-r12,r14}\n\t"
-            "ldr r0, =1f\n\t"
-            "stmdb sp!, {r0}\n\t"
-            "ldr r0, %0\n\t"
-            "str sp, [r0]\n\t"
-            "add sp, sp, #60\n\t"
+			"mrs r12, cpsr\n\t"
+            "stmdb sp!, {r4-r12,r14}\n\t"
+            "ldr r12, =1f\n\t"
+            "stmdb sp!, {r12}\n\t"
+            "ldr r12, %0\n\t"
+            "str sp, [r12]\n\t"
             :
             :"m"(g_task_running)
-            :"r0"
             );
 
     g_task_running = new;
 
     __asm__ __volatile__ (
-            "ldr r0, %0\n\t"
-            "ldr sp, [r0]\n\t"
+            "ldr r12, %0\n\t"
+            "ldr sp, [r12]\n\t"
             "ldmia sp!, {pc}\n\t"
             "1:\n\t"
-            "ldmia sp!, {r0-r12,r14}\n\t"
+            "ldmia sp!, {r4-r12,r14}\n\t"
+            "msr cpsr_cxsf, r12\n\t"
             :
             :"m"(g_task_running)
-            :"r0"
             );
 }
 

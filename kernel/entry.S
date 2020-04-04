@@ -190,11 +190,6 @@ reset:
     bne .
 #endif
 
-	@restore the address in vector_reset
-	ldr r0, vector_reset
-	add r0, r0, #KERNBASE
-	str r0, vector_reset
-
 	@copy exception vector table and related vector_* to 0
 	mov r0, #LOADADDR
 	mov	r1, #0x0000

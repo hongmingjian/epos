@@ -35,6 +35,8 @@
 #define SYS_CLOCK_FREQ	250000000UL
 #endif
 
+#define FUARTCLK        3000000
+
 #define ARMTIMER_REG (0xB400)
 typedef struct {
 	volatile unsigned int Load;

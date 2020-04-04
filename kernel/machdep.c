@@ -77,7 +77,7 @@ void enable_irq(uint32_t irq)
         pic->Enable_basic_IRQs = 1 << irq;
     } else if(irq < 40) {
         pic->Enable_IRQs_1 = 1<<(irq - 8);
-    } else if(irq < 72) {
+    } else if(irq < NR_IRQ) {
         pic->Enable_IRQs_2 = 1<<(irq - 40);
     }
 }
@@ -92,7 +92,7 @@ void disable_irq(uint32_t irq)
         pic->Disable_basic_IRQs = 1 << irq;
     } else if(irq < 40) {
         pic->Disable_IRQs_1 = 1<<(irq - 8);
-    } else if(irq < 72) {
+    } else if(irq < NR_IRQ) {
         pic->Disable_IRQs_2 = 1<<(irq - 40);
     }
 }
@@ -142,12 +142,15 @@ static void init_uart1(uint32_t baud)
     aux->mu_baud = (SYS_CLOCK_FREQ/(8*baud))-1;
 
     uint32_t ra=gpio->gpfsel1;
-    ra&=~(7<<12); //GPIO Pin 14 takes
-    ra|=2<<12;    // alternate function 5, i.e., TxD1
-    ra&=~(7<<15); //GPIO Pin 15 takes
-    ra|=2<<15;    // alternate function 5, i.e., RxD1
+    ra &= ~((7 << 12) | (7 << 15)); // gpio14/gpio15
+    ra |= (2 << 12) | (2 << 15);    // alt5=TxD1/RxD1
     gpio->gpfsel1 = ra;
-    gpio->gppud = 0; //Disable pull-up/down
+
+	gpio->gppud = 0; //Disable pull-up/down
+    ra = 150; while(ra--) __asm__ __volatile__("nop");
+    gpio->gppudclk0 = (1 << 14) | (1 << 15);
+    ra = 150; while(ra--) __asm__ __volatile__("nop");
+    gpio->gppudclk0 = 0;
 
     aux->mu_cntl = 3; //Enable transmitter & receiver
 }
@@ -159,7 +162,7 @@ void uart1_putc ( int c )
         if(aux->mu_lsr&0x20) //Transmitter empty?
             break;
     }
-    aux->mu_io = c;
+    aux->mu_io = c & 0xff;
 }
 
 int uart1_getc()
@@ -169,7 +172,7 @@ int uart1_getc()
         if(aux->mu_lsr&0x1)
             break;
     }
-    return aux->mu_io;
+    return aux->mu_io & 0xff;
 }
 
 /**
@@ -186,22 +189,17 @@ void init_uart0(uint32_t baud)
 
     uint32_t ra = gpio->gpfsel1/*GPFSEL1*/;
     ra &= ~((7 << 12) | (7 << 15)); // gpio14/gpio15
-    ra |= (4 << 12) | (4 << 15);    // alt0
+    ra |= (4 << 12) | (4 << 15);    // alt0=TxD0/RxD0
     gpio->gpfsel1/*GPFSEL1*/ = ra;
+
     gpio->gppud/*GPPUD*/ = 0;
-
-    ra = 150;
-    while(ra--) __asm__ __volatile__("nop");
-
+    ra = 150; while(ra--) __asm__ __volatile__("nop");
     gpio->gppudclk0/*GPPUDCLK0*/ = (1 << 14) | (1 << 15);
-
-    ra = 150;
-    while(ra--) __asm__ __volatile__("nop");
-
+    ra = 150; while(ra--) __asm__ __volatile__("nop");
     gpio->gppudclk0/*GPPUDCLK0*/ = 0;
 
     uart->icr/*PL011_ICR*/  = 0x7FF;
-    uart->ibrd/*PL011_IBRD*/ = 24/*9600*/;         // 2 for 115200 baud
+    uart->ibrd/*PL011_IBRD*/ = FUARTCLK/16/baud;
     uart->fbrd/*PL011_FBRD*/ = 0xB;
     uart->lcrh/*PL011_LCRH*/ = 0b11 << 5; // 8N1
     uart->cr/*PL011_CR*/   = 0x301;
@@ -272,7 +270,7 @@ void abort_handler(struct context *ctx, uint32_t far, uint32_t fsr)
 {
     if(do_page_fault(ctx, far, fsr) == 0)
         return;
-	
+
     cli();
     exception(ctx);
 }
@@ -286,17 +284,17 @@ void irq_handler(struct context *ctx)
         if(pic->IRQ_basic_pending & (1<<irq))
             break;
 
-    if(irq == 8){
+    if(irq == 8) {
         for( ; irq < 40; irq++)
             if(pic->IRQ_pending_1 & (1<<(irq-8)))
                 break;
 
         if(irq == 40) {
-            for( ; irq < 72; irq++)
+            for( ; irq < NR_IRQ; irq++)
                 if(pic->IRQ_pending_2 & (1<<(irq-40)))
                     break;
 
-            if(irq == 72)
+            if(irq == NR_IRQ)
                 return;
         }
     }
@@ -670,12 +668,31 @@ static void init_ram(uint32_t physfree)
     g_ram_zone[3] = 0;
 }
 
+__attribute__((naked))
+static void trampoline()
+{
+    __asm__ __volatile__("add sp, sp, %0\n\t"
+                         "add lr, lr, %0\n\t"
+                         "bx  lr\n\t"
+                         :
+                         : "r" (KERNBASE));
+}
+
 /**
  * 机器相关（Machine Dependent）的初始化
  */
 static void md_startup(uint32_t mbi, uint32_t physfree)
 {
     physfree=init_paging(physfree);
+
+    /*
+     * 分页已经打开，切换到虚拟地址运行
+     */
+	trampoline();
+
+    /*
+     * 初始化物理内存区域
+     */
     init_ram(physfree);
 
     /*
@@ -687,16 +704,10 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
     init_pic();
     init_pit(HZ);
 #ifdef RPI_QEMU
-    init_uart0(9600);
+    init_uart0(115200);
 #else
-    init_uart1(9600);
+    init_uart1(115200);
 #endif
-}
-
-__attribute__((optimize("O0")))
-static void trampoline()
-{
-    __asm__ __volatile__("add lr, lr, %0" : : "r" (KERNBASE));
 }
 
 /**
@@ -710,12 +721,6 @@ void cstart(uint32_t magic, uint32_t mbi)
      * 机器相关（Machine Dependent）的初始化
      */
     md_startup(mbi, _end);
-
-    /*
-     * 分页已经打开，切换到虚拟地址运行
-     */
-	__asm__ __volatile__("add sp, sp, %0" : : "r" (KERNBASE));
-	trampoline();
 
     /*
      * 机器无关（Machine Independent）的初始化

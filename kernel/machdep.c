@@ -119,14 +119,14 @@ void disable_irq(uint32_t irq)
 void switch_to(struct tcb *new)
 {
     __asm__ __volatile__ (
+            "pushfl\n\t"
             "pushal\n\t"
             "pushl $1f\n\t"
             "movl %0, %%eax\n\t"
             "movl %%esp, (%%eax)\n\t"
-            "addl $36, %%esp\n\t"
+            "addl $40, %%esp\n\t"
             :
             :"m"(g_task_running)
-            :"%eax"
             );
 
     g_task_running = new;
@@ -140,9 +140,9 @@ void switch_to(struct tcb *new)
             "orl $8, %%eax\n\t"
             "movl %%eax, %%cr0\n\t"
             "popal\n\t"
+            "popfl\n\t"
             :
             :"m"(g_task_running)
-            :"%eax"
             );
 }
 

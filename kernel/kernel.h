@@ -203,21 +203,37 @@ void     mi_startup();
 struct dev {
 	int (*init)  (struct dev *this, int minor);
    void (*uninit)(struct dev *this);
-	int (*read)  (struct dev *this, uint8_t *buf, size_t size, uint32_t addr);
-	int (*write) (struct dev *this, uint8_t *buf, size_t size, uint32_t addr);
+	int (*read)  (struct dev *this, uint32_t addr, uint8_t *buf, size_t size);
+	int (*write) (struct dev *this, uint32_t addr, uint8_t *buf, size_t size);
 	int (*poll)  (struct dev *this, int events);
 	int (*ioctl) (struct dev *this, int cmd, int arg);
 };
 
 struct file;
 struct fs {
-	int (*mount)  (struct fs *this, struct dev *dev, size_t offset);
+	int (*mount)  (struct fs *this, struct dev *dev, uint32_t addr);
 	int (*unmount)(struct fs *this);	
 	int (*open)   (struct fs *this, char *path, int mode, struct file **_fpp);
+#define O_RDONLY	0x0
+#define O_WRONLY	0x1
+#define O_RDWR		0x2
+#define	O_SYNC		0x80
+#define	O_FSYNC		O_SYNC
+#define	O_CREAT		0x200
+#define	O_TRUNC		0x400
+#define	O_EXCL		0x800
+#define O_APPEND	0x2000
+#define O_NONBLOCK	0x4000
+#define O_NDELAY	O_NONBLOCK
+	
 	int (*close)  (struct file *_fp);
 	int (*read)   (struct file *_fp, uint8_t *buf, size_t size);
 	int (*write)  (struct file *_fp, uint8_t *buf, size_t size);
 	int (*seek)   (struct file *_fp, int offset, int whence);
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+	
 	int (*mmap)   (struct file *_fp, int offset);
 };
 struct file {

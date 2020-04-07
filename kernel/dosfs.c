@@ -1366,7 +1366,7 @@ uint32_t DFS_ReadSector(uint8_t unit, uint8_t *buffer,
         uint32_t sector, uint32_t count)
 {
 //	printk("DFS_ReadSector: sector=%d, count=%d\r\n", sector, count);
-	size_t ret = fat_fs.dev->read(fat_fs.dev, buffer, count * SECTOR_SIZE, sector*SECTOR_SIZE);
+	size_t ret = fat_fs.dev->read(fat_fs.dev, sector*SECTOR_SIZE, buffer, count * SECTOR_SIZE);
 	if(ret == count * SECTOR_SIZE)
 		return 0;
 	return -1;
@@ -1376,7 +1376,7 @@ uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
         uint32_t sector, uint32_t count)
 {
 //	printk("DFS_WriteSector: sector=%d, count=%d\r\n", sector, count);
-	size_t ret = fat_fs.dev->write(fat_fs.dev, buffer, count * SECTOR_SIZE, sector*SECTOR_SIZE);
+	size_t ret = fat_fs.dev->write(fat_fs.dev, sector*SECTOR_SIZE, buffer, count * SECTOR_SIZE);
 	if(ret == count * SECTOR_SIZE)
 		return 0;
 	return -1;

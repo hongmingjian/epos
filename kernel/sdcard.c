@@ -1606,8 +1606,8 @@ static void sdParseCSD()
 #include "kernel.h"
 
 static int sd_init(struct dev *this, int minor);
-static int sd_read(struct dev *this, uint8_t *buf, size_t buf_size, uint32_t addr);
-static int sd_write(struct dev *this, uint8_t *buf, size_t buf_size, uint32_t addr);
+static int sd_read(struct dev *this, uint32_t addr, uint8_t *buf, size_t buf_size);
+static int sd_write(struct dev *this, uint32_t addr, uint8_t *buf, size_t buf_size);
 
 struct sd_dev {
 	struct dev dev;
@@ -1632,7 +1632,7 @@ static int sd_init(struct dev *this, int minor)
 	return -ret;
 }
 
-static int sd_read(struct dev *this, uint8_t *buf, size_t buf_size, uint32_t addr)
+static int sd_read(struct dev *this, uint32_t addr, uint8_t *buf, size_t buf_size)
 {
 	struct sd_dev *sd_dev = (struct sd_dev *)this;
 	int ret = sdTransferBlocks( addr, buf_size/512, buf, 0 );
@@ -1641,7 +1641,7 @@ static int sd_read(struct dev *this, uint8_t *buf, size_t buf_size, uint32_t add
 	return -ret;
 }
 
-static int sd_write(struct dev *this, uint8_t *buf, size_t buf_size, uint32_t addr)
+static int sd_write(struct dev *this, uint32_t addr, uint8_t *buf, size_t buf_size)
 {
 	struct sd_dev *sd_dev = (struct sd_dev *)this;
 	int ret = sdTransferBlocks( addr, buf_size/512, buf, 1 );

@@ -1423,6 +1423,7 @@ static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp)
 		return 0;
 	}
 
+	kfree(fp);
 	return -1;
 }
 

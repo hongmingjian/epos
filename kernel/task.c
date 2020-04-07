@@ -80,16 +80,17 @@ void sleep_on(struct wait_queue **head)
     if(*head == &wait)
         *head = wait.next;
     else {
-        struct wait_queue *p, *q;
-        p = *head;
+        struct wait_queue *p, *q = *head;
         do {
-            q = p;
-            p = p->next;
+            p = q->next;
+            if(p == NULL)
+                break;
             if(p == &wait) {
                 q->next = p->next;
                 break;
             }
-        } while(p != NULL);
+            q = p;
+        } while(1);
     }
 }
 
@@ -113,12 +114,13 @@ void add_task(struct tcb *tsk)
     if(g_task_head == NULL)
         g_task_head = tsk;
     else {
-        struct tcb *p, *q;
-        p = g_task_head;
+        struct tcb *p, *q = g_task_head;
         do {
+            p = q->next;
+            if(p == NULL)
+                break;
             q = p;
-            p = p->next;
-        } while(p != NULL);
+        } while(1);
         q->next = tsk;
     }
 }
@@ -130,14 +132,15 @@ void remove_task(struct tcb *tsk)
         if(tsk == g_task_head) {
             g_task_head = g_task_head->next;
         } else {
-            struct tcb *p, *q;
-            p = g_task_head;
+            struct tcb *p, *q = g_task_head;            
             do {
-                q = p;
-                p = p->next;
+                p = q->next;
+                if(p == NULL)
+                    break;
                 if(p == tsk)
                     break;
-            } while(p != NULL);
+                q = p;
+            } while(1);
 
             if(p == tsk)
                 q->next = p->next;

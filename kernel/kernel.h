@@ -112,7 +112,6 @@ void wake_up(struct wait_queue **head, int n);
 
 void init_task(void);
 void syscall(struct context *ctx);
-extern void *ret_from_syscall;
 
 /**
  * `VADDR' comes from FreeBSD

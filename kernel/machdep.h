@@ -110,6 +110,8 @@ struct context {
             : "r0", "r1");\
 } while(0)
 
+extern void *ret_from_syscall;
+
 void sti(), cli();
 void isr_timer(uint32_t irq, struct context *ctx);
 

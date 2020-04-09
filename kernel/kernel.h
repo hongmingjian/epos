@@ -200,32 +200,40 @@ int sys_gettimeofday(struct timeval *tv, struct timezone *tz);
 
 void     mi_startup();
 
-struct dev {
-	int (*init)  (struct dev *this, int minor);
-   void (*uninit)(struct dev *this);
-	int (*read)  (struct dev *this, uint32_t addr, uint8_t *buf, size_t size);
-	int (*write) (struct dev *this, uint32_t addr, uint8_t *buf, size_t size);
-	int (*poll)  (struct dev *this, int events);
-	int (*ioctl) (struct dev *this, int cmd, int arg);
+struct dev;
+struct driver {
+	char *name;
+	int (*init)  (struct dev *dp);
+   void (*uninit)(struct dev *dp);
+	int (*read)  (struct dev *dp, uint32_t addr, uint8_t *buf, size_t size);
+	int (*write) (struct dev *dp, uint32_t addr, uint8_t *buf, size_t size);
+	int (*poll)  (struct dev *dp, int events);
+#define POLLIN		0x0001
+#define POLLOUT		0x0004
+
+	int (*ioctl) (struct dev *dp, int cmd, void *arg);
 };
+
+struct dev {
+	struct driver *drv;
+	uint32_t minor;
+};
+
+#define NR_DRIVER 16
+#define NR_DEVICE 16
+extern struct driver *g_driver_vector[];
+extern struct dev    *g_dev_vector[];
 
 struct file;
 struct fs {
 	int (*mount)  (struct fs *this, struct dev *dev, uint32_t addr);
-	int (*unmount)(struct fs *this);	
+	int (*unmount)(struct fs *this);
 	int (*open)   (struct fs *this, char *path, int mode, struct file **_fpp);
 #define O_RDONLY	0x0
 #define O_WRONLY	0x1
-#define O_RDWR		0x2
-#define	O_SYNC		0x80
-#define	O_FSYNC		O_SYNC
-#define	O_CREAT		0x200
-#define	O_TRUNC		0x400
-#define	O_EXCL		0x800
+#define O_RDWR      0x2
 #define O_APPEND	0x2000
-#define O_NONBLOCK	0x4000
-#define O_NDELAY	O_NONBLOCK
-	
+
 	int (*close)  (struct file *_fp);
 	int (*read)   (struct file *_fp, uint8_t *buf, size_t size);
 	int (*write)  (struct file *_fp, uint8_t *buf, size_t size);
@@ -233,10 +241,22 @@ struct fs {
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
-	
+
 	int (*mmap)   (struct file *_fp, int offset);
 };
 struct file {
 	struct fs *fs;
 };
+
+#define NR_FILE_SYSTEM   16
+#define NR_OPEN_FILE 64
+extern struct fs *g_fs_vector[];
+extern struct file *g_file_vector[];
+
+int sys_open(char *path, int mode);
+int sys_close(int fd);
+int sys_read(int fd, uint8_t *buffer, size_t size);
+int sys_write(int fd, uint8_t *buffer, size_t size);
+int sys_seek(int fd, int offset, int whence);
+
 #endif /*_KERNEL_H*/

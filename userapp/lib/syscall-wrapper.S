@@ -21,4 +21,10 @@ WRAPPER(sleep)
 WRAPPER(nanosleep)
 WRAPPER(gettimeofday)
 
+WRAPPER(open)
+WRAPPER(close)
+WRAPPER(read)
+WRAPPER(write)
+WRAPPER(seek)
+
 WRAPPER(putchar)

@@ -32,6 +32,12 @@
 #define SYSCALL_nanosleep     10
 #define SYSCALL_gettimeofday  11
 
+#define SYSCALL_open          20
+#define SYSCALL_close         21
+#define SYSCALL_read          22
+#define SYSCALL_write         23
+#define SYSCALL_seek          24
+
 #define SYSCALL_putchar       1000
 
 #endif /*_SYSCALLNR_H*/

@@ -480,7 +480,50 @@ void syscall(struct context *ctx)
     case SYSCALL_putchar:
         ctx->cf_r0 = sys_putchar(ctx->cf_r0 & 0xff);
         break;
-
+	case SYSCALL_open:
+		{
+	        char *path = ctx->cf_r0;
+            int mode = ctx->cf_r1;
+            if(!IN_USER_VM(path, strlen(path)))
+                break;
+            ctx->cf_r0 = sys_open(path, mode);
+            break;
+		}
+	case SYSCALL_close:
+		{
+            int fd = ctx->cf_r0;
+            ctx->cf_r0 = sys_close(fd);
+            break;
+		}
+	case SYSCALL_read:
+		{
+            int fd = ctx->cf_r0;
+            char *buffer = ctx->cf_r1;
+            uint32_t size = ctx->cf_r2;
+            if(!IN_USER_VM(buffer, size))
+                break;
+            ctx->cf_r0 = sys_read(fd, buffer, size);
+            break;
+		}
+	case SYSCALL_write:
+		{
+            int fd = ctx->cf_r0;
+            char *buffer = ctx->cf_r1;
+            uint32_t size = ctx->cf_r2;
+            if(!IN_USER_VM(buffer, size))
+                break;
+            ctx->cf_r0 = sys_write(fd, buffer, size);
+            break;
+		}
+	case SYSCALL_seek:
+		{
+            int fd = ctx->cf_r0,
+                offset = ctx->cf_r1,
+                whence = ctx->cf_r2;
+            ctx->cf_r0 = sys_seek(fd, offset, whence);
+            break;
+		}
+		
     default:
         printk("syscall #%d not implemented.\r\n", ctx->cf_r4);
 		ctx->cf_r0 = -ctx->cf_r4;

@@ -1605,48 +1605,63 @@ static void sdParseCSD()
 /*****************************************************************************/
 #include "kernel.h"
 
-static int sd_init(struct dev *this, int minor);
-static int sd_read(struct dev *this, uint32_t addr, uint8_t *buf, size_t buf_size);
-static int sd_write(struct dev *this, uint32_t addr, uint8_t *buf, size_t buf_size);
-
-struct sd_dev {
-	struct dev dev;
-} sd_dev =
+static int sd_init(struct dev *dp)
 {
-	{
-	.init = sd_init,
-	.uninit = NULL,
-	.read = sd_read,
-	.write = sd_write,
-	.poll = NULL,
-	.ioctl = NULL
-	}
-};
-
-static int sd_init(struct dev *this, int minor)
-{
-	struct sd_dev *sd_dev = (struct sd_dev *)this;
+	struct sd_dev *sd_dev = (struct sd_dev *)dp;
 	int ret = sdInitCard();
 	if(ret == SD_OK)
 		return 0;
 	return -ret;
 }
 
-static int sd_read(struct dev *this, uint32_t addr, uint8_t *buf, size_t buf_size)
+static void sd_uninit(struct dev *dp)
 {
-	struct sd_dev *sd_dev = (struct sd_dev *)this;
+}
+
+static int sd_read(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_size)
+{
+	struct sd_dev *sd_dev = (struct sd_dev *)dp;
 	int ret = sdTransferBlocks( addr, buf_size/512, buf, 0 );
 	if(ret == SD_OK)
 		return buf_size;
 	return -ret;
 }
 
-static int sd_write(struct dev *this, uint32_t addr, uint8_t *buf, size_t buf_size)
+static int sd_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_size)
 {
-	struct sd_dev *sd_dev = (struct sd_dev *)this;
+	struct sd_dev *sd_dev = (struct sd_dev *)dp;
 	int ret = sdTransferBlocks( addr, buf_size/512, buf, 1 );
 	if(ret == SD_OK)
 		return buf_size;
 	return -ret;
 }
+
+static int sd_poll(struct dev *dp, int events)
+{
+	return 1;
+}
+
+static int sd_ioctl(struct dev *dp, int cmd, void *arg)
+{
+	return -1;
+}
+
+struct driver sd_driver = {
+	.name = "sd",
+	.init = sd_init,
+	.uninit = sd_uninit,
+	.read = sd_read,
+	.write = sd_write,
+	.poll = sd_poll,
+	.ioctl = sd_ioctl
+};
+
+struct sd_dev {
+	struct dev dev;
+} sd_dev = {
+	{
+	.drv = &sd_driver,
+	.minor = 0
+	}
+};
 /*****************************************************************************/

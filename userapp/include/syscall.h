@@ -19,4 +19,18 @@ int   munmap(void *addr, size_t len);
 
 int putchar(int c);
 
+int open(char *path, int mode);
+#define O_RDONLY	0x0
+#define O_WRONLY	0x1
+#define O_RDWR      0x2
+#define O_APPEND	0x2000
+
+int close(int fd);
+int read(int fd, uint8_t *buffer, size_t size);
+int write(int fd, uint8_t *buffer, size_t size);
+int seek(int fd, int offset, int whence);
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
 #endif /*_SYSCALL_H*/

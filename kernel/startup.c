@@ -35,10 +35,14 @@ void isr_default(uint32_t irq, struct context *ctx)
     //printk("IRQ=0x%02x\r\n", irq);
 }
 
-extern struct fs  fat_fs;
-extern struct dev sd_dev;
-struct dev *g_dev_vector[16];
-struct fs  *g_fs_vector[16];
+extern struct fs     fat_fs, dev_fs;
+extern struct dev    sd_dev, null_dev, zero_dev;
+extern struct driver sd_driver, zero_driver, null_driver;
+
+struct driver *g_driver_vector[NR_DRIVER];
+struct dev    *g_dev_vector[NR_DEVICE];
+struct fs     *g_fs_vector[NR_FILE_SYSTEM];
+struct file   *g_file_vector[NR_OPEN_FILE];
 
 void start_user_task()
 {
@@ -51,18 +55,28 @@ void start_user_task()
      * 初始化SD卡和FAT文件系统
      */
     {
-	    g_dev_vector[0] = &sd_dev;
-	    g_fs_vector[0] = &fat_fs;
+		int i, j;
+
+	    g_driver_vector[0] = &null_driver;
+	    g_driver_vector[1] = &zero_driver;
+	    g_driver_vector[2] = &sd_driver;
+
+	    g_dev_vector[0] = &null_dev;
+	    g_dev_vector[1] = &zero_dev;
+	    g_dev_vector[2] = &sd_dev;
+
+	    g_fs_vector[0] = &dev_fs;
+	    g_fs_vector[1] = &fat_fs;
 
         printk("task #%d: Initializing SD card...", sys_task_getid());
-    	if(g_dev_vector[0]->init(g_dev_vector[0], 0)) {
+    	if(g_dev_vector[2]->drv->init(g_dev_vector[2])) {
             printk("Failed\r\n");
             return;
         }
         printk("Done\r\n");
 
         printk("task #%d: Initializing FAT file system...", sys_task_getid());
-    	if(g_fs_vector[0]->mount(g_fs_vector[0], g_dev_vector[0], -1)) {
+    	if(g_fs_vector[1]->mount(g_fs_vector[1], g_dev_vector[2], -1)) {
             printk("Failed\r\n");
             return;
         }
@@ -74,7 +88,7 @@ void start_user_task()
      */
     {
         printk("task #%d: Loading %s...", sys_task_getid(), filename);
-        entry = load_aout(g_fs_vector[0], filename);
+        entry = load_aout(g_fs_vector[1], filename);
 
         if(entry) {
             printk("Done\r\n");

@@ -1353,7 +1353,6 @@ struct fat_fs {
 		.read = fat_read,
 		.write = fat_write,
 		.seek = fat_seek,
-		.mmap = NULL,
 	},
 	NULL,
 	{0}
@@ -1366,7 +1365,7 @@ uint32_t DFS_ReadSector(uint8_t unit, uint8_t *buffer,
         uint32_t sector, uint32_t count)
 {
 //	printk("DFS_ReadSector: sector=%d, count=%d\r\n", sector, count);
-	size_t ret = fat_fs.dev->read(fat_fs.dev, sector*SECTOR_SIZE, buffer, count * SECTOR_SIZE);
+	size_t ret = fat_fs.dev->drv->read(fat_fs.dev, sector*SECTOR_SIZE, buffer, count * SECTOR_SIZE);
 	if(ret == count * SECTOR_SIZE)
 		return 0;
 	return -1;
@@ -1376,7 +1375,7 @@ uint32_t DFS_WriteSector(uint8_t unit, uint8_t *buffer,
         uint32_t sector, uint32_t count)
 {
 //	printk("DFS_WriteSector: sector=%d, count=%d\r\n", sector, count);
-	size_t ret = fat_fs.dev->write(fat_fs.dev, sector*SECTOR_SIZE, buffer, count * SECTOR_SIZE);
+	size_t ret = fat_fs.dev->drv->write(fat_fs.dev, sector*SECTOR_SIZE, buffer, count * SECTOR_SIZE);
 	if(ret == count * SECTOR_SIZE)
 		return 0;
 	return -1;
@@ -1414,11 +1413,20 @@ static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp)
 	struct fat_fs *fs = (struct fat_fs *)this;
 	unsigned char scratch[SECTOR_SIZE];
 
+	uint8_t _mode;
+	if(mode & 1 == O_RDONLY)
+		_mode = DFS_READ;
+	else if(mode & 1 == O_WRONLY)
+		_mode = DFS_WRITE;
+		
 	struct fat_file *fp = (struct fat_file *)kmalloc(sizeof(struct fat_file));
-	fp->file.fs = this;
+	fp->file.fs = this;	
 
-	uint32_t ret = DFS_OpenFile(&fs->volinfo, name, DFS_READ, &scratch[0], &fp->fi);
+	uint32_t ret = DFS_OpenFile(&fs->volinfo, name, _mode, &scratch[0], &fp->fi);
 	if(ret == DFS_OK) {
+		if(mode & O_APPEND)
+			DFS_Seek(&fp->fi, fp->fi.filelen, &scratch[0]);
+	
 		*_fpp = (struct file *)fp;
 		return 0;
 	}
@@ -1464,7 +1472,20 @@ static int fat_write  (struct file *_fp, uint8_t *buf, size_t size)
 static int fat_seek   (struct file *_fp, int offset, int whence)
 {
 	struct fat_file *fp = (struct fat_file *)_fp;
-
+	
+	switch(whence) {
+	case SEEK_SET:
+		break;
+	case SEEK_CUR:
+		offset += fp->fi.pointer;
+		break;
+	case SEEK_END:
+		offset = fp->fi.filelen - offset;
+		break;
+	default:
+		return -1;
+	}	
+	
 	unsigned char scratch[SECTOR_SIZE];
 	DFS_Seek(&fp->fi, offset, &scratch[0]);
 	return 0;

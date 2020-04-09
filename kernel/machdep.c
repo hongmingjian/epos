@@ -689,6 +689,14 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
      */
 	trampoline();
 
+    /* 
+     * You *must* enable the MMU before using the dcache
+     * TLDR: by default the dcache would cache everything, including MMIO
+     *       accesses, so you need the MMU enabled so you can mark the MMIO
+     *       regions as non-cachable					
+     */
+    enable_l1_dcache();
+
     /*
      * 初始化物理内存区域
      */

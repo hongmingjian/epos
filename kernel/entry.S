@@ -231,6 +231,12 @@ zeroify.1:
 	msr	cpsr_cxsf, r1
 	ldr sp, =(0x1000-36)
 
+    @enable l1 icache & branch predict
+    mrc p15, 0, r0, c1, c0, 0
+    orr r0, r0, #4096 @ l1 icache
+    orr r0, r0, #2048 @ branch predict
+    mcr p15, 0, r0, c1, c0, 0
+
     mov r0, #0
     mov r1, #0
 
@@ -380,3 +386,13 @@ ___aeabi_idivmod:
 	mul	r3, r0, r2
 	sub	r1, r1, r3
 	mov	pc, lr
+
+    .globl _enable_l1_dcache
+_enable_l1_dcache:
+    push {r0}
+    mrc p15, 0, r0, c1, c0, 0
+    orr r0, r0, #4
+    mcr p15, 0, r0, c1, c0, 0
+    pop {r0}
+    mov pc, lr
+

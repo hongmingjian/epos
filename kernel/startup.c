@@ -55,8 +55,6 @@ void start_user_task()
      * 初始化SD卡和FAT文件系统
      */
     {
-		int i, j;
-
 	    g_driver_vector[0] = &null_driver;
 	    g_driver_vector[1] = &zero_driver;
 	    g_driver_vector[2] = &sd_driver;
@@ -69,7 +67,7 @@ void start_user_task()
 	    g_fs_vector[1] = &fat_fs;
 
         printk("task #%d: Initializing SD card...", sys_task_getid());
-    	if(g_dev_vector[2]->drv->init(g_dev_vector[2])) {
+    	if(g_dev_vector[2]->drv->attach(g_dev_vector[2])) {
             printk("Failed\r\n");
             return;
         }

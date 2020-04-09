@@ -1605,7 +1605,7 @@ static void sdParseCSD()
 /*****************************************************************************/
 #include "kernel.h"
 
-static int sd_init(struct dev *dp)
+static int sd_attach(struct dev *dp)
 {
 	struct sd_dev *sd_dev = (struct sd_dev *)dp;
 	int ret = sdInitCard();
@@ -1614,7 +1614,7 @@ static int sd_init(struct dev *dp)
 	return -ret;
 }
 
-static void sd_uninit(struct dev *dp)
+static void sd_detach(struct dev *dp)
 {
 }
 
@@ -1648,8 +1648,8 @@ static int sd_ioctl(struct dev *dp, int cmd, void *arg)
 
 struct driver sd_driver = {
 	.name = "sd",
-	.init = sd_init,
-	.uninit = sd_uninit,
+	.attach = sd_attach,
+	.detach = sd_detach,
 	.read = sd_read,
 	.write = sd_write,
 	.poll = sd_poll,

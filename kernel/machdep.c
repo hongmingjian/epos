@@ -199,14 +199,14 @@ void init_uart0(uint32_t baud)
 
     uart->icr/*PL011_ICR*/  = 0x7FF;
 
-	/* 
+	/*
      * Set integer & fractional part of baud rate.
 	 * Divider = UART_CLOCK/(16 * Baud)
 	 * Fraction part register = (Fractional part * 64) + 0.5
 	 * UART_CLOCK = 3000000; Baud = 115200.
 
 	 * Divider = 3000000 / (16 * 115200) = 1.627
-	 * Integer part = 1 
+	 * Integer part = 1
 	 * Fractional part register = (.627 * 64) + 0.5 = 40.6 = 40
      */
     uart->ibrd/*PL011_IBRD*/ =  FUARTCLK/(16*baud);
@@ -523,7 +523,7 @@ void syscall(struct context *ctx)
             ctx->cf_r0 = sys_seek(fd, offset, whence);
             break;
 		}
-		
+
     default:
         printk("syscall #%d not implemented.\r\n", ctx->cf_r4);
 		ctx->cf_r0 = -ctx->cf_r4;
@@ -751,11 +751,11 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
      */
 	trampoline();
 
-    /* 
+    /*
      * You *must* enable the MMU before using the dcache
      * TLDR: by default the dcache would cache everything, including MMIO
      *       accesses, so you need the MMU enabled so you can mark the MMIO
-     *       regions as non-cachable					
+     *       regions as non-cachable
      */
     enable_l1_dcache();
 

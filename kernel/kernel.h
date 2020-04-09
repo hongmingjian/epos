@@ -203,8 +203,8 @@ void     mi_startup();
 struct dev;
 struct driver {
 	char *name;
-	int (*init)  (struct dev *dp);
-   void (*uninit)(struct dev *dp);
+	int (*attach)(struct dev *dp);
+   void (*detach)(struct dev *dp);
 	int (*read)  (struct dev *dp, uint32_t addr, uint8_t *buf, size_t size);
 	int (*write) (struct dev *dp, uint32_t addr, uint8_t *buf, size_t size);
 	int (*poll)  (struct dev *dp, int events);

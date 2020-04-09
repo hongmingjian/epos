@@ -42,9 +42,9 @@ static int devfs_unmount(struct fs *this)
 
 static int devfs_open(struct fs *this, char *name, int mode, struct file **_fpp)
 {
-	int i, major = -1, minor = 0;
+	int i;
 	char fullname[16];
-	
+
 	if(mode & O_APPEND)
 		return -1;
 
@@ -58,7 +58,7 @@ static int devfs_open(struct fs *this, char *name, int mode, struct file **_fpp)
 	if(i == NR_DEVICE)
 		return -1;
 
-	if(g_dev_vector[i]->drv->init(g_dev_vector[i]) != 0)
+	if(g_dev_vector[i]->drv->attach(g_dev_vector[i]) != 0)
 		return -1;
 
 	struct dev_file *fp = (struct dev_file *)kmalloc(sizeof(struct dev_file));
@@ -81,10 +81,10 @@ static int devfs_close  (struct file *_fp)
 static int devfs_read   (struct file *_fp, uint8_t *buf, size_t size)
 {
 	struct dev_file *fp = (struct dev_file *)_fp;
-	
-	if(fp->mode & 1 != O_RDONLY)
+
+	if((fp->mode & 1) != O_RDONLY)
 		return -1;
-		
+
 	int retval = fp->dev->drv->read(fp->dev, fp->pointer, buf, size);
 	if(retval >= 0) {
 		fp->pointer += retval;
@@ -96,10 +96,10 @@ static int devfs_read   (struct file *_fp, uint8_t *buf, size_t size)
 static int devfs_write  (struct file *_fp, uint8_t *buf, size_t size)
 {
 	struct dev_file *fp = (struct dev_file *)_fp;
-	
-	if((fp->mode & 1 != O_WRONLY) && (fp->mode & 2 != O_RDWR))
+
+	if(((fp->mode & 1) != O_WRONLY) && ((fp->mode & 2) != O_RDWR))
 		return -1;
-			
+
 	int retval = fp->dev->drv->write(fp->dev, fp->pointer, buf, size);
 	if(retval >= 0) {
 		fp->pointer += retval;

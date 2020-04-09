@@ -1,12 +1,12 @@
 #include <string.h>
 #include "kernel.h"
 
-static int zero_init(struct dev *dp)
+static int zero_attach(struct dev *dp)
 {
 	return 0;
 }
 
-static void zero_uninit(struct dev *dp)
+static void zero_detach(struct dev *dp)
 {
 	return;
 }
@@ -34,8 +34,8 @@ static int zero_ioctl(struct dev *dp, int cmd, void *arg)
 
 struct driver zero_driver = {
 	.name = "zero",
-	.init = zero_init,
-	.uninit = zero_uninit,
+	.attach = zero_attach,
+	.detach = zero_detach,
 	.read = zero_read,
 	.write = zero_write,
 	.poll = zero_poll,
@@ -58,8 +58,8 @@ static int null_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_si
 
 struct driver null_driver = {
 	.name = "null",
-	.init = zero_init,
-	.uninit = zero_uninit,
+	.attach = zero_attach,
+	.detach = zero_detach,
 	.read = zero_write,
 	.write = null_write,
 	.poll = zero_poll,

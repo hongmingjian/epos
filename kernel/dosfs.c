@@ -1414,19 +1414,19 @@ static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp)
 	unsigned char scratch[SECTOR_SIZE];
 
 	uint8_t _mode;
-	if(mode & 1 == O_RDONLY)
+	if((mode & 1) == O_RDONLY)
 		_mode = DFS_READ;
-	else if(mode & 1 == O_WRONLY)
+	else if((mode & 1) == O_WRONLY)
 		_mode = DFS_WRITE;
-		
+
 	struct fat_file *fp = (struct fat_file *)kmalloc(sizeof(struct fat_file));
-	fp->file.fs = this;	
+	fp->file.fs = this;
 
 	uint32_t ret = DFS_OpenFile(&fs->volinfo, name, _mode, &scratch[0], &fp->fi);
 	if(ret == DFS_OK) {
 		if(mode & O_APPEND)
 			DFS_Seek(&fp->fi, fp->fi.filelen, &scratch[0]);
-	
+
 		*_fpp = (struct file *)fp;
 		return 0;
 	}
@@ -1472,7 +1472,7 @@ static int fat_write  (struct file *_fp, uint8_t *buf, size_t size)
 static int fat_seek   (struct file *_fp, int offset, int whence)
 {
 	struct fat_file *fp = (struct fat_file *)_fp;
-	
+
 	switch(whence) {
 	case SEEK_SET:
 		break;
@@ -1484,8 +1484,8 @@ static int fat_seek   (struct file *_fp, int offset, int whence)
 		break;
 	default:
 		return -1;
-	}	
-	
+	}
+
 	unsigned char scratch[SECTOR_SIZE];
 	DFS_Seek(&fp->fi, offset, &scratch[0]);
 	return 0;

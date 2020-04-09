@@ -18,12 +18,12 @@ int sys_open(char *path, int mode)
 		ifs = 0;
 	else
 		ifs = toupper(path[0]) - 'A' + 1;
-		
+
 	if(ifs >= NR_FILE_SYSTEM)
 		return -1;
 	if(g_fs_vector[ifs] == NULL)
 		return -1;
-		
+
 	int fd;
 	for(fd = 0; fd < NR_OPEN_FILE; fd++) {
 		if(g_file_vector[fd] != NULL)

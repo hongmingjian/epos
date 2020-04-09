@@ -198,8 +198,20 @@ void init_uart0(uint32_t baud)
     gpio->gppudclk0/*GPPUDCLK0*/ = 0;
 
     uart->icr/*PL011_ICR*/  = 0x7FF;
-    uart->ibrd/*PL011_IBRD*/ = FUARTCLK/16/baud;
-    uart->fbrd/*PL011_FBRD*/ = 0xB;
+
+	/* 
+     * Set integer & fractional part of baud rate.
+	 * Divider = UART_CLOCK/(16 * Baud)
+	 * Fraction part register = (Fractional part * 64) + 0.5
+	 * UART_CLOCK = 3000000; Baud = 115200.
+
+	 * Divider = 3000000 / (16 * 115200) = 1.627
+	 * Integer part = 1 
+	 * Fractional part register = (.627 * 64) + 0.5 = 40.6 = 40
+     */
+    uart->ibrd/*PL011_IBRD*/ =  FUARTCLK/(16*baud);
+    uart->fbrd/*PL011_FBRD*/ = (FUARTCLK%(16*baud))/(baud/4);
+
     uart->lcrh/*PL011_LCRH*/ = 0b11 << 5; // 8N1
     uart->cr/*PL011_CR*/   = 0x301;
 }
@@ -230,10 +242,17 @@ int uart0_getc()
  */
 int sys_putchar(int c)
 {
+#if RPI_MODEL == 4
+    /*
+     * 在Pi 4中, PL011连到蓝牙上了
+     */
+    uart1_putc(c);
+#else
 #ifdef RPI_QEMU
     uart0_putc(c);
 #else
     uart1_putc(c);
+#endif
 #endif
     return c;
 }

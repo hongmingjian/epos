@@ -35,6 +35,10 @@
 #define SYS_CLOCK_FREQ	250000000UL
 #endif
 
+/* 
+ * XXX On Pi3 (and all other Pis with recent firmware) 
+ *     UART clock is now 48MHz 
+ */
 #define FUARTCLK        3000000
 
 #define ARMTIMER_REG (0xB400)

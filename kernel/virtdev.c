@@ -32,7 +32,7 @@ static int zero_ioctl(struct dev *dp, int cmd, void *arg)
 	return -1;
 }
 
-struct driver zero_driver = {
+static struct driver zero_driver = {
 	.name = "zero",
 	.attach = zero_attach,
 	.detach = zero_detach,
@@ -56,7 +56,7 @@ static int null_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_si
 	return buf_size;
 }
 
-struct driver null_driver = {
+static struct driver null_driver = {
 	.name = "null",
 	.attach = zero_attach,
 	.detach = zero_detach,

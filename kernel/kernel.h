@@ -219,9 +219,7 @@ struct dev {
 	uint32_t minor;
 };
 
-#define NR_DRIVER 16
 #define NR_DEVICE 16
-extern struct driver *g_driver_vector[];
 extern struct dev    *g_dev_vector[];
 
 struct file;

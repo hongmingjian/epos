@@ -37,9 +37,7 @@ void isr_default(uint32_t irq, struct context *ctx)
 
 extern struct fs     fat_fs, dev_fs;
 extern struct dev    sd_dev, null_dev, zero_dev;
-extern struct driver sd_driver, zero_driver, null_driver;
 
-struct driver *g_driver_vector[NR_DRIVER];
 struct dev    *g_dev_vector[NR_DEVICE];
 struct fs     *g_fs_vector[NR_FILE_SYSTEM];
 struct file   *g_file_vector[NR_OPEN_FILE];
@@ -55,10 +53,6 @@ void start_user_task()
      * 初始化SD卡和FAT文件系统
      */
     {
-	    g_driver_vector[0] = &null_driver;
-	    g_driver_vector[1] = &zero_driver;
-	    g_driver_vector[2] = &sd_driver;
-
 	    g_dev_vector[0] = &null_dev;
 	    g_dev_vector[1] = &zero_dev;
 	    g_dev_vector[2] = &sd_dev;

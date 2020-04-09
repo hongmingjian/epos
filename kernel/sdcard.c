@@ -1646,7 +1646,7 @@ static int sd_ioctl(struct dev *dp, int cmd, void *arg)
 	return -1;
 }
 
-struct driver sd_driver = {
+static struct driver sd_driver = {
 	.name = "sd",
 	.attach = sd_attach,
 	.detach = sd_detach,

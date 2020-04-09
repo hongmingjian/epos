@@ -92,7 +92,7 @@ uint32_t load_aout(struct fs *fs, char *filename)
     uint32_t va, npages, prot;
 
     struct file *fp;
-    if(0 != fs->open(fs, filename, 0, &fp)) {
+    if(0 != fs->open(fs, filename, O_RDONLY, &fp)) {
         printk("task #%d: failed to open %s\r\n",
                 sys_task_getid(), filename);
         return 0;
@@ -121,7 +121,7 @@ uint32_t load_aout(struct fs *fs, char *filename)
     }
 
     Elf32_Phdr *phdr = (Elf32_Phdr *)kmalloc(ehdr.e_phentsize*ehdr.e_phnum);
-    fs->seek(fp, ehdr.e_phoff, 0);
+    fs->seek(fp, ehdr.e_phoff, SEEK_SET);
     read = fs->read(fp, (uint8_t *)phdr, ehdr.e_phentsize*ehdr.e_phnum);
     if(read != ehdr.e_phentsize*ehdr.e_phnum) {
         fs->close(fp);
@@ -154,7 +154,7 @@ uint32_t load_aout(struct fs *fs, char *filename)
                 return 0;
             }
 
-            fs->seek(fp, phdr[i].p_offset, 0);
+            fs->seek(fp, phdr[i].p_offset, SEEK_SET);
             read = fs->read(fp, (uint8_t *)phdr[i].p_vaddr, phdr[i].p_filesz);
             if(read != phdr[i].p_filesz) {
                 fs->close(fp);

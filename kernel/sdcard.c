@@ -1618,22 +1618,110 @@ static void sd_detach(struct dev *dp)
 {
 }
 
+#define min(x,y) (((x)>(y))?(y):(x))
 static int sd_read(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_size)
 {
 	struct sd_dev *sd_dev = (struct sd_dev *)dp;
-	int ret = sdTransferBlocks( addr, buf_size/512, buf, 0 );
-	if(ret == SD_OK)
-		return buf_size;
-	return -ret;
+	int ret;
+	uint8_t tmpbuf[512];
+	uint8_t *oldbuf = buf;
+	uint32_t rem;
+
+	if(buf_size == 0)
+		return buf-oldbuf;
+
+	rem = addr & (512-1);
+	if(rem) {
+		ret = sdTransferBlocks(addr-rem, 1, tmpbuf, 0);
+		if(ret != SD_OK)
+			return buf-oldbuf;
+
+		uint32_t len = min(512-rem, buf_size);
+		memcpy(buf, &tmpbuf[rem], len);
+
+		buf_size -= len;
+		buf += len;
+		addr += len;
+	}
+
+	rem = buf_size & (~(512-1));
+	if(rem) {
+		ret = sdTransferBlocks( addr, buf_size/512, buf, 0 );
+		if(ret != SD_OK)
+			return buf-oldbuf;
+
+		buf_size -= rem;
+		buf += rem;
+		addr += rem;
+	}
+
+	if(buf_size) {
+		ret = sdTransferBlocks( addr, 1, tmpbuf, 0 );
+		if(ret != SD_OK)
+			return buf-oldbuf;
+
+		memcpy(buf, &tmpbuf[0], buf_size);
+		buf += buf_size;
+	}
+
+	return buf-oldbuf;
 }
 
 static int sd_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_size)
 {
 	struct sd_dev *sd_dev = (struct sd_dev *)dp;
-	int ret = sdTransferBlocks( addr, buf_size/512, buf, 1 );
-	if(ret == SD_OK)
-		return buf_size;
-	return -ret;
+	int ret;
+	uint8_t tmpbuf[512];
+	uint8_t *oldbuf = buf;
+	uint32_t rem;
+
+	if(buf_size == 0)
+		return buf-oldbuf;
+
+	rem = addr & (512-1);
+	if(rem) {
+		ret = sdTransferBlocks(addr-rem, 1, tmpbuf, 0);
+		if(ret != SD_OK)
+			return buf-oldbuf;
+
+		uint32_t len = min(512-rem, buf_size);
+		memcpy(&tmpbuf[rem], buf, len);
+
+		ret = sdTransferBlocks( addr-rem, 1, tmpbuf, 1 );
+		if(ret != SD_OK)
+			return buf-oldbuf;
+
+		buf_size -= len;
+		buf += len;
+		addr += len;
+	}
+
+	rem = buf_size & (~(512-1));
+	if(rem) {
+		ret = sdTransferBlocks( addr, buf_size/512, buf, 1 );
+		if(ret != SD_OK)
+			return buf-oldbuf;
+
+		buf_size -= rem;
+		buf += rem;
+		addr += rem;
+	}
+
+	if(buf_size) {
+		ret = sdTransferBlocks(addr, 1, tmpbuf, 0);
+		if(ret != SD_OK)
+			return buf-oldbuf;
+
+		memcpy(&tmpbuf[0], buf, buf_size);
+
+		ret = sdTransferBlocks( addr, 1, tmpbuf, 1 );
+		if(ret != SD_OK)
+			return buf-oldbuf;
+
+		buf += buf_size;
+	}
+
+	return buf-oldbuf;
 }
 
 static int sd_poll(struct dev *dp, int events)

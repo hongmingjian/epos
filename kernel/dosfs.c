@@ -1488,6 +1488,6 @@ static int fat_seek   (struct file *_fp, int offset, int whence)
 
 	unsigned char scratch[SECTOR_SIZE];
 	DFS_Seek(&fp->fi, offset, &scratch[0]);
-	return 0;
+	return fp->fi.pointer;
 }
 /*****************************************************************************/

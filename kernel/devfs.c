@@ -50,7 +50,7 @@ static int devfs_open(struct fs *this, char *name, int mode, struct file **_fpp)
 
 	for(i = 0; i < NR_DEVICE; i++) {
 		snprintf(fullname, sizeof(fullname), "%s%d",
-		         g_dev_vector[i]->drv->name,
+		         g_dev_vector[i]->drv->major,
 		         g_dev_vector[i]->minor);
 		if(strncmp(fullname, name, strlen(fullname)) == 0)
 			break;

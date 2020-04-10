@@ -202,7 +202,7 @@ void     mi_startup();
 
 struct dev;
 struct driver {
-	char *name;
+	char *major;
 	int (*attach)(struct dev *dp);
    void (*detach)(struct dev *dp);
 	int (*read)  (struct dev *dp, uint32_t addr, uint8_t *buf, size_t size);

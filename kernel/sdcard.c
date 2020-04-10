@@ -1735,7 +1735,7 @@ static int sd_ioctl(struct dev *dp, int cmd, void *arg)
 }
 
 static struct driver sd_driver = {
-	.name = "sd",
+	.major = "sd",
 	.attach = sd_attach,
 	.detach = sd_detach,
 	.read = sd_read,

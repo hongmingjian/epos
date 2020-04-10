@@ -33,7 +33,7 @@ static int zero_ioctl(struct dev *dp, int cmd, void *arg)
 }
 
 static struct driver zero_driver = {
-	.name = "zero",
+	.major = "zero",
 	.attach = zero_attach,
 	.detach = zero_detach,
 	.read = zero_read,
@@ -57,7 +57,7 @@ static int null_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_si
 }
 
 static struct driver null_driver = {
-	.name = "null",
+	.major = "null",
 	.attach = zero_attach,
 	.detach = zero_detach,
 	.read = zero_write,

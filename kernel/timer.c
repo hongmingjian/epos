@@ -49,6 +49,11 @@ void isr_timer(uint32_t irq, struct context *ctx)
     }
 }
 
+/**
+ * The following code comes from pintos.
+ *
+ * With some modifications by Mingjian Hong
+ */
 #define barrier() __asm__ __volatile__ ("" : : : "memory")
 static void busy_wait(unsigned loops)
 {

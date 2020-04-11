@@ -1,3 +1,8 @@
+/**
+ * This file comes from pintos.
+ *
+ * With improved bitmap_set_multiple by Mingjian Hong
+ */
 #include <stdint.h>
 #include <limits.h>
 #include <string.h>

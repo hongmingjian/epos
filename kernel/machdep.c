@@ -25,8 +25,8 @@
 
 #include "kernel.h"
 
-/*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
-time_t g_startup_time;
+uint32_t cpuid;
+uint32_t MMIO_BASE_PA;
 
 /**
  * 初始化定时器
@@ -242,18 +242,24 @@ int uart0_getc()
  */
 int sys_putchar(int c)
 {
-#if RPI_MODEL == 4
-    /*
-     * 在Pi 4中, PL011连到蓝牙上了
-     */
-    uart1_putc(c);
-#else
-#ifdef RPI_QEMU
-    uart0_putc(c);
-#else
-    uart1_putc(c);
-#endif
-#endif
+	switch(cpuid) {
+#if RPI_QEMU == 1
+	case CPUID_QEMU:
+		/*
+		 * QEMU只模拟了PL011
+		 */
+		uart0_putc(c);
+		break;
+#endif		
+	case CPUID_BCM2711:
+		/*
+		 * 在Pi 4中, PL011连到蓝牙上了
+		 * 只能用Mini UART
+		 */
+	default:
+		uart1_putc(c);
+		break;
+	}
     return c;
 }
 
@@ -772,11 +778,25 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
 
     init_pic();
     init_pit(HZ);
-#ifdef RPI_QEMU
-    init_uart0(115200);
-#else
-    init_uart1(115200);
-#endif
+
+	switch(cpuid) {
+#if RPI_QEMU == 1	
+	case CPUID_QEMU:
+		/*
+		 * QEMU只模拟了PL011
+		 */
+		init_uart0(115200);
+		break;
+#endif		
+	case CPUID_BCM2711:
+		/*
+		 * 在Pi 4中, PL011连到蓝牙上了
+		 * 只能用Mini UART
+		 */
+	default:
+		init_uart1(115200);
+		break;
+	}
 }
 
 /**
@@ -785,6 +805,11 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
 void cstart(uint32_t magic, uint32_t mbi)
 {
     uint32_t _end = PAGE_ROUNDUP(R((uint32_t)(&end)));
+
+	if(cpuid == 0x410FB767)
+		MMIO_BASE_PA = 0x20000000;
+	else
+		MMIO_BASE_PA = 0x3f000000;
 
     /*
      * 机器相关（Machine Dependent）的初始化

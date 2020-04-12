@@ -20,6 +20,7 @@
 #ifndef _ARCH_H
 #define _ARCH_H
 
+#include "config.h"
 #include <inttypes.h>
 
 #define PSR_MODE_USR  0x10

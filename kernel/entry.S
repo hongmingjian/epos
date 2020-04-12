@@ -21,17 +21,18 @@
     .extern _edata, _end
     .extern _abort_handler, _syscall, _undefined_handler, _irq_handler
 	.extern _cstart, _schedule, _g_resched, _g_task_running
+    .extern _cpuid
 
 #include "config.h"
 
-#define KERNBASE 0xC0000000
-#define R(x) ((x)-KERNBASE)
+#define CPUID_BCM2835  0x410FB767
 
 #define PSR_MODE_USR  0x10
 #define PSR_MODE_FIQ  0x11
 #define PSR_MODE_IRQ  0x12
 #define PSR_MODE_SVC  0x13
 #define PSR_MODE_ABT  0x17
+#define PSR_MODE_HYP  0x1a
 #define PSR_MODE_UND  0x1b
 #define PSR_MODE_SYS  0x1f
 #define PSR_MODE_MASK 0x1f
@@ -182,63 +183,83 @@ vector_fiq:
 	.word 0
 
 reset:
-#if RPI_MODEL > 1
-    @shutdown other cores
-    mrc p15, #0, r1, c0, c0, #5
-    and r1, r1, #3
-    cmp r1, #0
+	;@read cpuid
+    mrc p15, #0, r12, c0, c0, #0
+    ldr r11, =CPUID_BCM2835
+    cmp r11, r12
+    beq start
+
+    ;@shutdown other cores
+    mrc p15, #0, r11, c0, c0, #5
+    and r11, r11, #3
+    cmp r11, #0
     bne .
-#endif
 
-	@copy exception vector table and related vector_* to 0
-	mov r0, #LOADADDR
-	mov	r1, #0x0000
-	ldmia r0!, {r2-r9}
-	stmia r1!, {r2-r9}
-	ldmia r0!, {r2-r9}
-	stmia r1!, {r2-r9}
+start:
+    mrs r10, cpsr
+ 	and r11, r10, #PSR_MODE_MASK
+ 	cmp r11, #PSR_MODE_HYP
+	bne rolling
+	bic r10, r10, #PSR_MODE_MASK
+	orr r10, r10, #PSR_MODE_SVC|PSR_I|PSR_F
+    msr spsr_cxsf, r10
+    add lr, pc, #4
+	.long 0xE12EF30E	             ;@msr ELR_hyp,lr
+	.long 0xE160006E	             ;@eret
 
-	@zeroify bss
-	ldr r0, =_edata
-	ldr r1, =_end
-	sub r0, r0, #KERNBASE
-	sub r1, r1, #KERNBASE
-	ldr r2, =0x0
+rolling:
+	;@copy exception vector table and related vector_* to 0
+	mov r10, #LOADADDR
+	mov	r11, #0x0000
+	ldmia r10!, {r4-r9}
+	stmia r11!, {r4-r9}
+	ldmia r10!, {r4-r9}
+	stmia r11!, {r4-r9}
+	ldmia r10!, {r4-r7}
+	stmia r11!, {r4-r7}
+
+	;@zeroify bss
+	ldr r10, =R(_edata)
+	ldr r11, =R(_end)
+	sub r10, r10, #KERNBASE
+	sub r11, r11, #KERNBASE
+	ldr r9, =0x0
 zeroify:
-	cmp		r1, r0
+	cmp		r11, r10
 	ble		zeroify.1
-	stmia	r0!, {r2}
+	stmia	r10!, {r9}
 	b		zeroify
 zeroify.1:
 
-	@setup stack for modes to be used
-	mrs	r0, cpsr
-	bic	r0, r0, #PSR_MODE_MASK
+	;@must be after zeroifying bss
+    ldr r11, =_cpuid
+    str r12, [r11]
 
-	orr	r1, r0, #PSR_MODE_UND|PSR_I|PSR_F
-	msr	cpsr_cxsf, r1
+	;@setup stack for modes to be used
+	mrs	r11, cpsr
+	bic	r11, r11, #PSR_MODE_MASK
+
+	orr	r12, r11, #PSR_MODE_UND|PSR_I|PSR_F
+	msr	cpsr_cxsf, r12
 	ldr	sp, =(KERNBASE+0x1000)
 
-	orr	r1, r0, #PSR_MODE_ABT|PSR_I|PSR_F
-	msr	cpsr_cxsf, r1
+	orr	r12, r11, #PSR_MODE_ABT|PSR_I|PSR_F
+	msr	cpsr_cxsf, r12
 	ldr	sp, =(KERNBASE+0x1000-12)
 
-	orr	r1, r0, #PSR_MODE_IRQ|PSR_I|PSR_F
-	msr	cpsr_cxsf, r1
+	orr	r12, r11, #PSR_MODE_IRQ|PSR_I|PSR_F
+	msr	cpsr_cxsf, r12
 	ldr	sp, =(KERNBASE+0x1000-24)
 
-	orr	r1, r0, #PSR_MODE_SVC|PSR_I|PSR_F
-	msr	cpsr_cxsf, r1
+	orr	r12, r11, #PSR_MODE_SVC|PSR_I|PSR_F
+	msr	cpsr_cxsf, r12
 	ldr sp, =(0x1000-36)
 
-    @enable l1 icache & branch predict
-    mrc p15, 0, r0, c1, c0, 0
-    orr r0, r0, #4096 @ l1 icache
-    orr r0, r0, #2048 @ branch predict
-    mcr p15, 0, r0, c1, c0, 0
-
-    mov r0, #0
-    mov r1, #0
+	;@enable
+    mrc p15, #0, r12, c1, c0, #0
+    orr r12, r12, #4096              ;@l1 icache
+    orr r12, r12, #2048              ;@branch prediction
+    mcr p15, #0, r12, c1, c0, #0
 
     /* Now enter the C main function... */
     b _cstart
@@ -246,10 +267,10 @@ zeroify.1:
 prefetch_abort:
 	PUSHFRAMEINSVC
     PROLOGUE
-	
+
 	mov	r0, sp
-    mrc p15, 0, r1, c6, c0, 2        @get IFAR
-    mrc p15, 0, r2, c5, c0, 1        @get IFSR
+    mrc p15, #0, r1, c6, c0, #2        ;@get IFAR
+    mrc p15, #0, r2, c5, c0, #1        ;@get IFSR
 
 	bl _sti
 	bl _abort_handler
@@ -258,14 +279,14 @@ prefetch_abort:
     b _ret_from_syscall
 
 data_abort:
-    @https://stackoverflow.com/questions/6292620/why-are-the-return-addresses-of-prefetch-abort-and-data-abort-different-in-arm-e
+    ;@https://stackoverflow.com/questions/6292620/why-are-the-return-addresses-of-prefetch-abort-and-data-abort-different-in-arm-e
 	sub lr, lr, #4
 	PUSHFRAMEINSVC
     PROLOGUE
-	
+
 	mov	r0, sp
-    mrc p15, 0, r1, c6, c0, 0         @get DFAR
-    mrc p15, 0, r2, c5, c0, 0         @get DFSR
+    mrc p15, #0, r1, c6, c0, #0         ;@get DFAR
+    mrc p15, #0, r2, c5, c0, #0         ;@get DFSR
 
 	bl _sti
 	bl _abort_handler
@@ -276,7 +297,7 @@ data_abort:
 irq:
 	PUSHFRAMEINSVC
     PROLOGUE
-	
+
 	mov	r0, sp
 	bl _irq_handler
 
@@ -290,7 +311,7 @@ irq:
 undefined:
 	PUSHFRAMEINSVC
     PROLOGUE
-	
+
 	mov r0, sp
 	bl _undefined_handler
 
@@ -313,20 +334,20 @@ swi:
 	bl _syscall
 	bl _cli
 
-.globl _ret_from_syscall
+	.globl _ret_from_syscall
 _ret_from_syscall:
     EPILOGUE
 	PULLFRAMEANDEXIT
 
 	.globl	_sti, _cli
-_sti:							@ enable IRQs
+_sti:							;@ enable IRQs
 	stmfd	sp!, {r0, lr}
 	mrs		r0, cpsr
 	bic		r0, r0, #PSR_I
 	msr		cpsr_cxsf, r0
 	ldmfd	sp!, {r0, pc}
 
-_cli:							@ disable IRQs
+_cli:							;@ disable IRQs
 	stmfd	sp!, {r0, lr}
 	mrs		r0, cpsr
 	orr		r0, r0, #PSR_I
@@ -375,7 +396,7 @@ _atomic_xor:
 
 	.globl _invlpg
 _invlpg:
-	mcr p15, 0, r0, c8, c7, 1
+	mcr p15, #0, r0, c8, c7, #1
 	mov pc, lr
 
 	.globl	___aeabi_idivmod

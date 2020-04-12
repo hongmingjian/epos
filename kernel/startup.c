@@ -23,17 +23,20 @@
 /*中断向量表*/
 void (*g_intr_vector[NR_IRQ])(uint32_t irq, struct context *ctx);
 
+/*默认的中断处理程序*/
+void isr_default(uint32_t irq, struct context *ctx)
+{
+    //printk("IRQ=0x%02x\r\n", irq);
+}
+
 /*可用的物理内存区域*/
 uint32_t g_ram_zone[RAM_ZONE_LEN];
 
 uint32_t *PT  = (uint32_t *)USER_MAX_ADDR, //页表的指针
          *PTD = (uint32_t *)KERN_MIN_ADDR; //页目录的指针
 
-/*默认的中断处理程序*/
-void isr_default(uint32_t irq, struct context *ctx)
-{
-    //printk("IRQ=0x%02x\r\n", irq);
-}
+/*计算机启动时，自1970-01-01 00:00:00 +0000 (UTC)以来的秒数*/
+time_t g_startup_time;
 
 extern struct fs     fat_fs, dev_fs;
 extern struct dev    sd_dev, null_dev, zero_dev;

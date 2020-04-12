@@ -25,8 +25,6 @@
 #include <time.h>
 #include "machdep.h"
 
-#define MMIO_BASE_VA      0xC4000000
-
 /*中断向量表*/
 extern void (*g_intr_vector[])(uint32_t irq, struct context *ctx);
 
@@ -123,8 +121,7 @@ void syscall(struct context *ctx);
 #define USER_MAX_ADDR VADDR(0xBFC, 0x00)
 #define USER_MIN_ADDR VADDR(4, 0)
 
-#define KERNBASE  VADDR(0xC00, 0)
-#define R(x) ((x)-KERNBASE)
+//#define KERNBASE  VADDR(0xC00, 0)
 
 #define NR_KERN_PAGETABLE 80
 

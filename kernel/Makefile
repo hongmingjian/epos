@@ -5,7 +5,10 @@ PROG=		kernel
 .PHONY: all
 all: release
 
-CPPFLAGS=-DVERBOSE=0 -nostdinc -I../include
+RPI_QEMU=0
+VERBOSE=0
+
+CPPFLAGS=-DVERBOSE=$(VERBOSE) -nostdinc -I../include -DRPI_QEMU=$(RPI_QEMU)
 ASFLAGS=-Wall -D__ASSEMBLY__
 CFLAGS=	-Wall -pipe \
 	-ffreestanding -fleading-underscore
@@ -54,11 +57,11 @@ debug: CFLAGS+=-O0 -ggdb
 debug: make.dep $(PROG).uue
 
 .PHONY: qemu
-qemu: CPPFLAGS+=-DRPI_QEMU
+qemu: RPI_QEMU=1
 qemu: release
 
 .PHONY: qemudbg
-qemudbg: CPPFLAGS+=-DRPI_QEMU
+qemudbg: RPI_QEMU=1
 qemudbg: debug
 
 .PHONY: clean

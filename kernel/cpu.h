@@ -21,19 +21,19 @@
 #define _CPU_H
 
 #include "arch.h"
-#include "config.h"
 
-#if RPI_MODEL > 1
-#define MMIO_BASE_PA	0x3f000000
-#else
-#define MMIO_BASE_PA	0x20000000
+#define SYS_CLOCK_FREQ 250000000UL
+
+extern uint32_t cpuid;
+#define CPUID_BCM2835  0x410FB767
+#define CPUID_BCM2836  0x410FC073
+#define CPUID_BCM2837  0x410FD034
+#define CPUID_BCM2711  0x410FD083
+#if RPI_QEMU == 1
+#define CPUID_QEMU     0x410fc075
 #endif
 
-#if RPI_MODEL == 3
-#define SYS_CLOCK_FREQ	300000000UL
-#else
-#define SYS_CLOCK_FREQ	250000000UL
-#endif
+extern uint32_t MMIO_BASE_PA;
 
 /* 
  * XXX On Pi3 (and all other Pis with recent firmware) 
@@ -229,7 +229,7 @@ typedef struct {
  * QEMU(v4.1)只能模拟System Timer，不能模拟Timer(ARM side)
  * 但是，因为ARM Timer不稳定，建议用System Timer作为时钟
  */
-#ifdef RPI_QEMU
+#if RPI_QEMU == 1
 #define IRQ_TIMER     9
 #else
 #define IRQ_TIMER     0	

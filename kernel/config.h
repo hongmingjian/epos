@@ -20,14 +20,15 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
-#ifdef RPI_QEMU
-#define RPI_MODEL 2
-#endif
-
-#ifdef RPI_QEMU
+#if RPI_QEMU == 1
 #define LOADADDR 0x10000
 #else
 #define LOADADDR 0x8000
 #endif
+
+#define KERNBASE 0xC0000000
+#define R(x) ((x)-KERNBASE)
+
+#define MMIO_BASE_VA 0xC4000000
 
 #endif /* _CONFIG_H */

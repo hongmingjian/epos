@@ -488,7 +488,7 @@ void syscall(struct context *ctx)
         break;
 	case SYSCALL_open:
 		{
-	        char *path = ctx->cf_r0;
+	        char *path = (char *)ctx->cf_r0;
             int mode = ctx->cf_r1;
             if(!IN_USER_VM(path, strlen(path)))
                 break;
@@ -504,7 +504,7 @@ void syscall(struct context *ctx)
 	case SYSCALL_read:
 		{
             int fd = ctx->cf_r0;
-            char *buffer = ctx->cf_r1;
+            uint8_t *buffer = (uint8_t *)ctx->cf_r1;
             uint32_t size = ctx->cf_r2;
             if(!IN_USER_VM(buffer, size))
                 break;
@@ -514,7 +514,7 @@ void syscall(struct context *ctx)
 	case SYSCALL_write:
 		{
             int fd = ctx->cf_r0;
-            char *buffer = ctx->cf_r1;
+            uint8_t *buffer = (uint8_t *)ctx->cf_r1;
             uint32_t size = ctx->cf_r2;
             if(!IN_USER_VM(buffer, size))
                 break;
@@ -806,7 +806,7 @@ void cstart(uint32_t magic, uint32_t mbi)
 {
     uint32_t _end = PAGE_ROUNDUP(R((uint32_t)(&end)));
 
-	if(cpuid == 0x410FB767)
+	if(cpuid == CPUID_BCM2835)
 		MMIO_BASE_PA = 0x20000000;
 	else
 		MMIO_BASE_PA = 0x3f000000;

@@ -26,9 +26,12 @@
 #define LOADADDR 0x8000
 #endif
 
+#define NR_KERN_PAGETABLE 80
 #define KERNBASE 0xC0000000
 #define R(x) ((x)-KERNBASE)
 
-#define MMIO_BASE_VA 0xC4000000
+#define MMIO_BASE_VA (KERNBASE +\
+                      NR_KERN_PAGETABLE * L2_ENTRY_COUNT * PAGE_SIZE -\
+                      0x1000000) /*size of MMIO region*/
 
 #endif /* _CONFIG_H */

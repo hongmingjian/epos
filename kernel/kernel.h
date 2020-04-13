@@ -21,8 +21,9 @@
 #define _KERNEL_H
 
 #include <sys/types.h>
-#include <inttypes.h>
+#include <stdint.h>
 #include <time.h>
+
 #include "machdep.h"
 
 /*中断向量表*/
@@ -109,6 +110,12 @@ void sleep_on(struct wait_queue **head);
 void wake_up(struct wait_queue **head, int n);
 
 void init_task(void);
+struct tcb *sys_task_create(void *tos, void (*func)(void *pv), void *pv);
+void        sys_task_exit(int code_exit);
+int         sys_task_wait(int tid, int *pcode_exit);
+int         sys_task_getid();
+void        sys_task_yield();
+
 void syscall(struct context *ctx);
 
 /**
@@ -122,8 +129,6 @@ void syscall(struct context *ctx);
 #define USER_MIN_ADDR VADDR(4, 0)
 
 //#define KERNBASE  VADDR(0xC00, 0)
-
-#define NR_KERN_PAGETABLE 80
 
 #define IN_USER_VM(va, len) \
        ((uint32_t)(va) >= USER_MIN_ADDR && \
@@ -152,12 +157,6 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code);
 
 int     sys_putchar(int c);
 int     sys_getchar();
-
-struct tcb *sys_task_create(void *tos, void (*func)(void *pv), void *pv);
-void        sys_task_exit(int code_exit);
-int         sys_task_wait(int tid, int *pcode_exit);
-int         sys_task_getid();
-void        sys_task_yield();
 
 int printk(const char *fmt,...);
 
@@ -195,7 +194,7 @@ struct timezone {
 };
 int sys_gettimeofday(struct timeval *tv, struct timezone *tz);
 
-void     mi_startup();
+void mi_startup();
 
 struct dev;
 struct driver {

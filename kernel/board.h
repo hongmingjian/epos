@@ -20,6 +20,4 @@
 #ifndef _BOARD_H
 #define _BOARD_H
 
-#include "cpu.h"
-
 #endif /*_BOARD_H*/

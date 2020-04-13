@@ -20,14 +20,12 @@
 #ifndef _ARCH_H
 #define _ARCH_H
 
-#include "config.h"
-#include <inttypes.h>
-
 #define PSR_MODE_USR  0x10
 #define PSR_MODE_FIQ  0x11
 #define PSR_MODE_IRQ  0x12
 #define PSR_MODE_SVC  0x13
 #define PSR_MODE_ABT  0x17
+#define PSR_MODE_HYP  0x1a
 #define PSR_MODE_UND  0x1b
 #define PSR_MODE_SYS  0x1f
 #define PSR_MODE_MASK 0x1f
@@ -39,37 +37,6 @@
 #define PSR_I		  0x80
 #define PSR_F		  0x40
 #define PSR_T		  0x20
-
-static __inline void
-cpu_idle()
-{
-    __asm__ __volatile__("mcr p15,0,r0,c7,c0,4" : : : "r0");
-}
-
-#define save_flags_cli(flags)					\
-	do {										\
-		unsigned int tmp;						\
-		__asm__ __volatile__(					\
-		"mrs	%0, cpsr\n\t"                   \
-		"orr	%1, %0, #0x80\n\t"	            \
-		"msr	cpsr_cxsf, %1\n\t"	            \
-		:"=r"(flags), "=r"(tmp)					\
-		:										\
-		:"memory"								\
-		);										\
-	} while(0)
-
-#define restore_flags(flags)					\
-	do {										\
-		__asm__ __volatile__(					\
-		"msr	cpsr_cxsf, %0\n\t"              \
-		:										\
-		:"r"(flags)								\
-		:"memory"								\
-		);										\
-	} while(0)
-
-extern void invlpg(uint32_t page);
 
 #define L1_TABLE_SIZE      0x4000 /* 16K */
 #define L2_TABLE_SIZE      0x400  /* 1K */
@@ -92,7 +59,6 @@ extern void invlpg(uint32_t page);
 #define _L2_S            (1 << 10) /* Shared */
 #define _L2_nG           (1 << 11) /* Not-Global */
 
-
 #define ROUNDUP(x, y) (((x)+((y)-1))&(~((y)-1)))
 
 #define PAGE_SHIFT  12
@@ -111,5 +77,42 @@ extern void invlpg(uint32_t page);
 #define L2E_W   _L2_AP0                   /* Read/Write */
 #define L2E_U   _L2_AP1                   /* User/Supervisor */
 #define L2E_C   (_L2_B|_L2_C)             /* Cacheable */
+
+#ifndef __ASSEMBLY__
+#include <stdint.h>
+
+#define save_flags_cli(flags)		\
+	do {							\
+		unsigned int tmp;			\
+		__asm__ __volatile__(		\
+		"mrs %0, cpsr\n\t"       	\
+		"orr %1, %0, #0x80\n\t"		\
+		"msr cpsr_cxsf, %1\n\t"		\
+		:"=r"(flags), "=r"(tmp)		\
+		:							\
+		:"memory"					\
+		);							\
+	} while(0)
+
+#define restore_flags(flags)		\
+	do {							\
+		__asm__ __volatile__(		\
+		"msr cpsr_cxsf, %0\n\t"  	\
+		:							\
+		:"r"(flags)					\
+		:"memory"					\
+		);							\
+	} while(0)
+
+extern void sti(), cli();
+extern void invlpg(uint32_t page);
+extern void enable_l1_dcache();
+extern void cpu_idle();
+extern int64_t /*struct {int quot, int rem}*/\
+       __aeabi_idivmod(int num, int den);
+extern void atomic_or (unsigned long *, unsigned long),
+            atomic_xor(unsigned long *, unsigned long),
+            atomic_and(unsigned long *, unsigned long);
+#endif /*__ASSEMBLY__*/
 
 #endif /*_ARCH_H*/

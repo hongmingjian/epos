@@ -20,7 +20,10 @@
 #ifndef _MACHDEP_H
 #define _MACHDEP_H
 
-#include <sys/types.h>
+#include "config.h"
+
+#include "arch.h"
+#include "cpu.h"
 #include "board.h"
 
 #define CF_SPSR     0
@@ -44,6 +47,9 @@
 #define CF_PC       72
 
 #define FRAME_SIZE  76
+
+#ifndef __ASSEMBLY__
+#include <stdint.h>
 
 struct context {
     uint32_t cf_spsr;
@@ -111,8 +117,7 @@ struct context {
 } while(0)
 
 extern void *ret_from_syscall;
-
-void sti(), cli();
 void isr_timer(uint32_t irq, struct context *ctx);
 
+#endif /*__ASSEMBLY__*/
 #endif /*_MACHDEP_H*/

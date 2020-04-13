@@ -20,11 +20,8 @@
 #ifndef _CPU_H
 #define _CPU_H
 
-#include "arch.h"
-
 #define SYS_CLOCK_FREQ 250000000UL
 
-extern uint32_t cpuid;
 #define CPUID_BCM2835  0x410FB767
 #define CPUID_BCM2836  0x410FC073
 #define CPUID_BCM2837  0x410FD034
@@ -33,6 +30,10 @@ extern uint32_t cpuid;
 #define CPUID_QEMU     0x410fc075
 #endif
 
+#ifndef __ASSEMBLY__
+#include <stdint.h>
+
+extern uint32_t cpuid;
 extern uint32_t MMIO_BASE_PA;
 
 /* 
@@ -43,9 +44,9 @@ extern uint32_t MMIO_BASE_PA;
 
 #define ARMTIMER_REG (0xB400)
 typedef struct {
-	volatile unsigned int Load;
-	volatile unsigned int Value;
-	volatile unsigned int Control;
+	volatile uint32_t Load;
+	volatile uint32_t Value;
+	volatile uint32_t Control;
 #define ARMTIMER_CTRL_23BIT            (1 << 1)
 #define ARMTIMER_CTRL_PRESCALE_1       (0 << 2)
 #define ARMTIMER_CTRL_PRESCALE_16      (1 << 2)
@@ -53,177 +54,179 @@ typedef struct {
 #define ARMTIMER_CTRL_INTR_ENABLE      (1 << 5)
 #define ARMTIMER_CTRL_ENABLE           (1 << 7)
 
-	volatile unsigned int IRQClear;
-	volatile unsigned int RAWIRQ;
-	volatile unsigned int MaskedIRQ;
-	volatile unsigned int Reload;
-	volatile unsigned int PreDivider;
-	volatile unsigned int FreeRunningCounter;
+	volatile uint32_t IRQClear;
+	volatile uint32_t RAWIRQ;
+	volatile uint32_t MaskedIRQ;
+	volatile uint32_t Reload;
+	volatile uint32_t PreDivider;
+	volatile uint32_t FreeRunningCounter;
 } armtimer_reg_t;
 
 #define INTR_REG (0xB200)
 typedef struct {
-	volatile unsigned int IRQ_basic_pending;
-	volatile unsigned int IRQ_pending_1;
-	volatile unsigned int IRQ_pending_2;
-	volatile unsigned int FIQ_control;
-	volatile unsigned int Enable_IRQs_1;
-	volatile unsigned int Enable_IRQs_2;
-	volatile unsigned int Enable_basic_IRQs;
-	volatile unsigned int Disable_IRQs_1;
-	volatile unsigned int Disable_IRQs_2;
-	volatile unsigned int Disable_basic_IRQs;
+	volatile uint32_t IRQ_basic_pending;
+	volatile uint32_t IRQ_pending_1;
+	volatile uint32_t IRQ_pending_2;
+	volatile uint32_t FIQ_control;
+	volatile uint32_t Enable_IRQs_1;
+	volatile uint32_t Enable_IRQs_2;
+	volatile uint32_t Enable_basic_IRQs;
+	volatile uint32_t Disable_IRQs_1;
+	volatile uint32_t Disable_IRQs_2;
+	volatile uint32_t Disable_basic_IRQs;
 } intr_reg_t;
 
 #define AUX_REG (0x215000)
 typedef struct {
-	volatile unsigned int IRQ;
-	volatile unsigned int enables;
-	volatile unsigned int UNUSED1[14];
-	volatile unsigned int mu_io;
-	volatile unsigned int mu_ier;
-	volatile unsigned int mu_iir;
-	volatile unsigned int mu_lcr;
-	volatile unsigned int mu_mcr;
-	volatile unsigned int mu_lsr;
-	volatile unsigned int mu_msr;
-	volatile unsigned int mu_scratch;
-	volatile unsigned int mu_cntl;
-	volatile unsigned int mu_stat;
-	volatile unsigned int mu_baud;
-	volatile unsigned int UNUSED2[5];
-	volatile unsigned int spi0_cntl0;
-	volatile unsigned int spi0_cntl1;
-	volatile unsigned int spi0_stat;
-	volatile unsigned int UNUSED3[1];
-	volatile unsigned int spi0_io;
-	volatile unsigned int spi0_peek;
-	volatile unsigned int UNUSED4[10];
-	volatile unsigned int spi1_cntl0;
-	volatile unsigned int spi1_cntl1;
-	volatile unsigned int spi1_stat;
-	volatile unsigned int UNUSED5[1];
-	volatile unsigned int spi1_io;
-	volatile unsigned int spi1_peek;
+	volatile uint32_t IRQ;
+	volatile uint32_t enables;
+	volatile uint32_t UNUSED1[14];
+	volatile uint32_t mu_io;
+	volatile uint32_t mu_ier;
+	volatile uint32_t mu_iir;
+	volatile uint32_t mu_lcr;
+	volatile uint32_t mu_mcr;
+	volatile uint32_t mu_lsr;
+	volatile uint32_t mu_msr;
+	volatile uint32_t mu_scratch;
+	volatile uint32_t mu_cntl;
+	volatile uint32_t mu_stat;
+	volatile uint32_t mu_baud;
+	volatile uint32_t UNUSED2[5];
+	volatile uint32_t spi0_cntl0;
+	volatile uint32_t spi0_cntl1;
+	volatile uint32_t spi0_stat;
+	volatile uint32_t UNUSED3[1];
+	volatile uint32_t spi0_io;
+	volatile uint32_t spi0_peek;
+	volatile uint32_t UNUSED4[10];
+	volatile uint32_t spi1_cntl0;
+	volatile uint32_t spi1_cntl1;
+	volatile uint32_t spi1_stat;
+	volatile uint32_t UNUSED5[1];
+	volatile uint32_t spi1_io;
+	volatile uint32_t spi1_peek;
 } aux_reg_t;
 
 #define GPIO_REG (0x200000)
 typedef struct {
-	volatile unsigned int gpfsel0;
-	volatile unsigned int gpfsel1;
-	volatile unsigned int gpfsel2;
-	volatile unsigned int gpfsel3;
-	volatile unsigned int gpfsel4;
-	volatile unsigned int gpfsel5;
-	volatile unsigned int reserved1;
-	volatile unsigned int gpset0;
-	volatile unsigned int gpset1;
-	volatile unsigned int reserved2;
-	volatile unsigned int gpclr0;
-	volatile unsigned int gpclr1;
-	volatile unsigned int reserved3;
-	volatile unsigned int gplev0;
-	volatile unsigned int gplev1;
-	volatile unsigned int reserved4;
-	volatile unsigned int gpeds0;
-	volatile unsigned int gpeds1;
-	volatile unsigned int reserved5;
-	volatile unsigned int gpren0;
-	volatile unsigned int gpren1;
-	volatile unsigned int reserved6;
-	volatile unsigned int gpfen0;
-	volatile unsigned int gpfen1;
-	volatile unsigned int reserved7;
-	volatile unsigned int gphen0;
-	volatile unsigned int gphen1;
-	volatile unsigned int reserved8;
-	volatile unsigned int gplen0;
-	volatile unsigned int gplen1;
-	volatile unsigned int reserved9;
-	volatile unsigned int gparen0;
-	volatile unsigned int gparen1;
-	volatile unsigned int reserved10;
-	volatile unsigned int gpafen0;
-	volatile unsigned int gpafen1;
-	volatile unsigned int reserved11;
-	volatile unsigned int gppud;
-	volatile unsigned int gppudclk0;
-	volatile unsigned int gppudclk1;
+	volatile uint32_t gpfsel0;
+	volatile uint32_t gpfsel1;
+	volatile uint32_t gpfsel2;
+	volatile uint32_t gpfsel3;
+	volatile uint32_t gpfsel4;
+	volatile uint32_t gpfsel5;
+	volatile uint32_t reserved1;
+	volatile uint32_t gpset0;
+	volatile uint32_t gpset1;
+	volatile uint32_t reserved2;
+	volatile uint32_t gpclr0;
+	volatile uint32_t gpclr1;
+	volatile uint32_t reserved3;
+	volatile uint32_t gplev0;
+	volatile uint32_t gplev1;
+	volatile uint32_t reserved4;
+	volatile uint32_t gpeds0;
+	volatile uint32_t gpeds1;
+	volatile uint32_t reserved5;
+	volatile uint32_t gpren0;
+	volatile uint32_t gpren1;
+	volatile uint32_t reserved6;
+	volatile uint32_t gpfen0;
+	volatile uint32_t gpfen1;
+	volatile uint32_t reserved7;
+	volatile uint32_t gphen0;
+	volatile uint32_t gphen1;
+	volatile uint32_t reserved8;
+	volatile uint32_t gplen0;
+	volatile uint32_t gplen1;
+	volatile uint32_t reserved9;
+	volatile uint32_t gparen0;
+	volatile uint32_t gparen1;
+	volatile uint32_t reserved10;
+	volatile uint32_t gpafen0;
+	volatile uint32_t gpafen1;
+	volatile uint32_t reserved11;
+	volatile uint32_t gppud;
+	volatile uint32_t gppudclk0;
+	volatile uint32_t gppudclk1;
 } gpio_reg_t;
 
 #define UART_REG (0x201000)
 typedef struct {
-	volatile unsigned int dr;
-	volatile unsigned int rsrecr;
-	volatile unsigned int UNUSED1[5];
-	volatile unsigned int fr;
-	volatile unsigned int reserved1;
-	volatile unsigned int ilpr;
-	volatile unsigned int ibrd;
-	volatile unsigned int fbrd;
-	volatile unsigned int lcrh;
-	volatile unsigned int cr;
-	volatile unsigned int ifls;
-	volatile unsigned int imsc;
-	volatile unsigned int ris;
-	volatile unsigned int mis;
-	volatile unsigned int icr;
-	volatile unsigned int dmacr;
-	volatile unsigned int UNUSED2[13];
-	volatile unsigned int itcr;
-	volatile unsigned int itip;
-	volatile unsigned int itop;
-	volatile unsigned int tdr;
+	volatile uint32_t dr;
+	volatile uint32_t rsrecr;
+	volatile uint32_t UNUSED1[5];
+	volatile uint32_t fr;
+	volatile uint32_t reserved1;
+	volatile uint32_t ilpr;
+	volatile uint32_t ibrd;
+	volatile uint32_t fbrd;
+	volatile uint32_t lcrh;
+	volatile uint32_t cr;
+	volatile uint32_t ifls;
+	volatile uint32_t imsc;
+	volatile uint32_t ris;
+	volatile uint32_t mis;
+	volatile uint32_t icr;
+	volatile uint32_t dmacr;
+	volatile uint32_t UNUSED2[13];
+	volatile uint32_t itcr;
+	volatile uint32_t itip;
+	volatile uint32_t itop;
+	volatile uint32_t tdr;
 } uart_reg_t;
 
 #define SYSTIMER_REG (0x3000)
 typedef struct {
-	volatile unsigned int cs;
-	volatile unsigned int clo;
-	volatile unsigned int chi;
-	volatile unsigned int c0;
-	volatile unsigned int c1;
-	volatile unsigned int c2;
-	volatile unsigned int c3;
+	volatile uint32_t cs;
+	volatile uint32_t clo;
+	volatile uint32_t chi;
+	volatile uint32_t c0;
+	volatile uint32_t c1;
+	volatile uint32_t c2;
+	volatile uint32_t c3;
 } systimer_reg_t;
 
 
 #define EMMC_REG (0x300000)
 typedef struct {
-	volatile unsigned int arg2;
-	volatile unsigned int blksizecnt;
-	volatile unsigned int arg1;
-	volatile unsigned int cmdtm;
-	volatile unsigned int resp0;
-	volatile unsigned int resp1;
-	volatile unsigned int resp2;
-	volatile unsigned int resp3;
-	volatile unsigned int data;
-	volatile unsigned int status;
-	volatile unsigned int control0;
-	volatile unsigned int control1;
-	volatile unsigned int interrupt;
-	volatile unsigned int irpt_mask;
-	volatile unsigned int irpt_en;
-	volatile unsigned int control2;
-	volatile unsigned int capabilities_0;
-	volatile unsigned int capabilities_1;
-	volatile unsigned int UNUSED1[2];
-	volatile unsigned int force_irpt;
-	volatile unsigned int UNUSED2[7];
-	volatile unsigned int boot_timeout;
-	volatile unsigned int dbg_sel;
-	volatile unsigned int UNUSED3[2];
-	volatile unsigned int exrdfifo_cfg;
-	volatile unsigned int exrdfifo_en;
-	volatile unsigned int tune_step;
-	volatile unsigned int tune_steps_std;
-	volatile unsigned int tune_steps_ddr;
-	volatile unsigned int UNUSED4[23];
-	volatile unsigned int spi_int_spt;
-	volatile unsigned int UNUSED5[2];
-	volatile unsigned int slotisr_ver;
+	volatile uint32_t arg2;
+	volatile uint32_t blksizecnt;
+	volatile uint32_t arg1;
+	volatile uint32_t cmdtm;
+	volatile uint32_t resp0;
+	volatile uint32_t resp1;
+	volatile uint32_t resp2;
+	volatile uint32_t resp3;
+	volatile uint32_t data;
+	volatile uint32_t status;
+	volatile uint32_t control0;
+	volatile uint32_t control1;
+	volatile uint32_t interrupt;
+	volatile uint32_t irpt_mask;
+	volatile uint32_t irpt_en;
+	volatile uint32_t control2;
+	volatile uint32_t capabilities_0;
+	volatile uint32_t capabilities_1;
+	volatile uint32_t UNUSED1[2];
+	volatile uint32_t force_irpt;
+	volatile uint32_t UNUSED2[7];
+	volatile uint32_t boot_timeout;
+	volatile uint32_t dbg_sel;
+	volatile uint32_t UNUSED3[2];
+	volatile uint32_t exrdfifo_cfg;
+	volatile uint32_t exrdfifo_en;
+	volatile uint32_t tune_step;
+	volatile uint32_t tune_steps_std;
+	volatile uint32_t tune_steps_ddr;
+	volatile uint32_t UNUSED4[23];
+	volatile uint32_t spi_int_spt;
+	volatile uint32_t UNUSED5[2];
+	volatile uint32_t slotisr_ver;
 } emmc_reg_t;
+
+#endif /*__ASSEMBLY__*/
 
 /*
  * QEMU(v4.1)只能模拟System Timer，不能模拟Timer(ARM side)

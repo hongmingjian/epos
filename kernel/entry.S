@@ -23,49 +23,7 @@
 	.extern _cstart, _schedule, _g_resched, _g_task_running
     .extern _cpuid
 
-#include "config.h"
-
-#define CPUID_BCM2835  0x410FB767
-
-#define PSR_MODE_USR  0x10
-#define PSR_MODE_FIQ  0x11
-#define PSR_MODE_IRQ  0x12
-#define PSR_MODE_SVC  0x13
-#define PSR_MODE_ABT  0x17
-#define PSR_MODE_HYP  0x1a
-#define PSR_MODE_UND  0x1b
-#define PSR_MODE_SYS  0x1f
-#define PSR_MODE_MASK 0x1f
-
-#define PSR_N		  0x80000000
-#define PSR_Z		  0x40000000
-#define PSR_C		  0x20000000
-#define PSR_V		  0x10000000
-#define PSR_I		  0x80
-#define PSR_F		  0x40
-#define PSR_T		  0x20
-
-#define CF_SPSR		0
-#define CF_R0		4
-#define CF_R1		8
-#define CF_R2		12
-#define CF_R3		16
-#define CF_R4		20
-#define CF_R5		24
-#define CF_R6		28
-#define CF_R7		32
-#define CF_R8		36
-#define CF_R9		40
-#define CF_R10		44
-#define CF_R11		48
-#define CF_R12		52
-#define CF_USR_SP	56
-#define CF_USR_LR	60
-#define CF_SVC_SP	64
-#define CF_SVC_LR	68
-#define CF_PC		72
-
-#define FRAME_SIZE	76
+#include "machdep.h"
 
 #define	IRQ_R0		0
 #define	IRQ_SPSR	4
@@ -269,8 +227,8 @@ prefetch_abort:
     PROLOGUE
 
 	mov	r0, sp
-    mrc p15, #0, r1, c6, c0, #2        ;@get IFAR
-    mrc p15, #0, r2, c5, c0, #1        ;@get IFSR
+    mrc p15, #0, r1, c6, c0, #2      ;@get IFAR
+    mrc p15, #0, r2, c5, c0, #1      ;@get IFSR
 
 	bl _sti
 	bl _abort_handler
@@ -285,8 +243,8 @@ data_abort:
     PROLOGUE
 
 	mov	r0, sp
-    mrc p15, #0, r1, c6, c0, #0         ;@get DFAR
-    mrc p15, #0, r2, c5, c0, #0         ;@get DFSR
+    mrc p15, #0, r1, c6, c0, #0      ;@get DFAR
+    mrc p15, #0, r2, c5, c0, #0      ;@get DFSR
 
 	bl _sti
 	bl _abort_handler
@@ -358,7 +316,7 @@ _cli:							;@ disable IRQs
 _atomic_or:
 	stmfd	sp!, {r2, r3, lr}
 	mrs	r2, cpsr
-	orr	r3, r2, #(PSR_I)
+	orr	r3, r2, #PSR_I|PSR_F
 	msr	cpsr_c, r3
 
 	ldr	r3, [r0]
@@ -371,7 +329,7 @@ _atomic_or:
 _atomic_and:
 	stmfd	sp!, {r2, r3, lr}
 	mrs	r2, cpsr
-	orr	r3, r2, #(PSR_I)
+	orr	r3, r2, #PSR_I|PSR_F
 	msr	cpsr_c, r3
 
 	ldr	r3, [r0]
@@ -384,7 +342,7 @@ _atomic_and:
 _atomic_xor:
 	stmfd	sp!, {r2, r3, lr}
 	mrs	r2, cpsr
-	orr	r3, r2, #(PSR_I)
+	orr	r3, r2, #PSR_I|PSR_F
 	msr	cpsr_c, r3
 
 	ldr	r3, [r0]
@@ -411,9 +369,14 @@ ___aeabi_idivmod:
     .globl _enable_l1_dcache
 _enable_l1_dcache:
     push {r0}
-    mrc p15, 0, r0, c1, c0, 0
+    mrc p15, #0, r0, c1, c0, #0
     orr r0, r0, #4
-    mcr p15, 0, r0, c1, c0, 0
+    mcr p15, #0, r0, c1, c0, #0
     pop {r0}
     mov pc, lr
 
+    .globl _cpu_idle
+_cpu_idle:
+	mcr p15, #0, r0, c7, c0, #4
+    mov pc, lr
+	

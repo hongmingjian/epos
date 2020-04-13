@@ -120,6 +120,8 @@ void mi_startup()
         enable_irq(IRQ_TIMER);
     }
 
+	printk("CPU: [0x%08x]\r\n", cpuid);
+
     /*
      * 初始化物理内存管理器
      */

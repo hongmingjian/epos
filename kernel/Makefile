@@ -53,7 +53,7 @@ release: CFLAGS+=-O2 -ggdb
 release: make.dep $(PROG).uue
 
 .PHONY: debug
-debug: CFLAGS+=-O0 -ggdb
+debug: CFLAGS+=-O0 -ggdb -ffunction-sections
 debug: make.dep $(PROG).uue
 
 .PHONY: qemu

@@ -250,7 +250,7 @@ int sys_putchar(int c)
 		 */
 		uart0_putc(c);
 		break;
-#endif		
+#endif
 	case CPUID_BCM2711:
 		/*
 		 * 在Pi 4中, PL011连到蓝牙上了
@@ -544,25 +544,16 @@ void syscall(struct context *ctx)
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 {
     uint32_t i, prot;
-
-#if VERBOSE
-    printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
+	char *fmt = "PF:0x%08x(0x%08x)%s";
 
     if((code & (1<<10))/*FS[4]==1*/) {
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-        printk("->UNKNOWN ABORT\r\n");
+        printk(fmt, vaddr, code, "->UNKNOWN ABORT\r\n");
         return -1;
     }
 
     switch((code & 0xf)/*FS[0:3]*/) {
     case 0x1:/*Alignment fault*/
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-        printk("->ALIGNMENT FAULT\r\n");
+        printk(fmt, vaddr, code, "->ALIGNMENT FAULT\r\n");
         return -1;
         break;
     case 0x5:/*translation fault (section)*/
@@ -581,17 +572,11 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     case 0xb:/*domain fault (page)*/
     case 0xd:/*permission fault (section)*/
     case 0xf:/*permission fault (page)*/
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-        printk("->PROTECTION VIOLATION\r\n");
+        printk(fmt, vaddr, code, "->PROTECTION VIOLATION\r\n");
         return -1;
         break;
     default:
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-        printk("->UNKNOWN ABORT\r\n");
+        printk(fmt, vaddr, code, "->UNKNOWN ABORT\r\n");
         return -1;
         break;
     }
@@ -599,10 +584,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     /*检查地址是否合法*/
     prot = page_prot(vaddr);
     if(prot == -1 || prot == VM_PROT_NONE) {
-#if !VERBOSE
-        printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-        printk("->ILLEGAL MEMORY ACCESS\r\n");
+        printk(fmt, vaddr, code, "->ILLEGAL MEMORY ACCESS\r\n");
         return -1;
     }
 
@@ -632,20 +614,11 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
             *vtopte(vaddr) = paddr|flags;
 
             invlpg(vaddr);
-
             memset((void *)(PAGE_TRUNCATE(vaddr)), 0, PAGE_SIZE);
-
-#if VERBOSE
-            printk("->0x%08x\r\n", *vtopte(vaddr));
-#endif
-
             return 0;
         } else {
             /*物理内存已耗尽*/
-#if !VERBOSE
-            printk("PF:0x%08x(0x%04x)", vaddr, code);
-#endif
-            printk("->OUT OF RAM\r\n");
+            printk(fmt, vaddr, code, "->OUT OF RAM\r\n");
         }
     }
 

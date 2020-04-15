@@ -6,9 +6,8 @@ PROG=		kernel
 all: release
 
 RPI_QEMU=0
-VERBOSE=0
 
-CPPFLAGS=-DVERBOSE=$(VERBOSE) -nostdinc -I../include -DRPI_QEMU=$(RPI_QEMU)
+CPPFLAGS=-nostdinc -I../include -DRPI_QEMU=$(RPI_QEMU)
 ASFLAGS=-Wall -D__ASSEMBLY__
 CFLAGS=	-Wall -pipe \
 	-ffreestanding -fleading-underscore

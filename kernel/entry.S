@@ -190,7 +190,7 @@ zeroify:
 zeroify.1:
 
 	;@must be after zeroifying bss
-    ldr r11, =_cpuid
+    ldr r11, =R(_cpuid)
     str r12, [r11]
 
 	;@setup stack for modes to be used

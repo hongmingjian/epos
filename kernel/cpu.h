@@ -34,7 +34,6 @@
 #include <stdint.h>
 
 extern uint32_t cpuid;
-extern uint32_t MMIO_BASE_PA;
 
 /* 
  * XXX On Pi3 (and all other Pis with recent firmware) 

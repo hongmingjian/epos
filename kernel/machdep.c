@@ -26,7 +26,6 @@
 #include "kernel.h"
 
 uint32_t cpuid;
-uint32_t MMIO_BASE_PA;
 
 /**
  * 初始化定时器
@@ -730,6 +729,19 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
 	trampoline();
 
     /*
+     * 初始化物理内存区域
+     */
+    init_ram(physfree);
+
+    /*
+     * 映射虚拟地址[MMIO_BASE_VA, MMIO_BASE_VA+16M)
+     * 到物理地址[MMIO_BASE_PA, MMIO_BASE_PA+16M)
+     */
+    page_map(MMIO_BASE_VA,
+             (cpuid == CPUID_BCM2835)?0x20000000:0x3f000000,
+             4096, L2E_V|L2E_W);
+
+    /*
      * You *must* enable the MMU before using the dcache
      * TLDR: by default the dcache would cache everything, including MMIO
      *       accesses, so you need the MMU enabled so you can mark the MMIO
@@ -737,29 +749,18 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
      */
     enable_l1_dcache();
 
-    /*
-     * 初始化物理内存区域
-     */
-    init_ram(physfree);
-
-    /*
-     * 映射虚拟地址[MMIO_BASE_VA, MMIO_BASE_VA+16M)和[MMIO_BASE_VA-KERNBASE, MMIO_BASE_VA-KERNBASE+16M)
-     * 到物理地址[MMIO_BASE_PA, MMIO_BASE_PA+16M)
-     */
-    page_map(MMIO_BASE_VA, MMIO_BASE_PA, 4096, L2E_V|L2E_W);
-
     init_pic();
     init_pit(HZ);
 
 	switch(cpuid) {
-#if RPI_QEMU == 1	
+#if RPI_QEMU == 1
 	case CPUID_QEMU:
 		/*
 		 * QEMU只模拟了PL011
 		 */
 		init_uart0(115200);
 		break;
-#endif		
+#endif
 	case CPUID_BCM2711:
 		/*
 		 * 在Pi 4中, PL011连到蓝牙上了
@@ -778,10 +779,7 @@ void cstart(uint32_t magic, uint32_t mbi)
 {
     uint32_t _end = PAGE_ROUNDUP(R((uint32_t)(&end)));
 
-	if(cpuid == CPUID_BCM2835)
-		MMIO_BASE_PA = 0x20000000;
-	else
-		MMIO_BASE_PA = 0x3f000000;
+
 
     /*
      * 机器相关（Machine Dependent）的初始化

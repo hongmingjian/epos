@@ -120,7 +120,13 @@ void mi_startup()
         enable_irq(IRQ_TIMER);
     }
 
-	printk("CPU: [0x%08x]\r\n", cpuid);
+	if(cpuid == CPUID_BCM2835)
+		printk("CPU: [0x%08x]\r\n", cpuid);
+	else {
+		uint32_t core;
+		__asm__ __volatile__("mrc p15, #0, %0, c0, c0, #5":"=r"(core));
+		printk("CPU%d: [0x%08x]\r\n", core&3, cpuid);
+    }
 
     /*
      * 初始化物理内存管理器

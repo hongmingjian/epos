@@ -143,23 +143,14 @@ vector_fiq:
 reset:
 	;@read cpuid
     mrc p15, #0, r12, c0, c0, #0
-    ldr r11, =CPUID_BCM2835
-    cmp r11, r12
-    beq start
 
-    ;@shutdown other cores
-    mrc p15, #0, r11, c0, c0, #5
-    and r11, r11, #3
-    cmp r11, #0
-    bne .
-
-start:
     mrs r10, cpsr
  	and r11, r10, #PSR_MODE_MASK
  	cmp r11, #PSR_MODE_HYP
 	bne rolling
 	bic r10, r10, #PSR_MODE_MASK
-	orr r10, r10, #PSR_MODE_SVC|PSR_I|PSR_F
+	orr r10, r10, #PSR_MODE_SVC
+	orr r10, r10, #(PSR_A|PSR_I|PSR_F)
     msr spsr_cxsf, r10
     add lr, pc, #4
 	.long 0xE12EF30E	             ;@msr ELR_hyp,lr
@@ -215,8 +206,8 @@ zeroify.1:
 
 	;@enable
     mrc p15, #0, r12, c1, c0, #0
-    orr r12, r12, #4096              ;@l1 icache
-    orr r12, r12, #2048              ;@branch prediction
+    orr r12, r12, #(1<<11)           ;@branch prediction
+    orr r12, r12, #(1<<12)           ;@l1 icache
     mcr p15, #0, r12, c1, c0, #0
 
     /* Now enter the C main function... */
@@ -298,14 +289,14 @@ _ret_from_syscall:
 	PULLFRAMEANDEXIT
 
 	.globl	_sti, _cli
-_sti:							;@ enable IRQs
+_sti:							     ;@enable IRQs
 	stmfd	sp!, {r0, lr}
 	mrs		r0, cpsr
 	bic		r0, r0, #PSR_I
 	msr		cpsr_cxsf, r0
 	ldmfd	sp!, {r0, pc}
 
-_cli:							;@ disable IRQs
+_cli:							     ;@disable IRQs
 	stmfd	sp!, {r0, lr}
 	mrs		r0, cpsr
 	orr		r0, r0, #PSR_I
@@ -355,6 +346,7 @@ _atomic_xor:
 	.globl _invlpg
 _invlpg:
 	mcr p15, #0, r0, c8, c7, #1
+	mcr p15, #0, r0, c8, c6, #1
 	mov pc, lr
 
 	.globl	___aeabi_idivmod
@@ -370,7 +362,7 @@ ___aeabi_idivmod:
 _enable_l1_dcache:
     push {r0}
     mrc p15, #0, r0, c1, c0, #0
-    orr r0, r0, #4
+    orr r0, r0, #(1<<2)              ;@data and unified caches
     mcr p15, #0, r0, c1, c0, #0
     pop {r0}
     mov pc, lr

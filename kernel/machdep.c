@@ -705,18 +705,17 @@ static uint32_t init_paging(uint32_t physfree)
      */
     __asm__ __volatile__ (
             "mcr p15,0,%0,c2,c0,0 @TTBR0\n\t"
-            "mcr p15,0,%0,c2,c0,1 @TTBR1\n\t"
             "mcr p15,0,%1,c2,c0,2 @TTBCR\n\t"
             "\n\t"
             "mcr p15,0,%2,c3,c0,0 @DACR\n\t"
             "\n\t"
-            "mrc p15,0,r0,c1,c0,0\n\t"
+            "mrc p15,0,r0,c1,c0,0 @SCTLR\n\t"
             "orr r0,r0,%3\n\t"
             "mcr p15,0,r0,c1,c0,0\n\t"
             :
             : "r"(pgdir),
-              "r"(0),        /* Always use TTBR0 */
-              "r"(0x7),      /* D0=Manager, D1=Client, D2-D15=No access */
+              "r"(1<<5),     /* Disable TTBR1 */
+              "r"(1),        /* D0=Client, D1-D15=No access */
               "r"(1|(1<<23)) /* SCTLR.M=1, SCTLR.XP=1*/
             : "r0"
     );

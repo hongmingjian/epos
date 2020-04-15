@@ -34,6 +34,7 @@
 #define PSR_Z		  0x40000000
 #define PSR_C		  0x20000000
 #define PSR_V		  0x10000000
+#define PSR_A		  0x100
 #define PSR_I		  0x80
 #define PSR_F		  0x40
 #define PSR_T		  0x20
@@ -46,7 +47,6 @@
 #define _L1_TYPE_C       0x01      /* Coarse L2 */
 #define _L1_C_NS         (1 << 3)  /* Non-secure */
 #define _L1_C_DOM(x)     (((x) & 0xf) << 5)      /* domain */
-#define _L1_C_P          (1<<9)    /* ECC */
 
 #define _L2_S_XN         0x01      /* Execute-Never */
 #define _L2_TYPE_S       0x02      /* Small Page */
@@ -68,7 +68,7 @@
 #define PAGE_TRUNCATE(x)  ((x)&(~PAGE_MASK))
 #define PAGE_ROUNDUP(x)   ROUNDUP(x, PAGE_SIZE)
 
-#define L1E_V   (_L1_C_DOM(1)|_L1_TYPE_C) /* D1 = Client */
+#define L1E_V   (_L1_C_DOM(0)|_L1_TYPE_C) /* D0 = Client */
 #define L1E_W   0
 #define L1E_U   0
 #define L1E_C   0

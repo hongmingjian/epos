@@ -20,4 +20,6 @@ struct tm {
     int tm_isdst;       /* daylight saving time */
 };
 
+int nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+
 #endif /*_TIME_H*/

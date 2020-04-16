@@ -18,7 +18,6 @@
  *
  */
 #include <stddef.h>
-#include <time.h>
 #include "kernel.h"
 
 /*记录系统启动以来，定时器中断的次数*/
@@ -187,7 +186,7 @@ int sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp)
     return 0;
 }
 
-int sys_gettimeofday(struct timeval *tv, struct timezone *tz)
+int sys_gettimeofday(struct timeval *tv, void *tzp)
 {
     if(tv == NULL)
         return -1;

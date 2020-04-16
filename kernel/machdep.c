@@ -19,8 +19,6 @@
  */
 #include <stddef.h>
 #include <syscall-nr.h>
-#include <ioctl.h>
-#include <sys/mman.h>
 #include <string.h>
 
 #include "kernel.h"
@@ -235,8 +233,6 @@ int uart0_getc()
 }
 
 /**
- * 系统调用putchar的执行函数
- *
  * 往屏幕上的当前光标位置打印一个字符，相应地移动光标的位置
  */
 int sys_putchar(int c)
@@ -478,12 +474,9 @@ void syscall(struct context *ctx)
     case SYSCALL_gettimeofday:
         {
             struct timeval *tv = ( struct timeval *)(ctx->cf_r0);
-            struct timezone *tz = ( struct timezone *)(ctx->cf_r1);
-            ctx->cf_r0 = sys_gettimeofday(tv, tz);
+            void *tzp = ( void *)(ctx->cf_r1);
+            ctx->cf_r0 = sys_gettimeofday(tv, tzp);
         }
-        break;
-    case SYSCALL_putchar:
-        ctx->cf_r0 = sys_putchar(ctx->cf_r0 & 0xff);
         break;
 	case SYSCALL_open:
 		{
@@ -520,7 +513,7 @@ void syscall(struct context *ctx)
             ctx->cf_r0 = sys_write(fd, buffer, size);
             break;
 		}
-	case SYSCALL_seek:
+	case SYSCALL_lseek:
 		{
             int fd = ctx->cf_r0,
                 offset = ctx->cf_r1,

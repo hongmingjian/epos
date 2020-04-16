@@ -22,7 +22,7 @@
 
 #include <sys/types.h>
 #include <stdint.h>
-#include <time.h>
+#include <stdarg.h>
 
 #include "machdep.h"
 
@@ -156,8 +156,9 @@ extern uint32_t g_ram_zone[RAM_ZONE_LEN];
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code);
 
 int     sys_putchar(int c);
-int     sys_getchar();
 
+int snprintf (char *str, size_t count, const char *fmt, ...);
+int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 int printk(const char *fmt,...);
 
 void     init_vmspace(uint32_t brk);
@@ -175,6 +176,19 @@ uint32_t page_prot(uint32_t va);
 void     page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags);
 void     page_unmap(uint32_t vaddr, uint32_t npages);
 
+#define	PROT_NONE	0x00	/* [MC2] no permissions */
+#define	PROT_READ	0x01	/* [MC2] pages can be read */
+#define	PROT_WRITE	0x02	/* [MC2] pages can be written */
+#define	PROT_EXEC	0x04	/* [MC2] pages can be executed */
+
+#define	MAP_SHARED	0x0001		/* [MF|SHM] share changes */
+#define	MAP_PRIVATE	0x0002		/* [MF|SHM] changes are private */
+#define	MAP_FIXED	0x0010		/* interpret addr exactly */
+#define	MAP_FILE	0x0000		/* map from file (default) */
+#define	MAP_ANON	0x1000		/* allocated from memory, swap space */
+
+#define MAP_FAILED	((void *)-1)	/* [MF|SHM] mmap failed */
+
 uint32_t init_frame(uint32_t brk);
 uint32_t frame_alloc(uint32_t npages);
 uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t npages);
@@ -182,17 +196,19 @@ void     frame_free(uint32_t paddr, uint32_t npages);
 
 void     calibrate_delay(void);
 unsigned sys_sleep(unsigned seconds);
-int      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
-struct timeval {
-	long tv_sec;
-	long tv_usec;
-};
 
-struct timezone {
-	int tz_minuteswest;
-	int tz_dsttime;
+struct timespec
+{
+    time_t tv_sec;      /* seconds */
+    long tv_nsec;       /* nanoseconds */
 };
-int sys_gettimeofday(struct timeval *tv, struct timezone *tz);
+int      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+
+struct timeval {
+	long tv_sec;        /* seconds */
+	long tv_usec;       /* microseconds */
+};
+int sys_gettimeofday(struct timeval *tv, void *tzp);
 
 void mi_startup();
 

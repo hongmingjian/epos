@@ -49,6 +49,8 @@ static int devfs_open(struct fs *this, char *name, int mode, struct file **_fpp)
 		return -1;
 
 	for(i = 0; i < NR_DEVICE; i++) {
+		if(g_dev_vector[i] == NULL)
+			continue;
 		snprintf(fullname, sizeof(fullname), "%s%d",
 		         g_dev_vector[i]->drv->major,
 		         g_dev_vector[i]->minor);

@@ -25,6 +25,4 @@ WRAPPER(open)
 WRAPPER(close)
 WRAPPER(read)
 WRAPPER(write)
-WRAPPER(seek)
-
-WRAPPER(putchar)
+WRAPPER(lseek)

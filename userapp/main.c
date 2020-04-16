@@ -3,11 +3,14 @@
  */
 #include <inttypes.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <sys/mman.h>
 #include <netinet/in.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <time.h>
+#include <stdio.h>
+
 #include <syscall.h>
 
 extern void *tlsf_create_with_pool(void* mem, size_t bytes);
@@ -19,6 +22,10 @@ extern void *g_heap;
  */
 void __main()
 {
+	STDIN_FILENO == open("$:/uart1", O_RDONLY);
+	STDOUT_FILENO == open("$:/uart1", O_WRONLY);
+	STDERR_FILENO == open("$:/uart1", O_WRONLY);
+
     size_t heap_size = 32*1024*1024;
     void  *heap_base = mmap(NULL, heap_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
 	g_heap = tlsf_create_with_pool(heap_base, heap_size);

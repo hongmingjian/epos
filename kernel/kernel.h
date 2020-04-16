@@ -155,6 +155,15 @@ extern uint32_t g_ram_zone[RAM_ZONE_LEN];
 
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code);
 
+void init_uart0(uint32_t baud);
+void uart0_putc(int c);
+int  uart0_hasc();
+int  uart0_getc();
+void init_uart1(uint32_t baud);
+void uart1_putc(int c);
+int  uart1_hasc();
+int  uart1_getc();
+
 int     sys_putchar(int c);
 
 int snprintf (char *str, size_t count, const char *fmt, ...);

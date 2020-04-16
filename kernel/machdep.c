@@ -127,7 +127,7 @@ void switch_to(struct tcb *new)
 /**
  * 初始化串口(Mini UART)
  */
-static void init_uart1(uint32_t baud)
+void init_uart1(uint32_t baud)
 {
     aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
     gpio_reg_t *gpio = (gpio_reg_t *)(MMIO_BASE_VA+GPIO_REG);
@@ -159,6 +159,12 @@ void uart1_putc ( int c )
             break;
     }
     aux->mu_io = c & 0xff;
+}
+
+int uart1_hasc()
+{
+    aux_reg_t *aux = (aux_reg_t *)(MMIO_BASE_VA+AUX_REG);
+	return aux->mu_lsr&0x1;
 }
 
 int uart1_getc()
@@ -220,6 +226,12 @@ void uart0_putc ( int c )
         __asm__ __volatile__("nop");
     } while(uart->fr/*PL011_FR*/ & 0x20);
     uart->dr/*PL011_DR*/ = c & 0xff;
+}
+
+int uart0_hasc()
+{
+	uart_reg_t *uart = (uart_reg_t *)(MMIO_BASE_VA+UART_REG);
+	return uart->fr&0x10;
 }
 
 int uart0_getc()

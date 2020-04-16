@@ -330,21 +330,23 @@ void irq_handler(struct context *ctx)
         }
     }
 
-    g_intr_vector[irq](irq, ctx);
-
     switch(irq) {
     case 0: {
         armtimer_reg_t *pit = (armtimer_reg_t *)(MMIO_BASE_VA+ARMTIMER_REG);
         pit->IRQClear = 1;
         break;
-	}
+		}
 	case 9: {
 		systimer_reg_t *pst = (systimer_reg_t *)(MMIO_BASE_VA+SYSTIMER_REG);
 		pst->cs |= (1<<1);
 		pst->c1 = pst->clo + 1000000/HZ;
 		break;
+		}
     }
-    }
+
+    sti();
+    g_intr_vector[irq](irq, ctx);
+	cli();
 }
 
 void undefined_handler(struct context *ctx)

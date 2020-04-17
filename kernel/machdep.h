@@ -118,6 +118,16 @@ struct context {
 
 extern void *ret_from_syscall;
 void isr_timer(uint32_t irq, struct context *ctx);
+void syscall(struct context *ctx);
+
+void init_uart0(uint32_t baud);
+void uart0_putc(int c);
+int  uart0_hasc();
+int  uart0_getc();
+void init_uart1(uint32_t baud);
+void uart1_putc(int c);
+int  uart1_hasc();
+int  uart1_getc();
 
 #endif /*__ASSEMBLY__*/
 #endif /*_MACHDEP_H*/

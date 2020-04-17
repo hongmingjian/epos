@@ -1,14 +1,29 @@
 #include <string.h>
 #include "kernel.h"
 
-static int zero_attach(struct dev *dp)
+static int common_attach(struct dev *dp)
 {
 	return 0;
 }
 
-static void zero_detach(struct dev *dp)
+static void common_detach(struct dev *dp)
 {
 	return;
+}
+
+static int common_readwrite(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_size)
+{
+	return -1;
+}
+
+static int common_poll(struct dev *dp, short events)
+{
+	return -1;
+}
+
+static int common_ioctl(struct dev *dp, uint32_t cmd, void *arg)
+{
+	return -1;
 }
 
 static int zero_read(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_size)
@@ -17,29 +32,19 @@ static int zero_read(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_siz
 	return buf_size;
 }
 
-static int zero_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_size)
-{
-	return -1;
-}
-
-static int zero_poll(struct dev *dp, int events)
+static int zero_poll(struct dev *dp, short events)
 {
 	return 1;
 }
 
-static int zero_ioctl(struct dev *dp, int cmd, void *arg)
-{
-	return -1;
-}
-
 static struct driver zero_driver = {
 	.major = "zero",
-	.attach = zero_attach,
-	.detach = zero_detach,
+	.attach = common_attach,
+	.detach = common_detach,
 	.read = zero_read,
-	.write = zero_write,
+	.write = common_readwrite,
 	.poll = zero_poll,
-	.ioctl = zero_ioctl
+	.ioctl = common_ioctl
 };
 
 struct zero_dev {
@@ -58,12 +63,12 @@ static int null_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_si
 
 static struct driver null_driver = {
 	.major = "null",
-	.attach = zero_attach,
-	.detach = zero_detach,
-	.read = zero_write,
+	.attach = common_attach,
+	.detach = common_detach,
+	.read = common_readwrite,
 	.write = null_write,
 	.poll = zero_poll,
-	.ioctl = zero_ioctl
+	.ioctl = common_ioctl
 };
 
 struct null_dev {
@@ -93,11 +98,6 @@ static int uart_attach(struct dev *dp)
 	pfn(115200);
 
 	return 0;
-}
-
-static void uart_detach(struct dev *dp)
-{
-	return;
 }
 
 static int uart_read(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_size)
@@ -150,7 +150,7 @@ static int uart_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_si
 	return buf-oldbuf;
 }
 
-static int uart_poll(struct dev *dp, int events)
+static int uart_poll(struct dev *dp, short events)
 {
 	int retval = POLLOUT;
 	if(events & POLLIN) {
@@ -174,7 +174,7 @@ static int uart_poll(struct dev *dp, int events)
 	return retval;
 }
 
-static int uart_ioctl(struct dev *dp, int cmd, void *arg)
+static int uart_ioctl(struct dev *dp, uint32_t cmd, void *arg)
 {
 	return -1;
 }
@@ -182,7 +182,7 @@ static int uart_ioctl(struct dev *dp, int cmd, void *arg)
 static struct driver uart_driver = {
 	.major = "uart",
 	.attach = uart_attach,
-	.detach = uart_detach,
+	.detach = common_detach,
 	.read = uart_read,
 	.write = uart_write,
 	.poll = uart_poll,
@@ -207,3 +207,79 @@ struct uart_dev1 {
 	}
 };
 /*****************************************************************************/
+static int led_attach(struct dev *dp);
+static int led_ioctl(struct dev *dp, uint32_t cmd, void *arg);
+
+static struct driver led_driver = {
+	.major = "led",
+	.attach = led_attach,
+	.detach = common_detach,
+	.read = common_readwrite,
+	.write = common_readwrite,
+	.poll = common_poll,
+	.ioctl = led_ioctl
+};
+
+struct led_dev {
+	struct dev dev;
+	int gpio;
+	int active_low;
+} led_dev = {
+	{
+	.drv = &led_driver,
+	.minor = 0
+	},
+//	if (RPI_MODEL_B) ||
+//	 	RPI_MODEL_A) {
+//		led_gpio=16;
+//		led_active_low=1;
+//	}
+//	else if (RPI_MODEL_BPLUS ||
+//	 	     RPI_MODEL_APLUS ||
+//		     RPI_MODEL_2B) {
+//		led_gpio=47;
+//		led_active_low=0;
+//	}
+//	else if (RPI_MODEL_3B ||
+//		     RPI_MODEL_3BPLUS) {
+//		led_gpio=18;
+//		led_active_low=0;
+//	}
+	16,
+	1
+};
+
+static int led_attach(struct dev *dp)
+{
+	struct led_dev *ldp = (struct led_dev *)dp;
+	gpio_reg_t *grt = (gpio_reg_t *)(MMIO_BASE_VA+GPIO_REG);
+
+	uint32_t *p = (uint32_t *)(((uint32_t)(&grt->gpfsel0))+(ldp->gpio/10)*4);
+
+	int bit=(ldp->gpio%10)*3;
+
+	uint32_t old = *p;
+	old &= ~(7<<bit);
+	old |= (1<<bit); //output
+	*p = old;
+
+	return 0;
+}
+
+static int led_ioctl(struct dev *dp, uint32_t cmd, void *arg)
+{
+	struct led_dev *ldp = (struct led_dev *)dp;
+	gpio_reg_t *grt = (gpio_reg_t *)(MMIO_BASE_VA+GPIO_REG);
+	uint32_t *p;
+
+	if(cmd)
+		cmd = 1;
+
+	if(ldp->active_low)
+		cmd ^= 1;
+
+	p = (uint32_t *)((uint32_t)(cmd?(&grt->gpset0):(&grt->gpclr0))+(ldp->gpio/32)*4);
+	*p = 1<<(ldp->gpio&0x1f);
+
+	return -1;
+}

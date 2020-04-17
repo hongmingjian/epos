@@ -1337,7 +1337,9 @@ static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp);
 static int fat_close  (struct file *_fp);
 static int fat_read   (struct file *_fp, uint8_t *buf, size_t size);
 static int fat_write  (struct file *_fp, uint8_t *buf, size_t size);
-static int fat_seek   (struct file *_fp, int offset, int whence);
+static int fat_seek   (struct file *_fp, off_t offset, int whence);
+static int fat_poll   (struct file *_fp, short events);
+static int fat_ioctl  (struct file *_fp, uint32_t cmd, void *arg);
 
 struct fat_fs {
 	struct fs fs;
@@ -1353,6 +1355,8 @@ struct fat_fs {
 		.read = fat_read,
 		.write = fat_write,
 		.seek = fat_seek,
+		.poll = fat_poll,
+		.ioctl = fat_ioctl
 	},
 	NULL,
 	{0}
@@ -1469,7 +1473,7 @@ static int fat_write  (struct file *_fp, uint8_t *buf, size_t size)
 	return -1;
 }
 
-static int fat_seek   (struct file *_fp, int offset, int whence)
+static int fat_seek   (struct file *_fp, off_t offset, int whence)
 {
 	struct fat_file *fp = (struct fat_file *)_fp;
 
@@ -1489,5 +1493,15 @@ static int fat_seek   (struct file *_fp, int offset, int whence)
 	unsigned char scratch[SECTOR_SIZE];
 	DFS_Seek(&fp->fi, offset, &scratch[0]);
 	return fp->fi.pointer;
+}
+
+static int fat_poll   (struct file *_fp, short events)
+{
+	return -1;
+}
+
+static int fat_ioctl  (struct file *_fp, uint32_t cmd, void *arg)
+{
+	return -1;
 }
 /*****************************************************************************/

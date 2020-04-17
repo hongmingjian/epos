@@ -13,7 +13,7 @@ int printk(const char *fmt,...)
     va_end(args);
 
     for(j = 0; j < i; j++)
-        sys_putchar(buf[j]);
+        putchar(buf[j]);
 
     return i;
 }

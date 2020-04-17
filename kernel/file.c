@@ -66,9 +66,16 @@ int sys_write(int fd, uint8_t *buffer, size_t size)
 	return g_file_vector[fd]->fs->write(g_file_vector[fd], buffer, size);
 }
 
-int sys_seek(int fd, int offset, int whence)
+int sys_seek(int fd, off_t offset, int whence)
 {
 	if(fd < 0 || fd >= NR_OPEN_FILE || g_file_vector[fd] == NULL)
 		return -1;
 	return g_file_vector[fd]->fs->seek(g_file_vector[fd], offset, whence);
+}
+
+int sys_ioctl(int fd, uint32_t cmd, void *arg)
+{
+	if(fd < 0 || fd >= NR_OPEN_FILE || g_file_vector[fd] == NULL)
+		return -1;
+	return g_file_vector[fd]->fs->ioctl(g_file_vector[fd], cmd, arg);
 }

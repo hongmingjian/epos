@@ -244,10 +244,32 @@ int uart0_getc()
     return uart->dr/*PL011_DR*/ & 0xff;
 }
 
+void init_uart(uint32_t baud)
+{
+	switch(cpuid) {
+#if RPI_QEMU == 1
+	case CPUID_QEMU:
+		/*
+		 * QEMU只模拟了PL011
+		 */
+		init_uart0(baud);
+		break;
+#endif
+	case CPUID_BCM2711:
+		/*
+		 * 在Pi 4中, PL011连到蓝牙上了
+		 * 只能用Mini UART
+		 */
+	default:
+		init_uart1(baud);
+		break;
+	}
+}
+
 /**
  * 往屏幕上的当前光标位置打印一个字符，相应地移动光标的位置
  */
-int sys_putchar(int c)
+int putchar(int c)
 {
 	switch(cpuid) {
 #if RPI_QEMU == 1
@@ -496,8 +518,11 @@ void syscall(struct context *ctx)
 		{
 	        char *path = (char *)ctx->cf_r0;
             int mode = ctx->cf_r1;
-            if(!IN_USER_VM(path, strlen(path)))
+            if(!IN_USER_VM(path, strlen(path))) {
+				ctx->cf_r0 = -1;
                 break;
+            }
+
             ctx->cf_r0 = sys_open(path, mode);
             break;
 		}
@@ -512,8 +537,10 @@ void syscall(struct context *ctx)
             int fd = ctx->cf_r0;
             uint8_t *buffer = (uint8_t *)ctx->cf_r1;
             uint32_t size = ctx->cf_r2;
-            if(!IN_USER_VM(buffer, size))
+            if(!IN_USER_VM(buffer, size)) {
+				ctx->cf_r0 = -1;
                 break;
+            }
             ctx->cf_r0 = sys_read(fd, buffer, size);
             break;
 		}
@@ -522,17 +549,31 @@ void syscall(struct context *ctx)
             int fd = ctx->cf_r0;
             uint8_t *buffer = (uint8_t *)ctx->cf_r1;
             uint32_t size = ctx->cf_r2;
-            if(!IN_USER_VM(buffer, size))
+            if(!IN_USER_VM(buffer, size)) {
+				ctx->cf_r0 = -1;
                 break;
+            }
             ctx->cf_r0 = sys_write(fd, buffer, size);
             break;
 		}
 	case SYSCALL_lseek:
 		{
             int fd = ctx->cf_r0,
-                offset = ctx->cf_r1,
                 whence = ctx->cf_r2;
+            off_t offset = ctx->cf_r1;
             ctx->cf_r0 = sys_seek(fd, offset, whence);
+            break;
+		}
+	case SYSCALL_ioctl:
+		{
+            int fd = ctx->cf_r0;
+            uint32_t cmd = ctx->cf_r1;
+            void *arg = (void *)ctx->cf_r2;
+            if((arg != NULL) && !IN_USER_VM(arg, 0)) {
+				ctx->cf_r0 = -1;
+                break;
+            }
+            ctx->cf_r0 = sys_ioctl(fd, cmd, arg);
             break;
 		}
 
@@ -758,25 +799,7 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
 
     init_pic();
     init_pit(HZ);
-
-	switch(cpuid) {
-#if RPI_QEMU == 1
-	case CPUID_QEMU:
-		/*
-		 * QEMU只模拟了PL011
-		 */
-		init_uart0(115200);
-		break;
-#endif
-	case CPUID_BCM2711:
-		/*
-		 * 在Pi 4中, PL011连到蓝牙上了
-		 * 只能用Mini UART
-		 */
-	default:
-		init_uart1(115200);
-		break;
-	}
+    init_uart(115200);
 }
 
 /**

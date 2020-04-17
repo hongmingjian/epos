@@ -37,5 +37,7 @@
 #define SYSCALL_read          22
 #define SYSCALL_write         23
 #define SYSCALL_lseek         24
+#define SYSCALL_poll          25
+#define SYSCALL_ioctl         26
 
 #endif /*_SYSCALLNR_H*/

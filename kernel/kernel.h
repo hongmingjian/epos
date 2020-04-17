@@ -116,8 +116,6 @@ int         sys_task_wait(int tid, int *pcode_exit);
 int         sys_task_getid();
 void        sys_task_yield();
 
-void syscall(struct context *ctx);
-
 /**
  * `VADDR' comes from FreeBSD
  */
@@ -154,17 +152,6 @@ void *kmemalign(size_t align, size_t bytes);
 extern uint32_t g_ram_zone[RAM_ZONE_LEN];
 
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code);
-
-void init_uart0(uint32_t baud);
-void uart0_putc(int c);
-int  uart0_hasc();
-int  uart0_getc();
-void init_uart1(uint32_t baud);
-void uart1_putc(int c);
-int  uart1_hasc();
-int  uart1_getc();
-
-int     sys_putchar(int c);
 
 int snprintf (char *str, size_t count, const char *fmt, ...);
 int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
@@ -211,7 +198,7 @@ struct timespec
     time_t tv_sec;      /* seconds */
     long tv_nsec;       /* nanoseconds */
 };
-int      sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
+int sys_nanosleep(const struct timespec *rqtp, struct timespec *rmtp);
 
 struct timeval {
 	long tv_sec;        /* seconds */
@@ -228,11 +215,11 @@ struct driver {
    void (*detach)(struct dev *dp);
 	int (*read)  (struct dev *dp, uint32_t addr, uint8_t *buf, size_t size);
 	int (*write) (struct dev *dp, uint32_t addr, uint8_t *buf, size_t size);
-	int (*poll)  (struct dev *dp, int events);
+	int (*poll)  (struct dev *dp, short events);
 #define POLLIN		0x0001
 #define POLLOUT		0x0004
 
-	int (*ioctl) (struct dev *dp, int cmd, void *arg);
+	int (*ioctl) (struct dev *dp, uint32_t cmd, void *arg);
 };
 
 struct dev {
@@ -256,12 +243,15 @@ struct fs {
 	int (*close)  (struct file *_fp);
 	int (*read)   (struct file *_fp, uint8_t *buf, size_t size);
 	int (*write)  (struct file *_fp, uint8_t *buf, size_t size);
-	int (*seek)   (struct file *_fp, int offset, int whence);
+	int (*seek)   (struct file *_fp, off_t offset, int whence);
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
 
-	int (*mmap)   (struct file *_fp, int offset);
+	int (*poll)   (struct file *_fp, short events);
+	int (*ioctl)  (struct file *_fp, uint32_t cmd, void *arg);
+	
+	int (*mmap)   (struct file *_fp, off_t offset);
 };
 struct file {
 	struct fs *fs;
@@ -276,6 +266,7 @@ int sys_open(char *path, int mode);
 int sys_close(int fd);
 int sys_read(int fd, uint8_t *buffer, size_t size);
 int sys_write(int fd, uint8_t *buffer, size_t size);
-int sys_seek(int fd, int offset, int whence);
+int sys_seek(int fd, off_t offset, int whence);
+int sys_ioctl(int fd, uint32_t cmd, void *arg);
 
 #endif /*_KERNEL_H*/

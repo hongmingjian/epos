@@ -14,7 +14,9 @@ static int devfs_open(struct fs *this, char *name, int mode, struct file **_fpp)
 static int devfs_close  (struct file *_fp);
 static int devfs_read   (struct file *_fp, uint8_t *buf, size_t size);
 static int devfs_write  (struct file *_fp, uint8_t *buf, size_t size);
-static int devfs_seek   (struct file *_fp, int offset, int whence);
+static int devfs_seek   (struct file *_fp, off_t offset, int whence);
+static int devfs_poll   (struct file *_fp, short events);
+static int devfs_ioctl  (struct file *_fp, uint32_t cmd, void *arg);
 
 struct dev_fs {
 	struct fs fs;
@@ -27,6 +29,8 @@ struct dev_fs {
 	.read = devfs_read,
 	.write = devfs_write,
 	.seek = devfs_seek,
+	.poll = devfs_poll,
+	.ioctl = devfs_ioctl
 	}
 };
 
@@ -108,7 +112,7 @@ static int devfs_write  (struct file *_fp, uint8_t *buf, size_t size)
 	return retval;
 }
 
-static int devfs_seek   (struct file *_fp, int offset, int whence)
+static int devfs_seek   (struct file *_fp, off_t offset, int whence)
 {
 	struct dev_file *fp = (struct dev_file *)_fp;
 	switch(whence) {
@@ -122,4 +126,16 @@ static int devfs_seek   (struct file *_fp, int offset, int whence)
 		return -1;
 	}
 	return fp->pointer;
+}
+
+static int devfs_poll   (struct file *_fp, short events)
+{
+	struct dev_file *fp = (struct dev_file *)_fp;
+	return fp->dev->drv->poll(fp->dev, events);
+}
+
+static int devfs_ioctl  (struct file *_fp, uint32_t cmd, void *arg)
+{
+	struct dev_file *fp = (struct dev_file *)_fp;
+	return fp->dev->drv->ioctl(fp->dev, cmd, arg);
 }

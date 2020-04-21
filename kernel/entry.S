@@ -170,8 +170,6 @@ rolling:
 	;@zeroify bss
 	ldr r10, =R(_edata)
 	ldr r11, =R(_end)
-	sub r10, r10, #KERNBASE
-	sub r11, r11, #KERNBASE
 	ldr r9, =0x0
 zeroify:
 	cmp		r11, r10

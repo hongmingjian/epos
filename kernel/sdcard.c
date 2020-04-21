@@ -79,6 +79,7 @@ uint64_t tick_difference (uint64_t us1, uint64_t us2)
 #if 0
 /* Smartstart also defines a function pointer ....  int (*printhandler) (const char *fmt, ...); */
 printhandler LOG_ERROR = NULL;							// LOG_ERROR is a function pointer of that printhandler format
+#endif
 
 /*--------------------------------------------------------------------------}
 {  This controls if debugging code is compiled or removed at compile time   }
@@ -89,14 +90,12 @@ printhandler LOG_ERROR = NULL;							// LOG_ERROR is a function pointer of that 
 {  The working part of the DEBUG_INFO macro to make compilation on or off   }
 {--------------------------------------------------------------------------*/
 #if DEBUG_INFO == 1
-#define LOG_DEBUG(...) printf( __VA_ARGS__ )			// This displays debugging messages to function given
+#define LOG_DEBUG(...) printk( __VA_ARGS__ )			// This displays debugging messages to function given
 #else
-#define LOG_DEBUG(...)									// This just swallows debug code, it doesn't even get compiled
-#endif
+#define LOG_DEBUG(...) waitMicro(10)								// This just swallows debug code, it doesn't even get compiled
 #endif
 
-#define LOG_DEBUG(...) do { ; } while(0)
-#define LOG_ERROR(...) do { ; } while(0)
+#define LOG_ERROR(...) printk( __VA_ARGS__ )
 
 /***************************************************************************}
 {    PRIVATE INTERNAL SD HOST REGISTER STRUCTURES AS PER BCM2835 MANUAL     }

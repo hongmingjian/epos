@@ -6,18 +6,16 @@ PROG=	a
 all: release
 
 CPPFLAGS=-nostdinc -I../include -Iinclude
-ASFLAGS=-Wall -O2 -D__ASSEMBLY__
-CFLAGS=	-Wall -O2 \
+ASFLAGS=-Wall -D__ASSEMBLY__
+CFLAGS=	-Wall \
 	-ffreestanding -fleading-underscore
 LDFLAGS= -nostdlib \
-		-Wl,-Map,$(PROG).map -Wl,-e,_start,-Ttext,0x08048000
-
-COBJS=	main.o lib/stdio.o ../lib/snprintf.o ../lib/softfloat.o ../lib/string.o
+	-Wl,-Map,$(PROG).map -Wl,-e,_start,-Ttext,0x08048000
 
 COBJS=	main.o
 COBJS+=	lib/stdio.o lib/qsort.o
 COBJS+=	../lib/softfloat.o ../lib/string.o ../lib/memcpy.o \
-		../lib/memset.o ../lib/snprintf.o
+	../lib/memset.o ../lib/snprintf.o
 COBJS+=	lib/malloc.o ../lib/tlsf/tlsf.o
 
 OBJS=	lib/crt0.o lib/syscall-wrapper.o $(COBJS)
@@ -25,14 +23,18 @@ OBJS=	lib/crt0.o lib/syscall-wrapper.o $(COBJS)
 .PHONY: .FORCE
 .FORCE:
 
-../lib/softfloat.o: .FORCE
-../lib/string.o: .FORCE
+../lib/tlsf/tlsf.o: .FORCE
 ../lib/memcpy.o: .FORCE
 ../lib/memset.o: .FORCE
 ../lib/snprintf.o: .FORCE
+../lib/softfloat.o: .FORCE
+../lib/string.o: .FORCE
 
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+$(PROG).uue: $(PROG).out
+	uuencode $^ $^ >$@
 
 .DELETE_ON_ERROR: make.dep
 make.dep: $(COBJS:.o=.c)
@@ -40,11 +42,11 @@ make.dep: $(COBJS:.o=.c)
 
 .PHONY: release
 release: CFLAGS+=-O2 -ggdb
-release: make.dep $(PROG).out
+release: make.dep $(PROG).uue
 
 .PHONY: debug
 debug: CFLAGS+=-O0 -ggdb
-debug: make.dep $(PROG).out
+debug: make.dep $(PROG).uue
 
 .PHONY: qemu
 qemu: release
@@ -54,6 +56,6 @@ qemudbg: debug
 
 .PHONY: clean
 clean:
-	-$(RM) $(OBJS) $(PROG).out $(PROG).map make.dep *.*~
+	-$(RM) $(OBJS) $(PROG).{out,map,uue} make.dep *.*~
 
 -include make.dep

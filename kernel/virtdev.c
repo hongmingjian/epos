@@ -229,24 +229,9 @@ struct led_dev {
 	.drv = &led_driver,
 	.minor = 0
 	},
-//	if (RPI_MODEL_B) ||
-//	 	RPI_MODEL_A) {
-//		led_gpio=16;
-//		led_active_low=1;
-//	}
-//	else if (RPI_MODEL_BPLUS ||
-//	 	     RPI_MODEL_APLUS ||
-//		     RPI_MODEL_2B) {
-//		led_gpio=47;
-//		led_active_low=0;
-//	}
-//	else if (RPI_MODEL_3B ||
-//		     RPI_MODEL_3BPLUS) {
-//		led_gpio=18;
-//		led_active_low=0;
-//	}
-	16,
-	1
+	//16, 1//1B
+    //47, 0//1B+(V1.2), 2B(V1.1)
+	29, 1//3B+
 };
 
 static int led_attach(struct dev *dp)

@@ -757,10 +757,10 @@ static SDDescriptor sdCard = { 0 };
 
 static int sdDebugResponse( int resp )
 {
-	LOG_DEBUG("EMMC: Status: %08x, control1: %08x, interrupt: %08x\n",
+	LOG_DEBUG("EMMC: Status: %08x, control1: %08x, interrupt: %08x\r\n",
 		(unsigned int)EMMC_STATUS->Raw32, (unsigned int)EMMC_CONTROL1->Raw32,
 		(unsigned int)EMMC_INTERRUPT->Raw32);
-	LOG_DEBUG("EMMC: Command %s resp %08x: %08x %08x %08x %08x\n",
+	LOG_DEBUG("EMMC: Command %s resp %08x: %08x %08x %08x %08x\r\n",
 		sdCard.lastCmd->cmd_name, (unsigned int)resp,(unsigned int)*EMMC_RESP3,
 		(unsigned int)*EMMC_RESP2, (unsigned int)*EMMC_RESP1,
 		(unsigned int)*EMMC_RESP0);
@@ -789,7 +789,7 @@ static SDRESULT sdWaitForInterrupt (uint32_t mask )
 		(ival & INT_CMD_TIMEOUT) ||									// Command timeout occurred
 		(ival & INT_DATA_TIMEOUT) )									// Data timeout occurred
 	{
-		LOG_ERROR("EMMC: Wait for interrupt %08x timeout: %08x %08x %08x\n",
+		LOG_ERROR("EMMC: Wait for interrupt %08x timeout: %08x %08x %08x\r\n",
 			(unsigned int)mask, (unsigned int)EMMC_STATUS->Raw32,
 			(unsigned int)ival, (unsigned int)*EMMC_RESP0);			// Log any error if requested
 
@@ -798,7 +798,7 @@ static SDRESULT sdWaitForInterrupt (uint32_t mask )
 
 		return SD_TIMEOUT;											// Return SD_TIMEOUT
 	} else if ( ival & INT_ERROR_MASK ) {
-		LOG_ERROR("EMMC: Error waiting for interrupt: %08x %08x %08x\n",
+		LOG_ERROR("EMMC: Error waiting for interrupt: %08x %08x %08x\r\n",
 			(unsigned int)EMMC_STATUS->Raw32, (unsigned int)ival,
 			(unsigned int)*EMMC_RESP0);								// Log any error if requested
 
@@ -834,7 +834,7 @@ static SDRESULT sdWaitForCommand (void)
 	}
 	if( (td >= 1000000) || (EMMC_INTERRUPT->Raw32 & INT_ERROR_MASK) )// Error occurred or it timed out
     {
-		LOG_ERROR("EMMC: Wait for command aborted: %08x %08x %08x\n",
+		LOG_ERROR("EMMC: Wait for command aborted: %08x %08x %08x\r\n",
 			(unsigned int)EMMC_STATUS->Raw32, (unsigned int)EMMC_INTERRUPT->Raw32,
 			(unsigned int)*EMMC_RESP0);								// Log any error if requested
 		return SD_BUSY;												// return SD_BUSY
@@ -863,7 +863,7 @@ static SDRESULT sdWaitForData (void)
 	}
 	if ( (td >= 500000) || (EMMC_INTERRUPT->Raw32 & INT_ERROR_MASK) )
     {
-		LOG_ERROR("EMMC: Wait for data aborted: %08x %08x %08x\n",
+		LOG_ERROR("EMMC: Wait for data aborted: %08x %08x %08x\r\n",
 			(unsigned int)EMMC_STATUS->Raw32, (unsigned int)EMMC_INTERRUPT->Raw32,
 			(unsigned int)*EMMC_RESP0);								// Log any error if requested
 		return SD_BUSY;												// return SD_BUSY
@@ -892,7 +892,7 @@ static void unpack_csd(struct CSD* csd)
 	*p = *EMMC_RESP3;
 
 	/* Display raw CSD - values of my SANDISK ultra 16GB shown under each */
-	LOG_DEBUG("CSD Contents : %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\n",
+	LOG_DEBUG("CSD Contents : %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x\r\n",
 		buf[2], buf[1], buf[0], buf[7], buf[6], buf[5], buf[4],
 		/*    40       e0      00     32        5b     59     00               */
 		buf[11], buf[10], buf[9], buf[8], buf[15], buf[14], buf[13], buf[12]);
@@ -948,27 +948,27 @@ static void unpack_csd(struct CSD* csd)
 	csd->file_format = (buf[12] & 0x0c) >> 2;								// @10-11    **correct
 	csd->ecc = buf[12] & 0x03;												// @8-9      **corrrect
 
-	LOG_DEBUG("  csd_structure=%d\t  spec_vers=%d\t  taac=%02x\t nsac=%02x\t  tran_speed=%02x\t  ccc=%04x\n"
-		"  read_bl_len=%d\t  read_bl_partial=%d\t  write_blk_misalign=%d\t  read_blk_misalign=%d\n"
-		"  dsr_imp=%d\t  sector_size =%d\t  erase_blk_en=%d\n",
+	LOG_DEBUG("  csd_structure=%d\t  spec_vers=%d\t  taac=%02x\t nsac=%02x\t  tran_speed=%02x\t  ccc=%04x\r\n"
+		"  read_bl_len=%d\t  read_bl_partial=%d\t  write_blk_misalign=%d\t  read_blk_misalign=%d\r\n"
+		"  dsr_imp=%d\t  sector_size =%d\t  erase_blk_en=%d\r\n",
 		csd->csd_structure, csd->spec_vers, csd->taac, csd->nsac, csd->tran_speed, csd->ccc,
 		csd->read_bl_len, csd->read_bl_partial, csd->write_blk_misalign, csd->read_blk_misalign,
 		csd->dsr_imp, csd->sector_size, csd->erase_blk_en);
 
 	if (csd->csd_structure == 0x1) {
-		LOG_DEBUG("CSD 2.0: ver2_c_size = %d\t  card capacity: %lu\n",
+		LOG_DEBUG("CSD 2.0: ver2_c_size = %d\t  card capacity: %lu\r\n",
 			csd->ver2_c_size, sdCard.CardCapacity);
 	}
 	else {
-		LOG_DEBUG("CSD 1.0: c_size = %d\t  c_size_mult=%d\t card capacity: %lu\n"
-			"  vdd_r_curr_min = %d\t  vdd_r_curr_max=%d\t  vdd_w_curr_min = %d\t  vdd_w_curr_max=%d\n",
+		LOG_DEBUG("CSD 1.0: c_size = %d\t  c_size_mult=%d\t card capacity: %lu\r\n"
+			"  vdd_r_curr_min = %d\t  vdd_r_curr_max=%d\t  vdd_w_curr_min = %d\t  vdd_w_curr_max=%d\r\n",
 			csd->c_size, csd->c_size_mult, sdCard.CardCapacity,
 			csd->vdd_r_curr_min, csd->vdd_r_curr_max, csd->vdd_w_curr_min, csd->vdd_w_curr_max);
 	}
 
-	LOG_DEBUG("  wp_grp_size=%d\t  wp_grp_enable=%d\t  default_ecc=%d\t  r2w_factor=%d\n"
-		"  write_bl_len=%d\t  write_bl_partial=%d\t  file_format_grp=%d\t  copy=%d\n"
-		"  perm_write_protect=%d\t  tmp_write_protect=%d\t  file_format=%d\t  ecc=%d\n",
+	LOG_DEBUG("  wp_grp_size=%d\t  wp_grp_enable=%d\t  default_ecc=%d\t  r2w_factor=%d\r\n"
+		"  write_bl_len=%d\t  write_bl_partial=%d\t  file_format_grp=%d\t  copy=%d\r\n"
+		"  perm_write_protect=%d\t  tmp_write_protect=%d\t  file_format=%d\t  ecc=%d\r\n",
 		csd->wp_grp_size, csd->wp_grp_enable, csd->default_ecc, csd->r2w_factor,
 		csd->write_bl_len, csd->write_bl_partial, csd->file_format_grp, csd->copy,
 		csd->perm_write_protect, csd->tmp_write_protect, csd->file_format, csd->ecc);
@@ -986,7 +986,7 @@ static int sdSendCommandP( EMMCCommand* cmd, uint32_t arg )
 	/* Check for command in progress */
 	if ( sdWaitForCommand() != SD_OK ) return SD_BUSY;				// Check command wait
 
-	LOG_DEBUG("EMMC: Sending command %s code %08x arg %08x\n",
+	LOG_DEBUG("EMMC: Sending command %s code %08x arg %08x\r\n",
 		cmd->cmd_name, (unsigned int)cmd->code.CMD_INDEX, (unsigned int)arg);
 	sdCard.lastCmd = cmd;
 
@@ -1160,7 +1160,7 @@ static SDRESULT sdReadSCR (void)
 	// Wait for READ_RDY interrupt.
 	if( (resp = sdWaitForInterrupt(INT_READ_RDY)) )
 	{
-		LOG_ERROR("EMMC: Timeout waiting for ready to read\n");
+		LOG_ERROR("EMMC: Timeout waiting for ready to read\r\n");
 		return sdDebugResponse(resp);
 	}
 
@@ -1182,11 +1182,11 @@ static SDRESULT sdReadSCR (void)
 	if( numRead != 2 )
 	{
 		{
-			LOG_ERROR("EMMC: SEND_SCR ERR: %08x %08x %08x\n",
+			LOG_ERROR("EMMC: SEND_SCR ERR: %08x %08x %08x\r\n",
 				(unsigned int)EMMC_STATUS->Raw32,
 				(unsigned int)EMMC_INTERRUPT->Raw32,
 				(unsigned int)*EMMC_RESP0);
-			LOG_ERROR("EMMC: Reading SCR, only read %d words\n", numRead);
+			LOG_ERROR("EMMC: Reading SCR, only read %d words\r\n", numRead);
 		}
 		return SD_TIMEOUT;
 	}
@@ -1244,7 +1244,7 @@ static uint32_t sdGetClockDivider (uint32_t freq)
 		if (shiftcount > 7) shiftcount = 7;							// It's only 8 bits maximum on HOST_SPEC_V2
 		divisor = ((uint32_t)1 << shiftcount);						// Version 1,2 take power 2
 	} else if (divisor < 3) divisor = 4;							// Set minimum divisor limit
-	LOG_DEBUG("Divisor = %i, Freq Set = %i\n", (int)divisor, (int)(41666667/divisor));
+	LOG_DEBUG("Divisor = %i, Freq Set = %i\r\n", (int)divisor, (int)(41666667/divisor));
 	return divisor;													// Return divisor that would be required
 }
 
@@ -1322,7 +1322,7 @@ static SDRESULT sdResetCard (void)
 	EMMC_CONTROL1->SRST_HC = 1;										// Reset the complete host circuit
   	//EMMC_CONTROL2->UHSMODE = SDR12;
 	waitMicro(10);													// Wait 10 microseconds
-	LOG_DEBUG("EMMC: reset card.\n");
+	LOG_DEBUG("EMMC: reset card.\r\n");
 	while ((EMMC_CONTROL1->SRST_HC)									// Host circuit reset not clear
 			&& (td < 100000))										// Timeout not reached
 	{
@@ -1371,17 +1371,17 @@ static SDRESULT sdAppSendOpCond (uint32_t arg )
 	SDRESULT  resp;
 	if( (resp = sdSendCommandA(IX_APP_SEND_OP_COND,arg)) && resp != SD_TIMEOUT )
     {
-		LOG_ERROR("EMMC: ACMD41 returned non-timeout error %d\n",resp);
+		LOG_ERROR("EMMC: ACMD41 returned non-timeout error %d\r\n",resp);
 			return resp;
     }
 	int count = 6;
 	while( (sdCard.ocr.card_power_up_busy == 0) && count-- )
 	{
-		//scPrintf("EMMC: Retrying ACMD SEND_OP_COND status %08x\n",*EMMC_STATUS);
+		//scPrintf("EMMC: Retrying ACMD SEND_OP_COND status %08x\r\n",*EMMC_STATUS);
 		waitMicro(400000);
 		if( (resp = sdSendCommandA(IX_APP_SEND_OP_COND,arg)) && resp != SD_TIMEOUT )
 		{
-			LOG_ERROR("EMMC: ACMD41 returned non-timeout error %d\n",resp);
+			LOG_ERROR("EMMC: ACMD41 returned non-timeout error %d\r\n",resp);
 			return resp;
 		}
 	}
@@ -1442,7 +1442,7 @@ SDRESULT sdTransferBlocks (uint32_t startBlock, uint32_t numBlocks, uint8_t* buf
 		// Wait for ready interrupt for the next block.
 		if( (resp = sdWaitForInterrupt(readyInt)) )
 		{
-			LOG_ERROR("EMMC: Timeout waiting for ready to read\n");
+			LOG_ERROR("EMMC: Timeout waiting for ready to read\r\n");
 			return sdDebugResponse(resp);
 		}
 
@@ -1481,12 +1481,12 @@ SDRESULT sdTransferBlocks (uint32_t startBlock, uint32_t numBlocks, uint8_t* buf
 
 	// If not all bytes were read, the operation timed out.
 	if( blocksDone != numBlocks ) {
-		LOG_ERROR("EMMC: Transfer error only done %d/%d blocks\n",blocksDone,numBlocks);
-		LOG_DEBUG("EMMC: Transfer: %08x %08x %08x %08x\n", (unsigned int)EMMC_STATUS->Raw32,
+		LOG_ERROR("EMMC: Transfer error only done %d/%d blocks\r\n",blocksDone,numBlocks);
+		LOG_DEBUG("EMMC: Transfer: %08x %08x %08x %08x\r\n", (unsigned int)EMMC_STATUS->Raw32,
 			(unsigned int)EMMC_INTERRUPT->Raw32, (unsigned int)*EMMC_RESP0,
 			(unsigned int)EMMC_BLKSIZECNT->Raw32);
 		if( !write && numBlocks > 1 && (resp = sdSendCommand(IX_STOP_TRANS)) )
-			LOG_DEBUG("EMMC: Error response from stop transmission: %d\n",resp);
+			LOG_DEBUG("EMMC: Error response from stop transmission: %d\r\n",resp);
 
 		return SD_TIMEOUT;
     }
@@ -1494,7 +1494,7 @@ SDRESULT sdTransferBlocks (uint32_t startBlock, uint32_t numBlocks, uint8_t* buf
 	// For a write operation, ensure DATA_DONE interrupt before we stop transmission.
 	if( write && (resp = sdWaitForInterrupt(INT_DATA_DONE)) )
 	{
-		LOG_ERROR("EMMC: Timeout waiting for data done\n");
+		LOG_ERROR("EMMC: Timeout waiting for data done\r\n");
 		return sdDebugResponse(resp);
 	}
 
@@ -1523,7 +1523,7 @@ SDRESULT sdClearBlocks(uint32_t startBlock , uint32_t numBlocks)
 	uint32_t startAddress = sdCard.type == SD_TYPE_2_SC ? (uint32_t)(startBlock << 9) : (uint32_t)startBlock;
 	uint32_t endAddress = sdCard.type == SD_TYPE_2_SC ? (uint32_t)( (startBlock +numBlocks) << 9) : (uint32_t)(startBlock + numBlocks);
 	SDRESULT resp;
-	LOG_DEBUG("EMMC: erasing blocks from %d to %d\n", startAddress, endAddress);
+	LOG_DEBUG("EMMC: erasing blocks from %d to %d\r\n", startAddress, endAddress);
 	if ( (resp = sdSendCommandA(IX_ERASE_WR_ST,startAddress)) ) return sdDebugResponse(resp);
 	if ( (resp = sdSendCommandA(IX_ERASE_WR_END,endAddress)) ) return sdDebugResponse(resp);
 	if ( (resp = sdSendCommand(IX_ERASE)) ) return sdDebugResponse(resp);
@@ -1534,7 +1534,7 @@ SDRESULT sdClearBlocks(uint32_t startBlock , uint32_t numBlocks)
 	{
 	if ( --count == 0 )
 		{
-		LOG_ERROR("EMMC: Timeout waiting for erase: %08x %08x\n",
+		LOG_ERROR("EMMC: Timeout waiting for erase: %08x %08x\r\n",
 			(unsigned int)EMMC_STATUS->Raw32, (unsigned int)EMMC_INTERRUPT->Raw32);
 		return SD_TIMEOUT;
 		}
@@ -1542,7 +1542,7 @@ SDRESULT sdClearBlocks(uint32_t startBlock , uint32_t numBlocks)
 		waitMicro(10);
 	}
 
-	//scPrintf("EMMC: completed erase command int %08x\n",*EMMC_INTERRUPT);
+	//scPrintf("EMMC: completed erase command int %08x\r\n",*EMMC_INTERRUPT);
 
 	return SD_OK;
 }
@@ -1700,7 +1700,7 @@ static bool LoadDrivePartition (printhandler prn_basic) {
 		sdCard.partition.firstDataSector = bpb->ReservedSectorCount + bpb->HiddenSectors + (bpb->FSTypeData.fat32.FATSize32 * bpb->NumFATs);
 		// data sectors x sectorsize = capacity ... I have check this on PC and it gives right calc
 		sdCard.partition.dataSectors = bpb->TotalSectors32 - bpb->ReservedSectorCount - (bpb->FSTypeData.fat32.FATSize32 * bpb->NumFATs);
-		if (prn_basic) prn_basic("FAT32 Volume Label: %s, ID: %08x\n",
+		if (prn_basic) prn_basic("FAT32 Volume Label: %s, ID: %08x\r\n",
 			bpb->FSTypeData.fat32.BS_VolumeLabel,
 			(unsigned int)bpb->FSTypeData.fat32.BS_VolumeID);		// Basic detail print if requested
 	}
@@ -1711,7 +1711,7 @@ static bool LoadDrivePartition (printhandler prn_basic) {
 		// data sectors x sectorsize = capacity ... I have check this on PC and gives right calc
 		sdCard.partition.dataSectors = bpb->TotalSectors32 - (bpb->NumFATs * bpb->FATSize16) - 33;  // -1 see above +1 and 32 fixed sectors
 		if (bpb->FSTypeData.fat1612.BS_BootSig == 0x29) {
-			if (prn_basic) prn_basic("FAT12/16 Volume Label: %s, Volume ID %08x\n",
+			if (prn_basic) prn_basic("FAT12/16 Volume Label: %s, Volume ID %08x\r\n",
 				bpb->FSTypeData.fat1612.BS_VolumeLabel,
 				(unsigned int)bpb->FSTypeData.fat1612.BS_VolumeID);	// Basic detail print if requested
 		}
@@ -1719,7 +1719,7 @@ static bool LoadDrivePartition (printhandler prn_basic) {
 
 	// total clusters *  clustersize = capacity  ... see data sectors above ... another way to say same thing
 	partition_totalClusters = sdCard.partition.dataSectors / sdCard.partition.sectorPerCluster;
-	if (prn_basic) prn_basic("First Sector: %lu, Data Sectors: %lu, TotalClusters: %lu, RootCluster: %lu\n",
+	if (prn_basic) prn_basic("First Sector: %lu, Data Sectors: %lu, TotalClusters: %lu, RootCluster: %lu\r\n",
 		(unsigned long)sdCard.partition.firstDataSector, (unsigned long)sdCard.partition.dataSectors,
 		(unsigned long)partition_totalClusters, (unsigned long) sdCard.partition.rootCluster);
 	return true;
@@ -1947,7 +1947,7 @@ static struct dir_Structure* LocateFATEntry (const char* searchPat, struct PRIV_
 				}
 				if (dir->name[0] != FILE_DELETED) {					// If entry not deleted
 					if (dir->attrib == FILE_ATTRIBUTE_LABEL) {		// FAT LABEL ENTRY
-						/*printf("LABEL: %c%c%c%c%c%c%c%c%c%c%c\n",
+						/*printf("LABEL: %c%c%c%c%c%c%c%c%c%c%c\r\n",
 							dir->name[0], dir->name[1], dir->name[2], dir->name[3],
 							dir->name[4], dir->name[5], dir->name[6], dir->name[7],
 							dir->name[8], dir->name[9], dir->name[10]);*/
@@ -2004,7 +2004,7 @@ static struct dir_Structure* LocateFATEntry (const char* searchPat, struct PRIV_
 							if (ErrorID) *ErrorID = FAT_RESULT_OK;	// Return result of FAT_RESULT_OK if requested
 							return dir;								// Return directory pointer
 						}
-						/*printf("Rejected match %s vs %s\n", searchPat, &LFN_Name[0]);*/
+						/*printf("Rejected match %s vs %s\r\n", searchPat, &LFN_Name[0]);*/
 					}
 				}
 				priv->bPos += sizeof(struct dir_Structure);			// Buffer position moves forward
@@ -2451,15 +2451,15 @@ SDRESULT sdInitCard (/*printhandler prn_basic, printhandler prn_error, bool moun
 	resp = sdSendCommandA(IX_SEND_IF_COND,0x000001AA);
 	if( resp == SD_OK )
 	{
-	// Card responded with voltage and check pattern.
-	// Resolve voltage and check for high capacity card.
-	if( (resp = sdAppSendOpCond(ACMD41_ARG_HC)) ) return sdDebugResponse(resp);
+		// Card responded with voltage and check pattern.
+		// Resolve voltage and check for high capacity card.
+		if( (resp = sdAppSendOpCond(ACMD41_ARG_HC)) ) return sdDebugResponse(resp);
 
-	// Check for high or standard capacity.
-	if( sdCard.ocr.card_capacity )
-		sdCard.type = SD_TYPE_2_HC;
-	else
-		sdCard.type = SD_TYPE_2_SC;
+		// Check for high or standard capacity.
+		if( sdCard.ocr.card_capacity )
+			sdCard.type = SD_TYPE_2_HC;
+		else
+			sdCard.type = SD_TYPE_2_SC;
 	}
 	else if( resp == SD_BUSY ) return resp;
 	// No response to SEND_IF_COND, treat as an old card.
@@ -2488,7 +2488,7 @@ SDRESULT sdInitCard (/*printhandler prn_basic, printhandler prn_error, bool moun
 	// Actually cards seem to respond in identify state at this point.
 	// Check this with a SEND_STATUS (CMD13)
 	//if( (resp = sdSendCommand(IX_SEND_STATUS)) ) return sdDebugResponse(resp);
-	//printf("Card current state: %08x %s\n",sdCard.status,STATUS_NAME[sdCard.cardState]);
+	//printf("Card current state: %08x %s\r\n",sdCard.status,STATUS_NAME[sdCard.cardState]);
 
 	// Send SEND_CSD (CMD9) and parse the result.
 	if( (resp = sdSendCommand(IX_SEND_CSD)) ) return sdDebugResponse(resp);
@@ -2513,7 +2513,7 @@ SDRESULT sdInitCard (/*printhandler prn_basic, printhandler prn_error, bool moun
 		if( (resp = sdSendCommandA(IX_SET_BUS_WIDTH, sdCard.rca | 2)) )
 			return sdDebugResponse(resp);
 		EMMC_CONTROL0->HCTL_DWIDTH = 1;
-		LOG_DEBUG("EMMC: Bus width set to 4\n");
+		LOG_DEBUG("EMMC: Bus width set to 4\r\n");
 	}
 
 	// Send SET_BLOCKLEN (CMD16)
@@ -2524,7 +2524,7 @@ SDRESULT sdInitCard (/*printhandler prn_basic, printhandler prn_error, bool moun
 	serial <<= 16;
 	serial |= sdCard.cid.SerialNumLo;
 #if 0
-	if (prn_basic) prn_basic("EMMC: SD Card %s %dMb mfr %d '%c%c:%c%c%c%c%c' r%d.%d %d/%d, #%08x RCA %04x\n",
+	if (prn_basic) prn_basic("EMMC: SD Card %s %dMb mfr %d '%c%c:%c%c%c%c%c' r%d.%d %d/%d, #%08x RCA %04x\r\n",
 		SD_TYPE_NAME[sdCard.type], (int)(sdCard.CardCapacity >> 20),
 		sdCard.cid.MID, sdCard.cid.OID_Hi, sdCard.cid.OID_Lo,
 		sdCard.cid.ProdName1, sdCard.cid.ProdName2, sdCard.cid.ProdName3, sdCard.cid.ProdName4, sdCard.cid.ProdName5,

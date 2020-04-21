@@ -736,7 +736,7 @@ static uint32_t init_paging(uint32_t physfree)
             : "r"(pgdir),
               "r"(1<<5),     /* Disable TTBR1 */
               "r"(1),        /* D0=Client, D1-D15=No access */
-              "r"(1|(1<<23)) /* SCTLR.M=1, SCTLR.XP=1*/
+              "r"(1|(1<<23)) /* SCTLR.{M,XP}=1 */
             : "r0"
     );
 
@@ -777,11 +777,6 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
 	trampoline();
 
     /*
-     * 初始化物理内存区域
-     */
-    init_ram(physfree);
-
-    /*
      * 映射虚拟地址[MMIO_BASE_VA, MMIO_BASE_VA+16M)
      * 到物理地址[MMIO_BASE_PA, MMIO_BASE_PA+16M)
      */
@@ -790,16 +785,16 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
              4096, L2E_V|L2E_W);
 
     /*
-     * You *must* enable the MMU before using the dcache
-     * TLDR: by default the dcache would cache everything, including MMIO
-     *       accesses, so you need the MMU enabled so you can mark the MMIO
-     *       regions as non-cachable
+     * 初始化外设
      */
-    enable_l1_dcache();
-
+    init_uart(115200);
     init_pic();
     init_pit(HZ);
-    init_uart(115200);
+
+    /*
+     * 初始化物理内存区域
+     */
+    init_ram(physfree);
 }
 
 /**

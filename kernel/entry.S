@@ -18,11 +18,6 @@
 #
 # $Id: entry.S,v 1.1.1.1 2007/06/22 03:20:53 hmj Exp $
 #
-    .extern _edata, _end
-    .extern _abort_handler, _syscall, _undefined_handler, _irq_handler
-	.extern _cstart, _schedule, _g_resched, _g_task_running
-    .extern _cpuid
-
 #include "machdep.h"
 
 #define	IRQ_R0		0
@@ -110,6 +105,10 @@
 	stmia r0!, {r2-r10}; \
     ; \
 1:
+    .extern _edata, _end
+    .extern _abort_handler, _syscall, _undefined_handler, _irq_handler
+	.extern _cstart, _schedule, _g_resched, _g_task_running
+    .extern _cpuid
 
     .text
     .globl _entry
@@ -356,6 +355,12 @@ ___aeabi_idivmod:
 	sub	r1, r1, r3
 	mov	pc, lr
 
+    /*
+     * You *must* enable the MMU before using the dcache
+     * TLDR: by default the dcache would cache everything, including MMIO
+     *       accesses, so you need the MMU enabled so you can mark the MMIO
+     *       regions as non-cachable
+     */
     .globl _enable_l1_dcache
 _enable_l1_dcache:
     push {r0}

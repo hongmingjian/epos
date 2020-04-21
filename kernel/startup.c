@@ -157,7 +157,7 @@ void mi_startup()
      * 然后打开hivecs模式(ARM720T TRM, Rev 3, p. 3-5)
      */
     page_alloc_in_addr(0xffff0000, 1, VM_PROT_RW);
-    page_map(0xffff0000, 0x0, 1, L2E_V|L2E_W|L2E_C);
+    page_map(0xffff0000, LOADADDR, 1, L2E_V|L2E_W|L2E_C);
     __asm__ __volatile__ (
              "mrc p15,0,r0,c1,c0,0\n\t"
              "orr r0, r0, #(1<<13) @SCTLR.V=1\n\t"

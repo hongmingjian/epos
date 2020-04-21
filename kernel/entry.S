@@ -372,6 +372,6 @@ _enable_l1_dcache:
 
     .globl _cpu_idle
 _cpu_idle:
-	mcr p15, #0, r0, c7, c0, #4
+    wfi
     mov pc, lr
 	

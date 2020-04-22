@@ -23,7 +23,7 @@
 
 #include "kernel.h"
 
-uint32_t cpuid;
+uint32_t cpuid, boardid;
 
 /**
  * 初始化定时器
@@ -748,8 +748,24 @@ static uint32_t init_paging(uint32_t physfree)
 */
 static void init_ram(uint32_t physfree)
 {
+    uint32_t  __attribute__((aligned(16))) msg[8] =
+    {
+        sizeof(msg),            // Message size
+        MAILBOX_REQUEST,        // Request/Response
+
+        TAG_GET_ARM_MEMORY,     // Tag
+        8,                      // # bytes of buffer
+        0,                      // Request/Response
+        0,                      // buffer
+        0,
+
+        0,                      // End Tag
+    };
+
+    mailbox_write_read(CHANNEL_TAGS, (uint32_t)&msg[0]);
+
     g_ram_zone[0] = physfree;
-    g_ram_zone[1] = 0x20000000;
+    g_ram_zone[1] = msg[5]+msg[6];
     g_ram_zone[2] = 0;
     g_ram_zone[3] = 0;
 }
@@ -783,6 +799,24 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
     page_map(MMIO_BASE_VA,
              (cpuid == CPUID_BCM2835)?0x20000000:0x3f000000,
              4096, L2E_V|L2E_W);
+
+    /*
+     * 获取电路板信息
+     */
+    uint32_t  __attribute__((aligned(16))) msg[8] =
+    {
+        sizeof(msg),            // Message size
+        MAILBOX_REQUEST,        // Request/Response
+
+        TAG_GET_BOARD_REVISION, // Tag
+        4,                      // # bytes of buffer
+        0,                      // Request/Response
+        0,                      // buffer
+
+        0,                      // End Tag
+    };
+    mailbox_write_read(CHANNEL_TAGS, (uint32_t)&msg[0]);
+    boardid = msg[5];
 
     /*
      * 初始化外设

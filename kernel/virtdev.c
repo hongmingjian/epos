@@ -229,15 +229,32 @@ struct led_dev {
 	.drv = &led_driver,
 	.minor = 0
 	},
-	//16, 1//1B
-    //47, 0//1B+(V1.2), 2B(V1.1)
-	29, 1//3B+
+    -1,
+    -1
 };
 
 static int led_attach(struct dev *dp)
 {
 	struct led_dev *ldp = (struct led_dev *)dp;
 	gpio_reg_t *grt = (gpio_reg_t *)(MMIO_BASE_VA+GPIO_REG);
+
+	switch(BOARD_MODEL(boardid)) {
+	case MODEL_1B:
+		ldp->gpio = 16;
+		ldp->active_low = 1;
+		break;
+	case MODEL_1B_PLUS:
+	case MODEL_2B:
+		ldp->gpio = 47;
+		ldp->active_low = 0;
+		break;
+	case MODEL_3B_PLUS:
+		ldp->gpio = 29;
+		ldp->active_low = 1;
+		break;
+	default:
+		return -1;
+	}
 
 	uint32_t *p = (uint32_t *)(((uint32_t)(&grt->gpfsel0))+(ldp->gpio/10)*4);
 
@@ -256,6 +273,9 @@ static int led_ioctl(struct dev *dp, uint32_t cmd, void *arg)
 	struct led_dev *ldp = (struct led_dev *)dp;
 	gpio_reg_t *grt = (gpio_reg_t *)(MMIO_BASE_VA+GPIO_REG);
 	uint32_t *p;
+
+	if(ldp->gpio < 0)
+		return -1;
 
 	if(cmd)
 		cmd = 1;

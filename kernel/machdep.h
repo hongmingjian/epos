@@ -129,5 +129,9 @@ void uart1_putc(int c);
 int  uart1_hasc();
 int  uart1_getc();
 
+uint32_t mailbox_read (MAILBOX_CHANNEL channel);
+int mailbox_write (MAILBOX_CHANNEL channel, uint32_t message);
+int mailbox_write_read(MAILBOX_CHANNEL channel, uint32_t message);
+
 #endif /*__ASSEMBLY__*/
 #endif /*_MACHDEP_H*/

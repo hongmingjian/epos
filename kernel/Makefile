@@ -8,7 +8,7 @@ all: release
 RPI_QEMU=0
 
 CPPFLAGS=-nostdinc -Iinclude -I../include -DRPI_QEMU=$(RPI_QEMU)
-ASFLAGS=-Wall -mcpu=arm1176jzf-s -D__ASSEMBLY__
+ASFLAGS=-Wall -march=armv6zk -D__ASSEMBLY__
 CFLAGS= -Wall -pipe \
 	-ffreestanding -fleading-underscore
 LDFLAGS+=-Tkernel.ld -nostdlib -Wl,-Map,$(PROG).map

@@ -105,7 +105,7 @@
 	stmia r0!, {r2-r10}; \
     ; \
 1:
-    .extern _edata, _end
+    .extern _bss_start, _end
     .extern _abort_handler, _syscall, _undefined_handler, _irq_handler
 	.extern _cstart, _schedule, _g_resched, _g_task_running
     .extern _cpuid
@@ -167,7 +167,7 @@ rolling:
 	stmia r11!, {r4-r7}
 
 	;@zeroify bss
-	ldr r10, =R(_edata)
+	ldr r10, =R(_bss_start)
 	ldr r11, =R(_end)
 	ldr r9, =0x0
 zeroify:

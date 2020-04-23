@@ -26,6 +26,10 @@
 #define LOADADDR 0x8000
 #endif
 
+#define PAGE_SHIFT  12
+#define PGDR_SHIFT  20
+#define PAGE_SIZE   (1<<PAGE_SHIFT)
+
 #define NR_KERN_PAGETABLE 80
 #define KERNBASE 0xC0000000
 #define R(x) ((x)-KERNBASE)

@@ -33,20 +33,19 @@ SECTIONS {
   .rodata : {
     *(.rodata)
   }
-  .rdata : {
-    *(.rdata)
-  }
+  . = ALIGN(PAGE_SIZE);
+  _rodata_end = .;
+
   .data : {
     *(.data)
   }
   . = ALIGN(4);
-  _edata = .;
+  _bss_start = .;
 
   .bss : {
     *(.bss)
     *(COMMON)
   }
-
   . = ALIGN(4);
   _end = .;
 }

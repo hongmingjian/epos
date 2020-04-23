@@ -590,7 +590,8 @@ void syscall(struct context *ctx)
  */
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 {
-    uint32_t i, prot;
+    uint32_t i;
+    struct vmzone *vmz;
 	char *fmt = "PF:0x%08x(0x%08x)%s";
 
     if((code & (1<<10))/*FS[4]==1*/) {
@@ -629,8 +630,8 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     }
 
     /*检查地址是否合法*/
-    prot = page_prot(vaddr);
-    if(prot == -1 || prot == VM_PROT_NONE) {
+    vmz = page_zone(vaddr);
+    if(vmz == NULL || vmz->prot == VM_PROT_NONE) {
         printk(fmt, vaddr, code, "->ILLEGAL MEMORY ACCESS\r\n");
         return -1;
     }
@@ -639,7 +640,7 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
         uint32_t paddr;
         uint32_t flags = L2E_V|L2E_C;
 
-        if(prot & VM_PROT_WRITE)
+        if(vmz->prot & VM_PROT_WRITE)
             flags |= L2E_W;
 
         /*只要访问用户的地址空间，都代表用户模式访问*/

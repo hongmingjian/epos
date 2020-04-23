@@ -21,34 +21,6 @@
 #include <string.h>
 #include "kernel.h"
 
-struct pvmap {
-    uint32_t paddr;
-    struct _vaddr {
-        uint32_t pgdir;
-        uint32_t vaddr;
-        struct _vaddr *next;
-    } vaddrs;
-    struct pvmap *next;
-};
-
-struct vsmap {
-    uint32_t pgdir;
-    uint32_t vaddr;
-    uint32_t length;
-    uint32_t fd;
-    uint32_t offset;
-    struct vsmap *next;
-};
-
-struct vmzone {
-    uint32_t base;
-    uint32_t limit;
-
-    uint32_t protect;
-
-    struct vmzone *next;
-};
-
 static struct vmzone km0;
 static struct vmzone *kvmzone;
 
@@ -58,7 +30,7 @@ void init_vmspace(uint32_t brk)
 {
     km0.base = USER_MAX_ADDR;
     km0.limit = brk - km0.base;
-    km0.protect = VM_PROT_ALL;
+    km0.prot = VM_PROT_ALL;
     km0.next = NULL;
     kvmzone = &km0;
 
@@ -114,7 +86,7 @@ uint32_t page_alloc_in_addr(uint32_t va, int npages, uint32_t prot)
     struct vmzone *x = (struct vmzone *)kmalloc(sizeof(struct vmzone));
     x->base = va;
     x->limit = size;
-    x->protect = prot;
+    x->prot = prot;
 
     if(q == NULL) {
         x->next = p;
@@ -177,7 +149,7 @@ uint32_t page_alloc(int npages, uint32_t prot, uint32_t user)
     struct vmzone *x = (struct vmzone *)kmalloc(sizeof(struct vmzone));
     x->base = va;
     x->limit = size;
-    x->protect = prot;
+    x->prot = prot;
 
     if(q == NULL) {
         x->next = p;
@@ -231,10 +203,9 @@ int page_free(uint32_t va, int npages)
 }
 
 /**
- * 检查虚拟地址是否合法
- * 若合法返回所在区域的protect标志，否则返回-1
+ * 返回va所在区域
  */
-uint32_t page_prot(uint32_t va)
+struct vmzone *page_zone(uint32_t va)
 {
     uint32_t flags;
     save_flags_cli(flags);
@@ -247,12 +218,12 @@ uint32_t page_prot(uint32_t va)
         if(va >= p->base &&
            va <  p->base+p->limit) {
             restore_flags(flags);
-            return p->protect;
+            return p;
         }
     }
 
     restore_flags(flags);
-    return -1;
+    return NULL;
 }
 
 /**

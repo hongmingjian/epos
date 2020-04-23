@@ -157,11 +157,22 @@ int snprintf (char *str, size_t count, const char *fmt, ...);
 int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 int printk(const char *fmt,...);
 
+struct file;
+struct vmzone {
+    uint32_t base;
+    uint32_t limit;
+    uint32_t prot;
+
+    struct file *fp;
+    off_t offset;
+
+    struct vmzone *next;
+};
 void     init_vmspace(uint32_t brk);
 uint32_t page_alloc(int npages, uint32_t prot, uint32_t user);
 uint32_t page_alloc_in_addr(uint32_t va, int npages, uint32_t prot);
 int      page_free(uint32_t va, int npages);
-uint32_t page_prot(uint32_t va);
+struct vmzone *page_zone(uint32_t va);
 #define VM_PROT_NONE   0x00
 #define VM_PROT_READ   0x01
 #define VM_PROT_WRITE  0x02
@@ -250,7 +261,7 @@ struct fs {
 
 	int (*poll)   (struct file *_fp, short events);
 	int (*ioctl)  (struct file *_fp, uint32_t cmd, void *arg);
-	
+
 	int (*mmap)   (struct file *_fp, off_t offset);
 };
 struct file {

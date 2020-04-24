@@ -28,7 +28,7 @@ void __main()
 	open("$:/uart1", O_WRONLY);//=STDERR_FILENO
 
     size_t heap_size = 32*1024*1024;
-    void  *heap_base = mmap(NULL, heap_size, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+    void  *heap_base = mmap(NULL, heap_size, PROT_READ|PROT_WRITE, MAP_ANON, -1, 0);
 	g_heap = tlsf_create_with_pool(heap_base, heap_size);
 }
 
@@ -79,7 +79,7 @@ void main(void *pv)
 		}
 	}
 
-	{
+	if(0) {
 		int fd = open(path, O_RDONLY);
 		if(fd < 0) {
 			printf("failed to open %s\r\n", path);
@@ -94,6 +94,7 @@ void main(void *pv)
 						printf("\r\n");
 					printf("%02X ", buf[i]);
 				}
+				printf("\r\n");
 			} else {
 				printf("read returns %d\r\n", nbyte);
 			}
@@ -101,25 +102,74 @@ void main(void *pv)
 		}
 	}
 	unsigned int  stack_size = 1024*1024;
-	
+
 	int tid_heartbeat;
 	unsigned char *stack_heartbeat = (unsigned char *)malloc(stack_size );
 	tid_heartbeat = task_create(stack_heartbeat+stack_size, &tsk_heartbeat, (void *)0);
 
 	int tid_foo;
 	unsigned char *stack_foo = (unsigned char *)malloc(stack_size );
-	tid_foo = task_create(stack_foo+stack_size, &tsk_foo, (void *)5);
+	tid_foo = task_create(stack_foo+stack_size, &tsk_foo, (void *)2);
 	task_wait(tid_foo, NULL);
 	printf("task #%d exited\r\n", tid_foo);
+
+	if(1) {
+		path = "A:/start.elf";
+		int fd = open(path, O_RDONLY);
+		if(fd < 0) {
+			printf("failed to open %s\r\n", path);
+		} else {
+			int len = lseek(fd, 0, SEEK_END);
+			char *buf = mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
+			close(fd);
+
+			printf("fd=%d, buf=0x%08x, buf[0]=0x%02x\r\n", fd, buf, buf[0]);
+
+			if(buf != MAP_FAILED) {
+				int i;
+				for(i = 0; i < 512; i++) {
+					if(i%16 == 0)
+						printf("\r\n");
+					printf("%02X ", buf[i+(len&(~(512-1)))]);
+				}
+				printf("\r\n");
+				//buf[0] = 1;
+				munmap(buf, len);
+				//buf[0] = 1;
+			} else
+				printf("failed to mmap %s\r\n", path);
+		}
+	}
+
+	if(0) {
+		path = "A:/sdcard.c";
+		int fd = open(path, O_RDWR);
+		if(fd < 0) {
+			printf("failed to open %s\r\n", path);
+		} else {
+			int len = lseek(fd, 0, SEEK_END);
+			char *buf = mmap(NULL, len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+			close(fd);
+
+			printf("fd=%d, buf=0x%08x, buf[0]=0x%02x\r\n", fd, buf, buf[0]);
+
+			if(buf != MAP_FAILED) {
+				buf[0]='H';
+				buf[len-1]='M';
+				munmap(buf, len);
+			} else
+				printf("failed to mmap %s\r\n", path);
+		}
+	}
 
 	while(1) {
 		char c;
 		if(1 == read(STDIN_FILENO, &c, 1))
 			write(STDOUT_FILENO, &c, 1);
 	}
-	
+
 	task_wait(tid_heartbeat, NULL);
-	
+
 	while(1)
 		;
 	task_exit(0);

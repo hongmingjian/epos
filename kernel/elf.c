@@ -89,7 +89,8 @@ uint32_t load_aout(struct fs *fs, char *filename)
 {
     int i, read;
     Elf32_Ehdr ehdr;
-    uint32_t va, npages, prot;
+    uint32_t npages, prot;
+    struct vmzone *z;
 
     struct file *fp;
     if(0 != fs->open(fs, filename, O_RDONLY, &fp)) {
@@ -143,8 +144,8 @@ uint32_t load_aout(struct fs *fs, char *filename)
                 prot |= VM_PROT_WRITE;
 
             npages = PAGE_ROUNDUP((phdr[i].p_vaddr&PAGE_MASK)+phdr[i].p_memsz)/PAGE_SIZE;
-            va = page_alloc_in_addr(PAGE_TRUNCATE(phdr[i].p_vaddr), npages, prot);
-            if(va != PAGE_TRUNCATE(phdr[i].p_vaddr)) {
+            z = page_alloc_in_addr(PAGE_TRUNCATE(phdr[i].p_vaddr), npages, prot, 0, NULL, 0);
+            if(z == NULL) {
                 fs->close(fp);
                 printk("task #%d: Address 0x%08x of %d pages has already been used!\r\n",
                     sys_task_getid(),

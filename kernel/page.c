@@ -31,6 +31,9 @@ void init_vmspace(uint32_t brk)
     km0.base = USER_MAX_ADDR;
     km0.limit = brk - km0.base;
     km0.prot = VM_PROT_ALL;
+    km0.fp = NULL;
+    km0.offset = 0;
+    km0.flags = 0;
     km0.next = NULL;
     kvmzone = &km0;
 
@@ -39,31 +42,31 @@ void init_vmspace(uint32_t brk)
 
 /**
  * 在指定的虚拟地址va，分配npages个连续页面
- * 失败返回SIZE_MAX，成功返回va
  */
-uint32_t page_alloc_in_addr(uint32_t va, int npages, uint32_t prot)
+struct vmzone *page_alloc_in_addr(uint32_t va, int npages, int prot,
+                                  int flags, struct file *fp, off_t offset)
 {
-    uint32_t flags;
+    uint32_t flagx;
     uint32_t size = npages * PAGE_SIZE;
     if(npages <= 0)
-        return SIZE_MAX;
+        return NULL;
     if(va & PAGE_MASK)
-        return SIZE_MAX;
+        return NULL;
 
     /*必须在[USER_MIN_ADDR, KERN_MAX_ADDR)之间*/
     if(va <  USER_MIN_ADDR ||
        va >= KERN_MAX_ADDR ||
        va + size > KERN_MAX_ADDR)
-        return SIZE_MAX;
+        return NULL;
 
-    save_flags_cli(flags);
+    save_flags_cli(flagx);
 
     struct vmzone *p = kvmzone, *q = NULL;
     if(va < USER_MAX_ADDR) {
         /*不能跨越用户空间和内核空间的边界*/
         if(va + size > USER_MAX_ADDR) {
-            restore_flags(flags);
-            return SIZE_MAX;
+            restore_flags(flagx);
+            return NULL;
         }
         p = uvmzone;
     }
@@ -71,47 +74,53 @@ uint32_t page_alloc_in_addr(uint32_t va, int npages, uint32_t prot)
     for(; p != NULL; q = p, p = p->next) {
         if(va >= p->base &&
            va <  p->base + p->limit) {
-            restore_flags(flags);
-            return SIZE_MAX;
+            restore_flags(flagx);
+            return NULL;
         }
         if(va < p->base) {
             if(va + size > p->base) {
-                restore_flags(flags);
-                return SIZE_MAX;
+                restore_flags(flagx);
+                return NULL;
             }
             break;
         }
     }
 
-    struct vmzone *x = (struct vmzone *)kmalloc(sizeof(struct vmzone));
-    x->base = va;
-    x->limit = size;
-    x->prot = prot;
+    struct vmzone *z = (struct vmzone *)kmalloc(sizeof(struct vmzone));
+    z->base = va;
+    z->limit = size;
+    z->prot = prot;
+    z->fp = fp;
+    if(z->fp)
+		z->fp->refcnt++;
+    z->offset = offset;
+    z->flags = flags;
 
     if(q == NULL) {
-        x->next = p;
-        uvmzone = x;
+        z->next = p;
+        uvmzone = z;
     } else {
-        x->next = q->next;
-        q->next = x;
+        z->next = q->next;
+        q->next = z;
     }
 
-    restore_flags(flags);
-    return va;
+    restore_flags(flagx);
+    return z;
 }
 
 /**
  * 在地址空间中分配npages个连续页面，返回页面所在的起始地址
  * user是0表示在内核空间中分配，否则在用户空间中分配
  */
-uint32_t page_alloc(int npages, uint32_t prot, uint32_t user)
+struct vmzone *page_alloc(int npages, int prot, int user,
+                          int flags, struct file *fp, off_t offset)
 {
-    uint32_t flags;
+    uint32_t flagx;
     uint32_t size = npages * PAGE_SIZE;
     if(npages <= 0)
-        return SIZE_MAX;
+        return NULL;
 
-    save_flags_cli(flags);
+    save_flags_cli(flagx);
 
     struct vmzone *p = kvmzone, *q = NULL;
     if(user) {
@@ -135,33 +144,37 @@ uint32_t page_alloc(int npages, uint32_t prot, uint32_t user)
     if(user) {
         if(va >= USER_MAX_ADDR ||
            va + size > USER_MAX_ADDR) {
-            restore_flags(flags);
-            return SIZE_MAX;
+            restore_flags(flagx);
+            return NULL;
         }
     } else {
         if(va >= KERN_MAX_ADDR ||
            va + size > KERN_MAX_ADDR) {
-            restore_flags(flags);
-            return SIZE_MAX;
+            restore_flags(flagx);
+            return NULL;
         }
     }
 
-    struct vmzone *x = (struct vmzone *)kmalloc(sizeof(struct vmzone));
-    x->base = va;
-    x->limit = size;
-    x->prot = prot;
+    struct vmzone *z = (struct vmzone *)kmalloc(sizeof(struct vmzone));
+    z->base = va;
+    z->limit = size;
+    z->prot = prot;
+    z->fp = fp;
+    if(z->fp)
+		z->fp->refcnt++;
+    z->offset = offset;
+    z->flags = flags;
 
     if(q == NULL) {
-        x->next = p;
-        uvmzone = x;
+        z->next = p;
+        uvmzone = z;
     } else {
-        x->next = q->next;
-        q->next = x;
+        z->next = q->next;
+        q->next = z;
     }
 
-    restore_flags(flags);
-
-    return va;
+    restore_flags(flagx);
+    return z;
 }
 
 /**
@@ -193,6 +206,26 @@ int page_free(uint32_t va, int npages)
                 q->next = p->next;
             }
             restore_flags(flags);
+
+            if(p->fp) {
+				if(p->flags & MAP_SHARED) {
+					uint32_t pte;
+					int i;
+					for(i = 0; i < p->limit; i+=PAGE_SIZE) {
+						pte = *vtopte(va+i);
+						if(pte & L2E_V) {
+							if(p->fp->fs->seek(p->fp, p->offset+i, SEEK_SET) >= 0)
+								p->fp->fs->write(p->fp, (void *)(va+i), PAGE_SIZE);
+						}
+					}
+				}
+
+				p->fp->refcnt--;
+				if(p->fp->refcnt == 0) {
+					p->fp->fs->close(p->fp);
+				}
+            }
+
             kfree(p);
             return 0;
         }

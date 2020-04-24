@@ -428,56 +428,67 @@ void syscall(struct context *ctx)
     case SYSCALL_mmap:
         {
             void *addr = (void *)(ctx->cf_r0);
-            size_t len = ctx->cf_r1;
+            size_t len = ctx->cf_r1, len1=PAGE_ROUNDUP(len);
             int prot = ctx->cf_r2;
             int flags = ctx->cf_r3;
             int fd = *(int *)(ctx->cf_usr_sp+4);
             off_t offset = *(off_t *)(ctx->cf_usr_sp+8);
-            uint32_t npages = PAGE_ROUNDUP(len)/PAGE_SIZE;
+            uint32_t npages = len1/PAGE_SIZE;
             uint32_t va = (uint32_t)addr;
+            struct vmzone *z;
 
-            ctx->cf_r0 = -1;
+            ctx->cf_r0 = (uint32_t)MAP_FAILED;
             if(len == 0)
                 break;
-            if(fd == -1) {
+			if(flags & MAP_FIXED)
+				if(!IN_USER_VM(va, len1) || (va & PAGE_MASK))
+					break;
+
+            if(fd < 0) {
                  if(!(flags & MAP_ANON))
                      break;
+				if(flags & MAP_FIXED) {
+					z = page_alloc_in_addr(va, npages, prot, flags, NULL, 0);
+				} else {
+					z = page_alloc(npages, prot, 1, flags, NULL, 0);
+				}
             } else {
                 if(flags & MAP_ANON)
                     break;
+                if(fd >= NR_OPEN_FILE || g_file_vector[fd] == NULL)
+					break;
+                if(offset & PAGE_MASK)
+					break;
+				if(flags & MAP_FIXED) {
+					z = page_alloc_in_addr(va, npages, prot, flags, g_file_vector[fd], offset);
+				} else {
+					z = page_alloc(npages, prot, 1, flags, g_file_vector[fd], offset);
+				}
             }
-            if(!(flags & MAP_PRIVATE))
-                break;
 
-            if(flags & MAP_FIXED) {
-                if(!IN_USER_VM(va, len) ||
-                   (va & PAGE_MASK)) {
-                    break;
-                }
-                ctx->cf_r0 = page_alloc_in_addr(va, npages, prot);
-            } else {
-                ctx->cf_r0 = page_alloc(npages, prot, 1);
-            }
+            if(z != NULL)
+				ctx->cf_r0 = z->base;
         }
         break;
     case SYSCALL_munmap:
         {
             void *addr = (void *)(ctx->cf_r0);
-            size_t len = ctx->cf_r1;
-            uint32_t npages = PAGE_ROUNDUP(len)/PAGE_SIZE;
+            size_t len = ctx->cf_r1, len1=PAGE_ROUNDUP(len);
+            uint32_t npages = len1/PAGE_SIZE;
             uint32_t va = (uint32_t)addr;
 
-            ctx->cf_r0 = -1;
+            ctx->cf_r0 = (uint32_t)MAP_FAILED;
             if(len == 0)
                 break;
 
-            if(!IN_USER_VM(va, len)) {
+            if(!IN_USER_VM(va, len1) ||
+               (va & PAGE_MASK)) {
                 break;
             }
 
             ctx->cf_r0 = page_free(va, npages);
 
-            if(ctx->cf_r0 != -1) {
+            if(ctx->cf_r0 == 0) {
                 uint32_t i, x;
                 for(i = 0; i < npages; i++) {
                     x = *vtopte(va);
@@ -485,7 +496,7 @@ void syscall(struct context *ctx)
                         *vtopte(va) = 0;
                         invlpg(va);
 
-                        //XXX - 可能不是RAM，不能用frame_free
+                        //XXX - 可能被共享，不能frame_free？
                         frame_free(PAGE_TRUNCATE(x), 1);
                     }
                     va += PAGE_SIZE;
@@ -591,7 +602,7 @@ void syscall(struct context *ctx)
 int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
 {
     uint32_t i;
-    struct vmzone *vmz;
+    struct vmzone *z;
 	char *fmt = "PF:0x%08x(0x%08x)%s";
 
     if((code & (1<<10))/*FS[4]==1*/) {
@@ -630,17 +641,17 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     }
 
     /*检查地址是否合法*/
-    vmz = page_zone(vaddr);
-    if(vmz == NULL || vmz->prot == VM_PROT_NONE) {
+    z = page_zone(vaddr);
+    if(z == NULL || z->prot == VM_PROT_NONE) {
         printk(fmt, vaddr, code, "->ILLEGAL MEMORY ACCESS\r\n");
         return -1;
     }
 
     {
-        uint32_t paddr;
+        uint32_t paddr, vaddr0=PAGE_TRUNCATE(vaddr);
         uint32_t flags = L2E_V|L2E_C;
 
-        if(vmz->prot & VM_PROT_WRITE)
+        if(z->prot & VM_PROT_WRITE)
             flags |= L2E_W;
 
         /*只要访问用户的地址空间，都代表用户模式访问*/
@@ -655,14 +666,22 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
             /*如果是小页表引起的缺页，需要填充页目录*/
             if(vaddr >= USER_MAX_ADDR && vaddr < KERNBASE) {
                 for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++) {
-                    *(PTD+i+((PAGE_TRUNCATE(vaddr)-USER_MAX_ADDR))/L2_TABLE_SIZE) = (paddr+i*L2_TABLE_SIZE)|L1E_V;
+                    *(PTD+i+((vaddr0-USER_MAX_ADDR))/L2_TABLE_SIZE) = (paddr+i*L2_TABLE_SIZE)|L1E_V;
                 }
             }
 
             *vtopte(vaddr) = paddr|flags;
-
             invlpg(vaddr);
-            memset((void *)(PAGE_TRUNCATE(vaddr)), 0, PAGE_SIZE);
+
+            if(z->fp != NULL) {
+				if(z->fp->fs->seek(z->fp, vaddr0-z->base+z->offset, SEEK_SET) >= 0 &&
+				   z->fp->fs->read(z->fp, (void *)(vaddr0), PAGE_SIZE) >= 0)
+					;
+				else
+					;
+            } else
+				memset((void *)(vaddr0), 0, PAGE_SIZE);
+
             return 0;
         } else {
             /*物理内存已耗尽*/

@@ -36,6 +36,7 @@ int sys_open(char *path, int mode)
 
 	struct file *fp;
 	if(0 == g_fs_vector[ifs]->open(g_fs_vector[ifs], &path[3], mode, &fp)) {
+		fp->refcnt++;
 		g_file_vector[fd] = fp;
 		return fd;
 	}
@@ -47,7 +48,9 @@ int sys_close(int fd)
 {
 	if(fd < 0 || fd >= NR_OPEN_FILE || g_file_vector[fd] == NULL)
 		return -1;
-	g_file_vector[fd]->fs->close(g_file_vector[fd]);
+	g_file_vector[fd]->refcnt--;
+	if(g_file_vector[fd]->refcnt == 0)
+		g_file_vector[fd]->fs->close(g_file_vector[fd]);
 	g_file_vector[fd] = NULL;
 	return 0;
 }

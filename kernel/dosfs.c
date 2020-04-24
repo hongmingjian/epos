@@ -1418,13 +1418,22 @@ static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp)
 	unsigned char scratch[SECTOR_SIZE];
 
 	uint8_t _mode;
-	if((mode & 1) == O_RDONLY)
-		_mode = DFS_READ;
-	else if((mode & 1) == O_WRONLY)
+
+	switch(mode&3) {
+	case O_WRONLY:
+	case O_RDWR:
 		_mode = DFS_WRITE;
+		break;
+	case O_RDONLY:
+		_mode = DFS_READ;
+		break;
+	default:
+		return -1;
+	}
 
 	struct fat_file *fp = (struct fat_file *)kmalloc(sizeof(struct fat_file));
 	fp->file.fs = this;
+	fp->file.refcnt = 0;
 
 	uint32_t ret = DFS_OpenFile(&fs->volinfo, name, _mode, &scratch[0], &fp->fi);
 	if(ret == DFS_OK) {

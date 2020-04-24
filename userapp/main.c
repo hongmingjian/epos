@@ -34,6 +34,7 @@ void __main()
 
 void tsk_foo(void *pv);
 void tsk_heartbeat(void *pv);
+void tsk_fib(void *pv);
 
 /**
  * 第一个运行在用户模式的线程所执行的函数
@@ -47,7 +48,7 @@ void main(void *pv)
 
     char *path = "$:/sd0";
 
-	if(0) {
+	if(1-1) {
 		int fd = open(path, O_WRONLY);
 		if(fd < 0) {
 			printf("failed to open %s\r\n", path);
@@ -79,7 +80,7 @@ void main(void *pv)
 		}
 	}
 
-	if(0) {
+	if(2-2) {
 		int fd = open(path, O_RDONLY);
 		if(fd < 0) {
 			printf("failed to open %s\r\n", path);
@@ -101,19 +102,32 @@ void main(void *pv)
 			close(fd);
 		}
 	}
-	unsigned int  stack_size = 1024*1024;
+
+	int  stack_size = 1024*1024;
 
 	int tid_heartbeat;
-	unsigned char *stack_heartbeat = (unsigned char *)malloc(stack_size );
+	char *stack_heartbeat = (char *)mmap(NULL, stack_size, PROT_READ|PROT_WRITE, MAP_STACK, -1, 0);
 	tid_heartbeat = task_create(stack_heartbeat+stack_size, &tsk_heartbeat, (void *)0);
 
-	int tid_foo;
-	unsigned char *stack_foo = (unsigned char *)malloc(stack_size );
-	tid_foo = task_create(stack_foo+stack_size, &tsk_foo, (void *)2);
-	task_wait(tid_foo, NULL);
-	printf("task #%d exited\r\n", tid_foo);
+	if(3) {
+		int tid_foo;
+		char *stack_foo = (char *)mmap(NULL, stack_size, PROT_READ|PROT_WRITE, MAP_STACK, -1, 0);
+		tid_foo = task_create(stack_foo+stack_size, &tsk_foo, (void *)2);
+		task_wait(tid_foo, NULL);
+		printf("task #%d exited\r\n", tid_foo);
+		printf("3: munmap: %d\r\n", munmap(stack_foo, stack_size));
+	}
 
-	if(1) {
+	if(4-4) {
+		int tid_fib;
+		char *stack_fib = (char *)mmap(NULL, 4*1024, PROT_READ|PROT_WRITE, MAP_STACK, -1, 0);
+		tid_fib = task_create(stack_fib+4*1024, &tsk_fib, (void *)0);
+		task_wait(tid_fib, NULL);
+		printf("task #%d exited\r\n", tid_fib);
+		printf("4: munmap: %d\r\n", munmap(stack_fib, 4*1024));
+	}
+
+	if(5) {
 		path = "A:/start.elf";
 		int fd = open(path, O_RDONLY);
 		if(fd < 0) {
@@ -134,14 +148,14 @@ void main(void *pv)
 				}
 				printf("\r\n");
 				//buf[0] = 1;
-				munmap(buf, len);
+				printf("5: munmap: %d\r\n", munmap(buf, len));
 				//buf[0] = 1;
 			} else
 				printf("failed to mmap %s\r\n", path);
 		}
 	}
 
-	if(0) {
+	if(6-6) {
 		path = "A:/sdcard.c";
 		int fd = open(path, O_RDWR);
 		if(fd < 0) {
@@ -156,19 +170,20 @@ void main(void *pv)
 			if(buf != MAP_FAILED) {
 				buf[0]='H';
 				buf[len-1]='M';
-				munmap(buf, len);
+				printf("6: munmap: %d\r\n", munmap(buf, len));
 			} else
 				printf("failed to mmap %s\r\n", path);
 		}
 	}
 
-	while(1) {
+	while(7) {
 		char c;
 		if(1 == read(STDIN_FILENO, &c, 1))
 			write(STDOUT_FILENO, &c, 1);
 	}
 
 	task_wait(tid_heartbeat, NULL);
+	printf("heartbeat: munmap: %d\r\n", munmap(stack_heartbeat, stack_size));
 
 	while(1)
 		;
@@ -207,5 +222,18 @@ void tsk_foo(void *pv)
 		*p = n;
 		free(p);
 	}
+    task_exit(0);
+}
+
+void tsk_fib(void *pv)
+{
+	int i, sum=0;
+	char buf[4096+1024];
+
+	for(i = 0; i < sizeof(buf); i++)
+		sum+=buf[i];
+
+	printf("sum=%d\r\n", sum);
+
     task_exit(0);
 }

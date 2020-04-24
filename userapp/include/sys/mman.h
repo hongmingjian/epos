@@ -24,6 +24,8 @@ int   munmap(void *addr, size_t len);
 #define	MAP_FILE	0x0000		/* map from file (default) */
 #define	MAP_ANON	0x1000		/* allocated from memory, swap space */
 
+#define MAP_STACK   0x20000
+
 /*
  * Error return from mmap()
  */

@@ -199,7 +199,8 @@ int page_free(uint32_t va, int npages)
         p = uvmzone;
     }
     for(; p != NULL; q = p, p = p->next) {
-        if(va == p->base && size == p->limit) {
+		if((va   == p->base +((p->flags&MAP_STACK)?PAGE_SIZE:0)) &&
+		   (size == p->limit-((p->flags&MAP_STACK)?PAGE_SIZE:0))) {
             if(q == NULL) {
                 uvmzone = p->next;
             } else {

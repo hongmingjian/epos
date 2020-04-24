@@ -433,17 +433,25 @@ void syscall(struct context *ctx)
             int flags = ctx->cf_r3;
             int fd = *(int *)(ctx->cf_usr_sp+4);
             off_t offset = *(off_t *)(ctx->cf_usr_sp+8);
-            uint32_t npages = len1/PAGE_SIZE;
+            uint32_t npages;
             uint32_t va = (uint32_t)addr;
             struct vmzone *z;
 
             ctx->cf_r0 = (uint32_t)MAP_FAILED;
             if(len == 0)
                 break;
+			if(flags & MAP_STACK) {
+				flags |= MAP_ANON;
+				if((prot&(PROT_READ|PROT_WRITE)) != (PROT_READ|PROT_WRITE))
+					break;
+
+				len1 += PAGE_SIZE;/*Guard page*/
+			}
 			if(flags & MAP_FIXED)
 				if(!IN_USER_VM(va, len1) || (va & PAGE_MASK))
 					break;
 
+			npages = len1/PAGE_SIZE;
             if(fd < 0) {
                  if(!(flags & MAP_ANON))
                      break;
@@ -467,7 +475,7 @@ void syscall(struct context *ctx)
             }
 
             if(z != NULL)
-				ctx->cf_r0 = z->base;
+				ctx->cf_r0 = z->base+((flags&MAP_STACK)?PAGE_SIZE:0);
         }
         break;
     case SYSCALL_munmap:
@@ -645,6 +653,13 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     if(z == NULL || z->prot == VM_PROT_NONE) {
         printk(fmt, vaddr, code, "->ILLEGAL MEMORY ACCESS\r\n");
         return -1;
+    }
+
+    if(z->flags & MAP_STACK) {
+		if(vaddr < (z->base + PAGE_SIZE)) {
+			printk(fmt, vaddr, code, "->STACK OVERFLOW\r\n");
+			return -1;
+		}
     }
 
     {

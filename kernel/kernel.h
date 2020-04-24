@@ -196,6 +196,7 @@ void     page_unmap(uint32_t vaddr, uint32_t npages);
 #define	MAP_FIXED	0x0010		/* interpret addr exactly */
 #define	MAP_FILE	0x0000		/* map from file (default) */
 #define	MAP_ANON	0x1000		/* allocated from memory, swap space */
+#define MAP_STACK   0x20000
 
 #define MAP_FAILED	((void *)-1)	/* [MF|SHM] mmap failed */
 

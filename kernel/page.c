@@ -30,7 +30,7 @@ void init_vmspace(uint32_t brk)
 {
     km0.base = USER_MAX_ADDR;
     km0.limit = brk - km0.base;
-    km0.prot = VM_PROT_ALL;
+    km0.prot = PROT_ALL;
     km0.fp = NULL;
     km0.offset = 0;
     km0.flags = 0;
@@ -48,26 +48,24 @@ struct vmzone *page_alloc_in_addr(uint32_t va, int npages, int prot,
 {
     uint32_t flagx;
     uint32_t size = npages * PAGE_SIZE;
+	int user = va < USER_MAX_ADDR;
     if(npages <= 0)
         return NULL;
     if(va & PAGE_MASK)
         return NULL;
 
-    /*必须在[USER_MIN_ADDR, KERN_MAX_ADDR)之间*/
-    if(va <  USER_MIN_ADDR ||
-       va >= KERN_MAX_ADDR ||
-       va + size > KERN_MAX_ADDR)
-        return NULL;
+	if(user) {
+        if(!IN_USER_VM(va, size))
+			return NULL;
+	} else {
+	    if(!IN_KERN_VM(va, size))
+			return NULL;
+	}
 
     save_flags_cli(flagx);
 
     struct vmzone *p = kvmzone, *q = NULL;
-    if(va < USER_MAX_ADDR) {
-        /*不能跨越用户空间和内核空间的边界*/
-        if(va + size > USER_MAX_ADDR) {
-            restore_flags(flagx);
-            return NULL;
-        }
+    if(user) {
         p = uvmzone;
     }
 
@@ -142,14 +140,12 @@ struct vmzone *page_alloc(int npages, int prot, int user,
     }
 
     if(user) {
-        if(va >= USER_MAX_ADDR ||
-           va + size > USER_MAX_ADDR) {
+		if(!IN_USER_VM(va, size)) {
             restore_flags(flagx);
             return NULL;
         }
     } else {
-        if(va >= KERN_MAX_ADDR ||
-           va + size > KERN_MAX_ADDR) {
+        if(!IN_KERN_VM(va, size)) {
             restore_flags(flagx);
             return NULL;
         }
@@ -215,8 +211,11 @@ int page_free(uint32_t va, int npages)
 					for(i = 0; i < p->limit; i+=PAGE_SIZE) {
 						pte = *vtopte(va+i);
 						if(pte & L2E_V) {
-							if(p->fp->fs->seek(p->fp, p->offset+i, SEEK_SET) >= 0)
-								p->fp->fs->write(p->fp, (void *)(va+i), PAGE_SIZE);
+							if(p->fp->fs->seek(p->fp, p->offset+i, SEEK_SET) >= 0 &&
+							   p->fp->fs->write(p->fp, (void *)(va+i), PAGE_SIZE) >= 0)
+								;
+							else
+								;
 						}
 					}
 				}
@@ -260,11 +259,88 @@ struct vmzone *page_zone(uint32_t va)
     return NULL;
 }
 
+void *sys_mmap(uint32_t va, int npages, int prot, int user, int flags, struct file *fp, off_t offset)
+{
+	void *retval = MAP_FAILED;
+	struct vmzone *z;
+
+	if(npages == 0)
+		return retval;
+
+	if(flags & MAP_STACK) {
+		flags |= MAP_ANON;
+		if((prot&PROT_RW) != PROT_RW)
+			return retval;
+
+		npages += 1;/*Guard page*/
+	}
+
+	if(flags & MAP_FIXED) {
+		if(va & PAGE_MASK)
+			return retval;
+		if(user) {
+			if(!IN_USER_VM(va, npages*PAGE_SIZE))
+				return retval;
+		} else {
+			if(!IN_KERN_VM(va, npages*PAGE_SIZE))
+				return retval;
+		}
+	}
+
+	if(fp == NULL) {
+		 if(!(flags & MAP_ANON))
+			 return retval;
+		offset = 0;
+	} else {
+		if(flags & MAP_ANON)
+			return retval;
+		if(offset & PAGE_MASK)
+			return retval;
+	}
+
+	if(flags & MAP_FIXED) {
+		z = page_alloc_in_addr(va, npages, prot, flags, fp, offset);
+	} else {
+		z = page_alloc(npages, prot, user, flags, fp, offset);
+	}
+
+	if(z != NULL)
+		retval = z->base+((flags&MAP_STACK)?PAGE_SIZE:0);
+
+	return retval;
+}
+
+int sys_munmap(uint32_t va, int npages)
+{
+	int retval = (int)MAP_FAILED;
+
+	if(npages == 0)
+		return retval;
+
+	retval = page_free(va, npages);
+
+	if(retval == 0) {
+		uint32_t i, x;
+		for(i = 0; i < npages; i++) {
+			x = *vtopte(va);
+			if(x & L2E_V) {
+				*vtopte(va) = 0;
+				invlpg(va);
+
+				//XXX - 可能被共享，不能frame_free？
+				frame_free(PAGE_TRUNCATE(x), 1);
+			}
+			va += PAGE_SIZE;
+		}
+	}
+
+	return retval;
+}
 /**
  * 把从vaddr开始的虚拟地址，映射到paddr开始的物理地址。
  * 共映射npages页面，把PTE的标志位设为flags
  */
-void page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags)
+void page_map(uint32_t vaddr, uint32_t paddr, int npages, uint32_t flags)
 {
     for (; npages > 0; npages--){
         *vtopte(vaddr) = paddr | flags;
@@ -277,7 +353,7 @@ void page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags)
 /**
  * 取消page_map的所做的映射
  */
-void page_unmap(uint32_t vaddr, uint32_t npages)
+void page_unmap(uint32_t vaddr, int npages)
 {
     for (; npages > 0; npages--){
         *vtopte(vaddr) = 0;

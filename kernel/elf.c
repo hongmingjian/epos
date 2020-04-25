@@ -135,13 +135,13 @@ uint32_t load_aout(struct fs *fs, char *filename)
     for (i=0; i<ehdr.e_phnum; i++)         {
         switch(phdr[i].p_type) {
         case PT_LOAD:
-            prot = VM_PROT_NONE;
+            prot = PROT_NONE;
             if(phdr[i].p_flags & PF_X)
-                prot |= VM_PROT_EXEC;
+                prot |= PROT_EXEC;
             if(phdr[i].p_flags & PF_R)
-                prot |= VM_PROT_READ;
+                prot |= PROT_READ;
             if(phdr[i].p_flags & PF_W)
-                prot |= VM_PROT_WRITE;
+                prot |= PROT_WRITE;
 
             npages = PAGE_ROUNDUP((phdr[i].p_vaddr&PAGE_MASK)+phdr[i].p_memsz)/PAGE_SIZE;
             z = page_alloc_in_addr(PAGE_TRUNCATE(phdr[i].p_vaddr), npages, prot, 0, NULL, 0);

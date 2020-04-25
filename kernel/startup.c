@@ -94,8 +94,9 @@ void start_user_task()
             printk("task #%d: Creating first user task...", sys_task_getid());
 
             /* XXX - 为第一个用户级线程准备栈，大小1MiB */
-            page_alloc_in_addr(USER_MAX_ADDR - (1024*1024), (1024*1024)/PAGE_SIZE, VM_PROT_RW,
-                               0, NULL, 0);
+			sys_mmap(USER_MAX_ADDR - (1024*1024) - PAGE_SIZE/*Guard page*/,
+			         (1024*1024)/PAGE_SIZE, PROT_RW,
+			         1, MAP_FIXED|MAP_STACK, NULL, 0);
             if(sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678) == NULL)
                 printk("Failed\r\n");
         } else
@@ -151,14 +152,14 @@ void mi_startup()
     /*
      * 把[MMIO_BASE_VA, MMIO_BASE_VA+16M)保留下来
      */
-    page_alloc_in_addr(MMIO_BASE_VA, 4096, VM_PROT_RW,
+    page_alloc_in_addr(MMIO_BASE_VA, 4096, PROT_RW,
                        0, NULL, 0);
 
     /*
      * 把[0xffff0000, 0xffff1000)保留下来，并映射到0x0。
      * 然后打开hivecs模式(ARM720T TRM, Rev 3, p. 3-5)
      */
-    page_alloc_in_addr(0xffff0000, 1, VM_PROT_RW, 0, NULL, 0);
+    page_alloc_in_addr(0xffff0000, 1, PROT_RW, 0, NULL, 0);
     page_map(0xffff0000, LOADADDR, 1, L2E_V|L2E_W|L2E_C);
     __asm__ __volatile__ (
              "mrc p15,0,r0,c1,c0,0\n\t"

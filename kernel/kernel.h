@@ -133,6 +133,11 @@ void        sys_task_yield();
         (uint32_t)(va) <  USER_MAX_ADDR && \
         (uint32_t)(va) + (len) <= USER_MAX_ADDR)
 
+#define IN_KERN_VM(va, len) \
+       ((uint32_t)(va) >= USER_MAX_ADDR && \
+        (uint32_t)(va) <  KERN_MAX_ADDR && \
+        (uint32_t)(va) + (len) <= KERN_MAX_ADDR)
+
 /**
  * `PT', `PTD' and `vtopte' come from FreeBSD
  */
@@ -176,21 +181,18 @@ struct vmzone *page_alloc_in_addr(uint32_t va, int npages, int prot,
                                   int flags, struct file *fp, off_t offset);
 struct vmzone *page_zone(uint32_t va);
 int            page_free(uint32_t va, int npages);
-#define VM_PROT_NONE   0x00
-#define VM_PROT_READ   0x01
-#define VM_PROT_WRITE  0x02
-#define VM_PROT_EXEC   0x04
-#define VM_PROT_RW     (VM_PROT_READ|VM_PROT_WRITE)
-#define VM_PROT_ALL    (VM_PROT_RW  |VM_PROT_EXEC)
+#define PROT_NONE   0x00
+#define PROT_READ   0x01
+#define PROT_WRITE  0x02
+#define PROT_EXEC   0x04
+#define PROT_RW     (PROT_READ|PROT_WRITE)
+#define PROT_ALL    (PROT_RW  |PROT_EXEC)
 
-void     page_map(uint32_t vaddr, uint32_t paddr, uint32_t npages, uint32_t flags);
-void     page_unmap(uint32_t vaddr, uint32_t npages);
+void     page_map(uint32_t vaddr, uint32_t paddr, int npages, uint32_t flags);
+void     page_unmap(uint32_t vaddr, int npages);
 
-#define	PROT_NONE	0x00	/* [MC2] no permissions */
-#define	PROT_READ	0x01	/* [MC2] pages can be read */
-#define	PROT_WRITE	0x02	/* [MC2] pages can be written */
-#define	PROT_EXEC	0x04	/* [MC2] pages can be executed */
-
+void *sys_mmap(uint32_t va, int npages, int prot, int user, int flags, struct file *fp, off_t offset);
+int   sys_munmap(uint32_t va, int npages);
 #define	MAP_SHARED	0x0001		/* [MF|SHM] share changes */
 #define	MAP_PRIVATE	0x0002		/* [MF|SHM] changes are private */
 #define	MAP_FIXED	0x0010		/* interpret addr exactly */

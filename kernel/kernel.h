@@ -121,7 +121,7 @@ void        sys_task_yield();
  */
 #define VADDR(pdi, pti) ((uint32_t)(((pdi)<<PGDR_SHIFT)|((pti)<<PAGE_SHIFT)))
 
-#define KERN_MAX_ADDR VADDR(0xFFF, 0xFF)
+#define KERN_MAX_ADDR VADDR(0xFFF, 0xF0)
 #define KERN_MIN_ADDR VADDR(0xC00, ((LOADADDR-L1_TABLE_SIZE)>>PAGE_SHIFT))
 #define USER_MAX_ADDR VADDR(0xBFC, 0x00)
 #define USER_MIN_ADDR VADDR(4, 0)

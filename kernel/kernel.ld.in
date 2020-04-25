@@ -32,6 +32,7 @@ SECTIONS {
   . = ALIGN(4);
   .rodata : {
     *(.rodata)
+    *(.rodata.*)
   }
   . = ALIGN(PAGE_SIZE);
   _rodata_end = .;

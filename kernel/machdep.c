@@ -593,7 +593,6 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
         printk(fmt, vaddr, code, "->ILLEGAL MEMORY ACCESS\r\n");
         return -1;
     }
-
     if(z->flags & MAP_STACK) {
 		if(vaddr < (z->base + PAGE_SIZE)) {
 			printk(fmt, vaddr, code, "->STACK OVERFLOW\r\n");

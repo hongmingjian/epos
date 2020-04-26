@@ -2670,7 +2670,7 @@ static int sd_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_size
 
 static int sd_poll(struct dev *dp, short events)
 {
-	return 1;
+	return POLLIN|POLLOUT;
 }
 
 static int sd_ioctl(struct dev *dp, uint32_t cmd, void *arg)

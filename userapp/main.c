@@ -147,9 +147,9 @@ void main(void *pv)
 					printf("%02X ", buf[i+(len&(~(512-1)))]);
 				}
 				printf("\r\n");
-				//buf[0] = 1;
+				//buf[0] = 1; // Protection violation
 				printf("5: munmap: %d\r\n", munmap(buf, len));
-				//buf[0] = 1;
+				//buf[0] = 1; // Illegal memory access
 			} else
 				printf("failed to mmap %s\r\n", path);
 		}

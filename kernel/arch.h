@@ -68,10 +68,10 @@
 #define L1E_U  0
 #define L1E_C  0
 
-#define L2E_V  (_L2_S_TEX(0)|_L2_TYPE_S) /* Valid */
+#define L2E_V  (_L2_S_TEX(0)|_L2_B|_L2_TYPE_S) /* Valid */
 #define L2E_W  _L2_AP0                   /* Read/Write */
 #define L2E_U  _L2_AP1                   /* User/Supervisor */
-#define L2E_C  (_L2_B|_L2_C)             /* Cacheable */
+#define L2E_C  _L2_C                     /* Cacheable */
 
 #ifndef __ASSEMBLY__
 #include <stdint.h>

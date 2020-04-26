@@ -34,7 +34,7 @@ static int zero_read(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_siz
 
 static int zero_poll(struct dev *dp, short events)
 {
-	return 1;
+	return POLLIN;
 }
 
 static struct driver zero_driver = {
@@ -61,13 +61,18 @@ static int null_write(struct dev *dp, uint32_t addr, uint8_t *buf, size_t buf_si
 	return buf_size;
 }
 
+static int null_poll(struct dev *dp, short events)
+{
+	return POLLOUT;
+}
+
 static struct driver null_driver = {
 	.major = "null",
 	.attach = common_attach,
 	.detach = common_detach,
 	.read = common_readwrite,
 	.write = null_write,
-	.poll = zero_poll,
+	.poll = null_poll,
 	.ioctl = common_ioctl
 };
 

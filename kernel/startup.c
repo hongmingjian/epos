@@ -47,9 +47,6 @@ struct file   *g_file_vector[NR_OPEN_FILE];
 
 void start_user_task()
 {
-    char *filename="a.out";
-    uint32_t entry;
-
     calibrate_delay();
 
     /*
@@ -85,22 +82,28 @@ void start_user_task()
      * 加载a.out，并创建第一个用户级线程执行a.out中的main函数
      */
     {
-        printk("task #%d: Loading %s...", sys_task_getid(), filename);
-        entry = load_aout(g_fs_vector[1], filename);
+		char *filename="a.out";
+		uint32_t entry;
+		struct file *fp = NULL;
 
-        if(entry) {
+        printk("task #%d: Loading %s...", sys_task_getid(), filename);
+        if((0 == g_fs_vector[1]->open(g_fs_vector[1], filename, O_RDONLY, &fp)) &&
+           (0 != (entry = load_aout(fp)))) {
             printk("Done\r\n");
 
             printk("task #%d: Creating first user task...", sys_task_getid());
 
-            /* XXX - 为第一个用户级线程准备栈，大小1MiB */
+            /* 为第一个用户级线程准备栈，大小1MiB */
 			sys_mmap(USER_MAX_ADDR - (1024*1024) - PAGE_SIZE/*Guard page*/,
 			         (1024*1024)/PAGE_SIZE, PROT_RW,
 			         1, MAP_FIXED|MAP_STACK, NULL, 0);
             if(sys_task_create((void *)USER_MAX_ADDR, (void *)entry, (void *)0x12345678) == NULL)
                 printk("Failed\r\n");
-        } else
+        } else {
+			if(fp != NULL)
+				g_fs_vector[1]->close(fp);
             printk("Failed\r\n");
+        }
     }
 }
 

@@ -85,21 +85,14 @@ typedef struct {
 	Elf32_Word	p_align;	/* memory/file alignment */
 } Elf32_Phdr;
 
-uint32_t load_aout(struct fs *fs, char *filename)
+uint32_t load_aout(struct file *fp)
 {
     int i, read;
     Elf32_Ehdr ehdr;
     uint32_t npages, prot;
-    struct vmzone *z;
 
-    struct file *fp;
-    if(0 != fs->open(fs, filename, O_RDONLY, &fp)) {
-        printk("task #%d: failed to open %s\r\n",
-                sys_task_getid(), filename);
-        return 0;
-    }
-
-    read = fs->read(fp, (uint8_t *)&ehdr, sizeof(ehdr));
+	fp->fs->seek(fp, 0, SEEK_SET);
+    read = fp->fs->read(fp, (uint8_t *)&ehdr, sizeof(ehdr));
     if(
        (read != sizeof(ehdr)) ||
        (ehdr.e_ident[EI_MAG0] != ELFMAG0) ||
@@ -115,19 +108,17 @@ uint32_t load_aout(struct fs *fs, char *filename)
        (ehdr.e_machine != EM_386)
 #endif
       ) {
-        fs->close(fp);
-        printk("task #%d: invalid executable file %s\r\n",
-            sys_task_getid(), filename);
+        printk("task #%d: invalid executable file\r\n",
+            sys_task_getid());
         return 0;
     }
 
     Elf32_Phdr *phdr = (Elf32_Phdr *)kmalloc(ehdr.e_phentsize*ehdr.e_phnum);
-    fs->seek(fp, ehdr.e_phoff, SEEK_SET);
-    read = fs->read(fp, (uint8_t *)phdr, ehdr.e_phentsize*ehdr.e_phnum);
+    fp->fs->seek(fp, ehdr.e_phoff, SEEK_SET);
+    read = fp->fs->read(fp, (uint8_t *)phdr, ehdr.e_phentsize*ehdr.e_phnum);
     if(read != ehdr.e_phentsize*ehdr.e_phnum) {
-        fs->close(fp);
-        printk("task #%d: bad executable file %s\r\n",
-            sys_task_getid(), filename);
+        printk("task #%d: bad executable file\r\n",
+            sys_task_getid());
         kfree(phdr);
         return 0;
     }
@@ -143,24 +134,20 @@ uint32_t load_aout(struct fs *fs, char *filename)
             if(phdr[i].p_flags & PF_W)
                 prot |= PROT_WRITE;
 
-            npages = PAGE_ROUNDUP((phdr[i].p_vaddr&PAGE_MASK)+phdr[i].p_memsz)/PAGE_SIZE;
-            z = page_alloc_in_addr(PAGE_TRUNCATE(phdr[i].p_vaddr), npages, prot, 0, NULL, 0);
-            if(z == NULL) {
-                fs->close(fp);
-                printk("task #%d: Address 0x%08x of %d pages has already been used!\r\n",
-                    sys_task_getid(),
-                    PAGE_TRUNCATE(phdr[i].p_vaddr),
-                    npages);
-                kfree(phdr);
-                return 0;
-            }
+            if(sys_mmap(PAGE_TRUNCATE(phdr[i].p_vaddr),
+			            PAGE_ROUNDUP(phdr[i].p_memsz)/PAGE_SIZE,
+			            prot, 1, MAP_PRIVATE|MAP_FIXED,
+			            fp,
+			            PAGE_TRUNCATE(phdr[i].p_offset)) == MAP_FAILED) {
+                printk("task #%d: failed to mmap file\r\n",
+                    sys_task_getid());
 
-            fs->seek(fp, phdr[i].p_offset, SEEK_SET);
-            read = fs->read(fp, (uint8_t *)phdr[i].p_vaddr, phdr[i].p_filesz);
-            if(read != phdr[i].p_filesz) {
-                fs->close(fp);
-                printk("task #%d: bad executable file %s\r\n",
-                    sys_task_getid(), filename);
+				int k;
+                for(k=i-1; k>=0; k--)
+					if(phdr[k].p_type == PT_LOAD)
+						sys_munmap(PAGE_TRUNCATE(phdr[k].p_vaddr),
+						           PAGE_ROUNDUP(phdr[k].p_memsz)/PAGE_SIZE);
+
                 kfree(phdr);
                 return 0;
             }
@@ -173,8 +160,8 @@ uint32_t load_aout(struct fs *fs, char *filename)
         }
     }
 
-    fs->close(fp);
     kfree(phdr);
     return ehdr.e_entry;
 }
+
 #endif /*__ELF__*/

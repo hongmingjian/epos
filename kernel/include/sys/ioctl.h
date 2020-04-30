@@ -61,6 +61,4 @@
 /* this should be _IORW, but stdio got there first */
 #define	_IOWR(g,n,t)	_IOC(IOC_INOUT,	(g), (n), sizeof(t))
 
-int ioctl(int fd, unsigned long request, void *arg);
-
 #endif /* !_SYS_IOCTL_H_ */

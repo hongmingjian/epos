@@ -206,11 +206,9 @@ int page_free(uint32_t va, int npages)
 
             if(p->fp) {
 				if(p->flags & MAP_SHARED) {
-					uint32_t pte;
 					int i;
 					for(i = 0; i < p->limit; i+=PAGE_SIZE) {
-						pte = *vtopte(va+i);
-						if(pte & L2E_V) {
+						if((PTD[(va+i)>>PGDR_SHIFT] & L1E_V) && ((*vtopte(va+i)) & L2E_V)) {
 							if(p->fp->fs->seek(p->fp, p->offset+i, SEEK_SET) >= 0 &&
 							   p->fp->fs->write(p->fp, (void *)(va+i), PAGE_SIZE) >= 0)
 								;

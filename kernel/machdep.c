@@ -292,6 +292,21 @@ int putchar(int c)
     return c;
 }
 
+//https://www.raspberrypi.org/forums/viewtopic.php?t=196015
+uint32_t rand(uint32_t min, uint32_t max)
+{
+	rng_reg_t *rngt = (rng_reg_t *)(MMIO_BASE_VA+RNG_REG);
+	if( !(rngt->ctrl & 1) ) {       // initialize on first call
+		rngt->status = 0x40000;     // not sure why is this important, but linux does it this way
+		rngt->intmask |= 1;         // mask interrupt
+		rngt->ctrl |= 1;            // enable the generator
+		while( !(rngt->status>>24) )
+			; // wait until it's entropy good enough
+	}
+	
+	return (rngt->data % (max - min)) + min;
+}
+
 int exception(struct context *ctx)
 {
     printk("SPSR  : 0x%08x\r\n", ctx->cf_spsr);

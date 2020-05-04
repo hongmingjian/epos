@@ -285,4 +285,6 @@ int sys_write(int fd, uint8_t *buffer, size_t size);
 int sys_seek(int fd, off_t offset, int whence);
 int sys_ioctl(int fd, uint32_t cmd, void *arg);
 
+uint32_t rand(uint32_t min, uint32_t max);
+
 #endif /*_KERNEL_H*/

@@ -405,6 +405,15 @@ typedef enum {
 #define MAILBOX_FULL        0x80000000
 #define MAILBOX_EMPTY       0x40000000
 
+#define RNG_REG (0x104000)
+typedef struct {
+    volatile uint32_t ctrl;
+    volatile uint32_t status;
+    volatile uint32_t data;
+    volatile uint32_t UNUSED1[1];
+    volatile uint32_t intmask;
+} rng_reg_t;
+
 #endif /*__ASSEMBLY__*/
 
 /*

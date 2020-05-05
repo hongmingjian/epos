@@ -16,7 +16,7 @@ LDFLAGS+=-Tkernel.ld -nostdlib -Wl,-Map,$(PROG).map
 COBJS=timer.o machdep.o task.o \
 	startup.o kmalloc.o page.o frame.o bitmap.o \
 	printk.o sdcard.o dosfs.o elf.o devfs.o file.o \
-	virtdev.o mailbox.o
+	virtdev.o mailbox.o sem.o
 COBJS+= ../lib/string.o ../lib/memcpy.o \
 		../lib/memset.o  ../lib/tlsf/tlsf.o ../lib/snprintf.o ../lib/softfloat.o
 OBJS=entry.o $(COBJS)

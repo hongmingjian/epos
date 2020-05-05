@@ -287,4 +287,13 @@ int sys_ioctl(int fd, uint32_t cmd, void *arg);
 
 uint32_t rand(uint32_t min, uint32_t max);
 
+struct sem {
+	int value;
+	struct wait_queue *wq;
+};
+struct sem *sys_sem_create(int value);
+void sys_sem_destory(struct sem *sem);
+void sys_sem_wait(struct sem *sem);
+void sys_sem_signal(struct sem *);
+
 #endif /*_KERNEL_H*/

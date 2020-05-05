@@ -1433,6 +1433,7 @@ static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp)
 
 	struct fat_file *fp = (struct fat_file *)kmalloc(sizeof(struct fat_file));
 	fp->file.fs = this;
+	fp->file.mode = mode;
 	fp->file.refcnt = 0;
 
 	uint32_t ret = DFS_OpenFile(&fs->volinfo, name, _mode, &scratch[0], &fp->fi);

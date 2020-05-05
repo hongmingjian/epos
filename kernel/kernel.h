@@ -273,10 +273,11 @@ struct fs {
 };
 struct file {
 	struct fs *fs;
+	int mode;
 	int refcnt;
 };
 
-#define NR_FILE_SYSTEM   16
+#define NR_FILE_SYSTEM 16
 #define NR_OPEN_FILE 64
 extern struct fs *g_fs_vector[];
 extern struct file *g_file_vector[];

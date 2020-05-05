@@ -4,13 +4,12 @@
 struct dev_file {
 	struct file file;
 	struct dev *dev;
-	int mode;
 	uint32_t pointer;
 };
 
-static int devfs_mount(struct fs *this, struct dev *dev, uint32_t addr);
+static int devfs_mount  (struct fs *this, struct dev *dev, uint32_t addr);
 static int devfs_unmount(struct fs *this);
-static int devfs_open(struct fs *this, char *name, int mode, struct file **_fpp);
+static int devfs_open   (struct fs *this, char *name, int mode, struct file **_fpp);
 static int devfs_close  (struct file *_fp);
 static int devfs_read   (struct file *_fp, uint8_t *buf, size_t size);
 static int devfs_write  (struct file *_fp, uint8_t *buf, size_t size);
@@ -69,9 +68,10 @@ static int devfs_open(struct fs *this, char *name, int mode, struct file **_fpp)
 
 	struct dev_file *fp = (struct dev_file *)kmalloc(sizeof(struct dev_file));
 	fp->file.fs = this;
+	fp->file.mode = mode;
+	fp->file.refcnt = 0;	
 	fp->dev = g_dev_vector[i];
 	fp->pointer = 0;
-	fp->mode = mode;
 	*_fpp = (struct file *)fp;
 
 	return 0;
@@ -80,6 +80,7 @@ static int devfs_open(struct fs *this, char *name, int mode, struct file **_fpp)
 static int devfs_close  (struct file *_fp)
 {
 	struct dev_file *fp = (struct dev_file *)_fp;
+	fp->dev->drv->detach(fp->dev);
 	kfree(fp);
 	return 0;
 }
@@ -88,7 +89,7 @@ static int devfs_read   (struct file *_fp, uint8_t *buf, size_t size)
 {
 	struct dev_file *fp = (struct dev_file *)_fp;
 
-	if((fp->mode & 1) != O_RDONLY)
+	if((fp->file.mode & 1) != O_RDONLY)
 		return -1;
 
 	int retval = fp->dev->drv->read(fp->dev, fp->pointer, buf, size);
@@ -102,7 +103,7 @@ static int devfs_write  (struct file *_fp, uint8_t *buf, size_t size)
 {
 	struct dev_file *fp = (struct dev_file *)_fp;
 
-	if(((fp->mode & 1) != O_WRONLY) && ((fp->mode & 2) != O_RDWR))
+	if(((fp->file.mode & 1) != O_WRONLY) && ((fp->file.mode & 2) != O_RDWR))
 		return -1;
 
 	int retval = fp->dev->drv->write(fp->dev, fp->pointer, buf, size);

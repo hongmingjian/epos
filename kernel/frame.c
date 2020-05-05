@@ -17,6 +17,7 @@
  * purpose.
  *
  */
+#include <stddef.h>
 #include "kernel.h"
 #include "bitmap.h"
 
@@ -137,4 +138,68 @@ void frame_free(uint32_t paddr, uint32_t nframes)
     restore_flags(flags);
 }
 
+void swapper(void *pv)
+{
+    uint32_t flags, va = PAGE_TRUNCATE(rand(USER_MIN_ADDR,
+                                            USER_MAX_ADDR-PAGE_SIZE));
+    struct vmzone *z;
+	while(1) {
+		sys_sem_wait(sem_swapper);
 
+		do {
+			va += PAGE_SIZE;
+			if(va >= USER_MAX_ADDR)
+				va = USER_MIN_ADDR;
+			z = page_zone(va);
+		} while(z == NULL);
+
+		do {
+			save_flags_cli(flags);
+
+			if((z->fp != NULL) &&
+			   (z->prot != PROT_NONE) &&
+			   ((z->flags & MAP_SHARED) ||
+				((z->flags & MAP_PRIVATE) &&
+				 (z->prot & PROT_WRITE) == 0))) {
+				uint32_t end =  z->base+z->limit;
+
+				restore_flags(flags);
+				int found = 0;
+				for(; va < end; va+=PAGE_SIZE)
+					if((PTD[va>>PGDR_SHIFT] & L1E_V) &&
+					   ((*vtopte(va)) & L2E_V)) {
+						found = 1;
+						break;
+					}
+
+				if(found)
+					break;
+
+				save_flags_cli(flags);
+			}
+
+			z = z->next;
+			if(z == NULL)
+				z = uvmzone;
+			va = z->base;
+			restore_flags(flags);
+		} while(1);
+
+		if(z->flags & MAP_SHARED) {
+			if(z->fp->fs->seek(z->fp, z->offset+va-z->base, SEEK_SET) >= 0 &&
+			   z->fp->fs->write(z->fp, (void *)va, PAGE_SIZE))
+				;
+			else
+				;
+		}
+
+		uint32_t pa=PAGE_TRUNCATE(*vtopte(va));
+
+		page_unmap(va, 1);
+		frame_free(pa, 1);
+
+		sys_sem_signal(sem_ram);
+	}
+
+	sys_task_exit(0);
+}

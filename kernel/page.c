@@ -22,9 +22,9 @@
 #include "kernel.h"
 
 static struct vmzone km0;
-static struct vmzone *kvmzone;
+struct vmzone *kvmzone;
 
-static struct vmzone *uvmzone;
+struct vmzone *uvmzone;
 
 void init_vmspace(uint32_t brk)
 {

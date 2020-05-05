@@ -627,10 +627,18 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
             flags |= L2E_U;
 
         /*搜索空闲帧*/
-        paddr = frame_alloc(1);
-        if(paddr != SIZE_MAX) {
-            /*找到空闲帧*/
+        do {
+            paddr = frame_alloc(1);
+            if(paddr != SIZE_MAX)
+                break;
+            if(g_task_running == NULL)
+                break;
 
+			sys_sem_signal(sem_swapper);
+			sys_sem_wait(sem_ram);
+        } while(1);
+
+        if(paddr != SIZE_MAX) {
             /*如果是小页表引起的缺页，需要填充页目录*/
             if(vaddr >= USER_MAX_ADDR && vaddr < KERNBASE) {
                 for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++) {

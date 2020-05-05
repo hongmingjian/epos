@@ -303,7 +303,7 @@ uint32_t rand(uint32_t min, uint32_t max)
 		while( !(rngt->status>>24) )
 			; // wait until it's entropy good enough
 	}
-	
+
 	return (rngt->data % (max - min)) + min;
 }
 

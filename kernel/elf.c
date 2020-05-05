@@ -89,7 +89,7 @@ uint32_t load_aout(struct file *fp)
 {
     int i, read;
     Elf32_Ehdr ehdr;
-    uint32_t npages, prot;
+    uint32_t prot;
 
 	fp->fs->seek(fp, 0, SEEK_SET);
     read = fp->fs->read(fp, (uint8_t *)&ehdr, sizeof(ehdr));

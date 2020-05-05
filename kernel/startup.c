@@ -49,16 +49,20 @@ struct sem *sem_swapper, *sem_ram;
 void start_user_task()
 {
     calibrate_delay();
-
-	sem_swapper = sys_sem_create(0);
-	sem_ram = sys_sem_create(0);
-
-    printk("task #%d: Creating swapper thread...", sys_task_getid());
-	if(sys_task_create(NULL, (void *)swapper, NULL) == NULL)
-		printk("Failed\r\n");
-	else
-		printk("Done\r\n");
-
+	
+    /*
+     * 初始化页面置换线程
+     */
+	{
+		sem_swapper = sys_sem_create(0);
+		sem_ram = sys_sem_create(0);
+		printk("task #%d: Creating swapper thread...", sys_task_getid());
+		if(sys_task_create(NULL, (void *)swapper, NULL) == NULL)
+			printk("Failed\r\n");
+		else
+			printk("Done\r\n");
+	}
+	
     /*
      * 初始化SD卡和FAT文件系统
      */

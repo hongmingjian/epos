@@ -38,6 +38,7 @@ uint32_t init_frame(uint32_t brk)
         pmzone[z].limit = g_ram_zone[i+1]-g_ram_zone[i];
         uint32_t bit_cnt = pmzone[z].limit/PAGE_SIZE;
         uint32_t size = PAGE_ROUNDUP(bitmap_buf_size(bit_cnt));
+		bit_cnt -= size/PAGE_SIZE;
         uint32_t paddr = pmzone[z].base;
         pmzone[z].base += size;
         pmzone[z].limit -= size;
@@ -59,7 +60,7 @@ uint32_t init_frame(uint32_t brk)
 
 /**
  * 在指定的物理地址pa分配nframes个连续帧
- * 失败返回BITMAP_ERROR(=SIZE_MAX)，成功返回pa
+ * 失败返回SIZE_MAX，成功返回pa
  */
 uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t nframes)
 {
@@ -80,12 +81,12 @@ uint32_t frame_alloc_in_addr(uint32_t pa, uint32_t nframes)
     }
     restore_flags(flags);
 
-    return BITMAP_ERROR;
+    return SIZE_MAX;
 }
 
 /**
  * 分配nframes个连续的帧
- * 失败返回BITMAP_ERROR(=SIZE_MAX)，成功返回帧的起始地址
+ * 失败返回SIZE_MAX，成功返回帧的起始地址
  */
 uint32_t frame_alloc(uint32_t nframes)
 {
@@ -97,7 +98,7 @@ uint32_t frame_alloc(uint32_t nframes)
         if(pmzone[z].limit == 0)
             break;
         uint32_t idx = bitmap_scan(pmzone[z].bitmap, 0, nframes, 0);
-        if(idx != BITMAP_ERROR) {
+        if(idx != SIZE_MAX) {
             bitmap_set_multiple(pmzone[z].bitmap, idx, nframes, 1);
             restore_flags(flags);
             return pmzone[z].base + idx * PAGE_SIZE;
@@ -105,7 +106,7 @@ uint32_t frame_alloc(uint32_t nframes)
     }
     restore_flags(flags);
 
-    return BITMAP_ERROR;
+    return SIZE_MAX;
 }
 
 /**

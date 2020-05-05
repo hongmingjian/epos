@@ -194,9 +194,8 @@ void swapper(void *pv)
 		}
 
 		uint32_t pa=PAGE_TRUNCATE(*vtopte(va));
-
 		page_unmap(va, 1);
-		frame_free(pa, 1);
+		frame_free(pa, 1);//XXX - 可能被共享，不能free？
 
 		sys_sem_signal(sem_ram);
 	}

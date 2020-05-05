@@ -208,7 +208,8 @@ int page_free(uint32_t va, int npages)
 				if(p->flags & MAP_SHARED) {
 					int i;
 					for(i = 0; i < p->limit; i+=PAGE_SIZE) {
-						if((PTD[(va+i)>>PGDR_SHIFT] & L1E_V) && ((*vtopte(va+i)) & L2E_V)) {
+						if((PTD[(va+i)>>PGDR_SHIFT] & L1E_V) &&
+						   ((*vtopte(va+i)) & L2E_V)) {
 							if(p->fp->fs->seek(p->fp, p->offset+i, SEEK_SET) >= 0 &&
 							   p->fp->fs->write(p->fp, (void *)(va+i), PAGE_SIZE) >= 0)
 								;
@@ -318,15 +319,13 @@ int sys_munmap(uint32_t va, int npages)
 	retval = page_free(va, npages);
 
 	if(retval == 0) {
-		uint32_t i, x;
+		int i;
 		for(i = 0; i < npages; i++) {
-			x = *vtopte(va);
-			if(x & L2E_V) {
-				*vtopte(va) = 0;
-				invlpg(va);
-
-				//XXX - 可能被共享，不能frame_free？
-				frame_free(PAGE_TRUNCATE(x), 1);
+			if((PTD[va>>PGDR_SHIFT] & L1E_V) &&
+			   ((*vtopte(va)) & L2E_V)) {
+				uint32_t pa=PAGE_TRUNCATE(*vtopte(va));
+				page_unmap(va, 1);
+				frame_free(pa, 1);//XXX - 可能被共享，不能free？
 			}
 			va += PAGE_SIZE;
 		}

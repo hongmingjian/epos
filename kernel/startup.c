@@ -39,7 +39,7 @@ uint32_t *PT  = (uint32_t *)USER_MAX_ADDR, //页表的指针
 time_t g_startup_time;
 
 extern struct fs     fat_fs, dev_fs;
-extern struct dev    null_dev, zero_dev, sd_dev, uart_dev0, uart_dev1, led_dev;
+extern struct dev    null_dev, zero_dev, sd_dev, uart_dev0, uart_dev1, led_dev, fb_dev;
 
 struct dev    *g_dev_vector[NR_DEVICE];
 struct fs     *g_fs_vector[NR_FILE_SYSTEM];
@@ -73,6 +73,7 @@ void start_user_task()
 	    g_dev_vector[3] = &uart_dev0;
 	    g_dev_vector[4] = &uart_dev1;
 	    g_dev_vector[5] = &led_dev;
+	    g_dev_vector[6] = &fb_dev;
 
 	    g_fs_vector[0] = &dev_fs;
 	    g_fs_vector[1] = &fat_fs;

@@ -264,7 +264,7 @@ typedef enum {
 {--------------------------------------------------------------------------*/
 typedef enum {
     CHANNEL_POWER   = 0x0,//Power Management
-    CHANNEL_FB      = 0x1,//Frame Buffer
+    CHANNEL_FB      = 0x1,//Frame Buffer - deprecated
     CHANNEL_VUART   = 0x2,//Virtual UART
     CHANNEL_VCHIQ   = 0x3,//VCHIQ
     CHANNEL_LEDS    = 0x4,//LEDs

@@ -44,16 +44,16 @@ $(PROG).elf: $(PROG).ld $(OBJS)
 $(PROG).ld: $(PROG).ld.in
 	$(CC) $(CPPFLAGS) -E -P -x c-header -o $@ $^
 
-$(PROG).uue: $(PROG).img
+$(PROG).img.uue: $(PROG).img
 	uuencode $^ $^ >$@
 
 .PHONY: release
 release: CFLAGS+=-O2 -ggdb
-release: make.dep $(PROG).uue
+release: make.dep $(PROG).img.uue
 
 .PHONY: debug
 debug: CFLAGS+=-O0 -ggdb -ffunction-sections
-debug: make.dep $(PROG).uue
+debug: make.dep $(PROG).img.uue
 
 .PHONY: qemu
 qemu: RPI_QEMU=1
@@ -65,6 +65,6 @@ qemudbg: debug
 
 .PHONY: clean
 clean:
-	-$(RM) $(OBJS) $(PROG).{ld,img,elf,map,uue} make.dep *.*~
+	-$(RM) $(OBJS) $(PROG).{ld,img,elf,map,img.uue} make.dep *.*~
 
 -include make.dep

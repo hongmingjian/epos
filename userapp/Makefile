@@ -33,7 +33,7 @@ OBJS=	lib/crt0.o lib/syscall-wrapper.o $(COBJS)
 $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-$(PROG).uue: $(PROG).out
+$(PROG).out.uue: $(PROG).out
 	uuencode $^ $^ >$@
 
 .DELETE_ON_ERROR: make.dep
@@ -42,11 +42,11 @@ make.dep: $(COBJS:.o=.c)
 
 .PHONY: release
 release: CFLAGS+=-O2 -ggdb
-release: make.dep $(PROG).uue
+release: make.dep $(PROG).out.uue
 
 .PHONY: debug
 debug: CFLAGS+=-O0 -ggdb
-debug: make.dep $(PROG).uue
+debug: make.dep $(PROG).out.uue
 
 .PHONY: qemu
 qemu: release
@@ -56,6 +56,6 @@ qemudbg: debug
 
 .PHONY: clean
 clean:
-	-$(RM) $(OBJS) $(PROG).{out,map,uue} make.dep *.*~
+	-$(RM) $(OBJS) $(PROG).{out,map,out.uue} make.dep *.*~
 
 -include make.dep

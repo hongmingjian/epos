@@ -626,29 +626,25 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
     }
 
     {
-        uint32_t paddr, vaddr0=PAGE_TRUNCATE(vaddr);
-        uint32_t flags = L2E_V|L2E_C;
-
-        if(z->prot & PROT_WRITE)
-            flags |= L2E_W;
-
-        /*只要访问用户的地址空间，都代表用户模式访问*/
-        if(vaddr < USER_MAX_ADDR)
-            flags |= L2E_U;
+        uint32_t paddr, flags;
 
         /*搜索空闲帧*/
-        do {
-            paddr = frame_alloc(1);
-            if(paddr != SIZE_MAX)
-                break;
-            if(g_task_running == NULL)
-                break;
-
-			sys_sem_signal(sem_swapper);
-			sys_sem_wait(sem_ram);
-        } while(1);
+        paddr = frame_alloc(1);
+		save_flags_cli(flags);
+		wake_up(&wq_swapper, 1);
+		restore_flags(flags);
 
         if(paddr != SIZE_MAX) {
+			uint32_t vaddr0=PAGE_TRUNCATE(vaddr);
+			flags = L2E_V|L2E_C;
+
+			if(z->prot & PROT_WRITE)
+				flags |= L2E_W;
+
+			/*只要访问用户的地址空间，都代表用户模式访问*/
+			if(vaddr < USER_MAX_ADDR)
+				flags |= L2E_U;
+
             /*如果是小页表引起的缺页，需要填充页目录*/
             if(vaddr >= USER_MAX_ADDR && vaddr < KERNBASE) {
                 for(i = 0; i < PAGE_SIZE/L2_TABLE_SIZE; i++) {
@@ -659,19 +655,21 @@ int do_page_fault(struct context *ctx, uint32_t vaddr, uint32_t code)
             *vtopte(vaddr) = paddr|flags;
             invlpg(vaddr);
 
+//			printk("swap in: 0x%08x->0x%08x\r\n", vaddr0, paddr);
+
             if(z->fp != NULL) {
-				if(z->fp->fs->seek(z->fp, vaddr0-z->base+z->offset, SEEK_SET) >= 0 &&
-				   z->fp->fs->read(z->fp, (void *)(vaddr0), PAGE_SIZE) >= 0)
+				if(z->fp->fs->seek(z->fp, z->offset+vaddr0-z->base, SEEK_SET) >= 0 &&
+				   z->fp->fs->read(z->fp, (void *)vaddr0, PAGE_SIZE) >= 0)
 					;
 				else
 					;
             } else
-				memset((void *)(vaddr0), 0, PAGE_SIZE);
+				memset((void *)vaddr0, 0, PAGE_SIZE);
 
             return 0;
         } else {
             /*物理内存已耗尽*/
-            printk(fmt, vaddr, code, "->OUT OF RAM\r\n");
+            printk(fmt, vaddr, code, "->OUT OF MEMORY\r\n");
         }
     }
 
@@ -768,6 +766,8 @@ static void init_ram(uint32_t physfree)
         0,                      // End Tag
     };
 
+    //XXX - The message should be vtop((uint32_t)&msg[0])|0xc0000000
+    //      but vtop is not ready and the following happens to work!
     mailbox_write_read(CHANNEL_TAGS, (uint32_t)&msg[0]);
 
     g_ram_zone[0] = physfree;
@@ -821,6 +821,9 @@ static void md_startup(uint32_t mbi, uint32_t physfree)
 
         0,                      // End Tag
     };
+
+    //XXX - The message should be vtop((uint32_t)&msg[0])|0xc0000000
+    //      but vtop is not ready and the following happens to work!
     mailbox_write_read(CHANNEL_TAGS, (uint32_t)&msg[0]);
     boardid = msg[5];
 

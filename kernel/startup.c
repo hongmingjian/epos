@@ -45,7 +45,6 @@ struct dev    *g_dev_vector[NR_DEVICE];
 struct fs     *g_fs_vector[NR_FILE_SYSTEM];
 struct file   *g_file_vector[NR_OPEN_FILE];
 
-struct sem *sem_swapper, *sem_ram;
 void start_user_task()
 {
     calibrate_delay();
@@ -54,8 +53,6 @@ void start_user_task()
      * 初始化页面置换线程
      */
 	{
-		sem_swapper = sys_sem_create(0);
-		sem_ram = sys_sem_create(0);
 		printk("task #%d: Creating swapper thread...", sys_task_getid());
 		if(sys_task_create(NULL, (void *)swapper, NULL) == NULL)
 			printk("Failed\r\n");

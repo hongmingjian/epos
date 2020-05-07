@@ -163,6 +163,7 @@ int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 int printk(const char *fmt,...);
 
 struct file;
+struct sem;
 struct vmzone {
     uint32_t base;
     uint32_t limit;
@@ -171,6 +172,8 @@ struct vmzone {
     struct file *fp;
     off_t offset;
     int flags;
+    
+    struct sem *lock;
 
     struct vmzone *next;
 };
@@ -301,6 +304,6 @@ void sys_sem_wait(struct sem *sem);
 void sys_sem_signal(struct sem *);
 
 void swapper(void *pv);
-extern struct sem *sem_swapper, *sem_ram;
+extern struct wait_queue *wq_swapper;
 
 #endif /*_KERNEL_H*/

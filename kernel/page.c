@@ -34,6 +34,7 @@ void init_vmspace(uint32_t brk)
     km0.fp = NULL;
     km0.offset = 0;
     km0.flags = 0;
+    km0.lock = NULL;
     km0.next = NULL;
     kvmzone = &km0;
 
@@ -93,6 +94,7 @@ struct vmzone *page_alloc_in_addr(uint32_t va, int npages, int prot,
 		z->fp->refcnt++;
     z->offset = offset;
     z->flags = flags;
+	z->lock = sys_sem_create(1);
 
     if(q == NULL) {
         z->next = p;
@@ -160,6 +162,7 @@ struct vmzone *page_alloc(int npages, int prot, int user,
 		z->fp->refcnt++;
     z->offset = offset;
     z->flags = flags;
+	z->lock = sys_sem_create(1);
 
     if(q == NULL) {
         z->next = p;
@@ -204,14 +207,14 @@ int page_free(uint32_t va, int npages)
             }
             restore_flags(flags);
 
+			sys_sem_wait(p->lock);
             if(p->fp) {
 				if(p->flags & MAP_SHARED) {
-					int i;
-					for(i = 0; i < p->limit; i+=PAGE_SIZE) {
-						if((PTD[(va+i)>>PGDR_SHIFT] & L1E_V) &&
-						   ((*vtopte(va+i)) & L2E_V)) {
-							if(p->fp->fs->seek(p->fp, p->offset+i, SEEK_SET) >= 0 &&
-							   p->fp->fs->write(p->fp, (void *)(va+i), PAGE_SIZE) >= 0)
+					for(va = p->base; va < p->base+p->limit; va+=PAGE_SIZE) {
+						if((PTD[(va)>>PGDR_SHIFT] & L1E_V) &&
+						   ((*vtopte(va)) & L2E_V)) {
+							if(p->fp->fs->seek(p->fp, p->offset+va-p->base, SEEK_SET) >= 0 &&
+							   p->fp->fs->write(p->fp, (void *)va, PAGE_SIZE) >= 0)
 								;
 							else
 								;
@@ -225,6 +228,16 @@ int page_free(uint32_t va, int npages)
 				}
             }
 
+			for(va = p->base; va < p->base+p->limit; va+=PAGE_SIZE) {
+				if((PTD[va>>PGDR_SHIFT] & L1E_V) &&
+				   ((*vtopte(va)) & L2E_V)) {
+					uint32_t pa=PAGE_TRUNCATE(*vtopte(va));
+					page_unmap(va, 1);
+					frame_free(pa, 1);//XXX - 可能被共享，不能free？
+				}
+			}
+//			sys_sem_signal(p->lock); //destroy will wake up all blocked threads
+			sys_sem_destory(p->lock);
             kfree(p);
             return 0;
         }
@@ -311,27 +324,9 @@ void *sys_mmap(uint32_t va, int npages, int prot, int user, int flags, struct fi
 
 int sys_munmap(uint32_t va, int npages)
 {
-	int retval = (int)MAP_FAILED;
-
 	if(npages == 0)
-		return retval;
-
-	retval = page_free(va, npages);
-
-	if(retval == 0) {
-		int i;
-		for(i = 0; i < npages; i++) {
-			if((PTD[va>>PGDR_SHIFT] & L1E_V) &&
-			   ((*vtopte(va)) & L2E_V)) {
-				uint32_t pa=PAGE_TRUNCATE(*vtopte(va));
-				page_unmap(va, 1);
-				frame_free(pa, 1);//XXX - 可能被共享，不能free？
-			}
-			va += PAGE_SIZE;
-		}
-	}
-
-	return retval;
+		return (int)MAP_FAILED;
+	return page_free(va, npages);
 }
 /**
  * 把从vaddr开始的虚拟地址，映射到paddr开始的物理地址。
@@ -358,4 +353,3 @@ void page_unmap(uint32_t vaddr, int npages)
         vaddr += PAGE_SIZE;
     }
 }
-

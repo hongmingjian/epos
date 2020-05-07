@@ -141,8 +141,8 @@ static void fb_detach(struct dev *dp)
 {
 	struct fb_dev *dev = (struct fb_dev *)dp;
 
-	page_unmap(dev->FrameBuffer, dev->FrameBufferSize/PAGE_SIZE);
-    page_free(dev->FrameBuffer, dev->FrameBufferSize/PAGE_SIZE);
+	page_unmap(dev->FrameBuffer, PAGE_ROUNDUP(dev->FrameBufferSize)/PAGE_SIZE);
+    page_free(dev->FrameBuffer, PAGE_ROUNDUP(dev->FrameBufferSize)/PAGE_SIZE);
 
     uint32_t  __attribute__((aligned(16))) msg[6] =
     {

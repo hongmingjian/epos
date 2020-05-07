@@ -69,7 +69,7 @@ static int devfs_open(struct fs *this, char *name, int mode, struct file **_fpp)
 	struct dev_file *fp = (struct dev_file *)kmalloc(sizeof(struct dev_file));
 	fp->file.fs = this;
 	fp->file.mode = mode;
-	fp->file.refcnt = 0;	
+	fp->file.refcnt = 0;
 	fp->dev = g_dev_vector[i];
 	fp->pointer = 0;
 	*_fpp = (struct file *)fp;
@@ -89,7 +89,7 @@ static int devfs_read   (struct file *_fp, uint8_t *buf, size_t size)
 {
 	struct dev_file *fp = (struct dev_file *)_fp;
 
-	if((fp->file.mode & 1) != O_RDONLY)
+	if((fp->file.mode & 3) != O_RDONLY && (fp->file.mode & 3) != O_RDWR)
 		return -1;
 
 	int retval = fp->dev->drv->read(fp->dev, fp->pointer, buf, size);
@@ -103,7 +103,7 @@ static int devfs_write  (struct file *_fp, uint8_t *buf, size_t size)
 {
 	struct dev_file *fp = (struct dev_file *)_fp;
 
-	if(((fp->file.mode & 1) != O_WRONLY) && ((fp->file.mode & 2) != O_RDWR))
+	if((fp->file.mode & 3) != O_WRONLY && (fp->file.mode & 3) != O_RDWR)
 		return -1;
 
 	int retval = fp->dev->drv->write(fp->dev, fp->pointer, buf, size);

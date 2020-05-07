@@ -1425,6 +1425,8 @@ static int fat_open(struct fs *this, char *name, int mode, struct file **_fpp)
 		_mode = DFS_WRITE;
 		break;
 	case O_RDONLY:
+		if(mode & O_APPEND)
+			return -1;
 		_mode = DFS_READ;
 		break;
 	default:
@@ -1463,6 +1465,9 @@ static int fat_read   (struct file *_fp, uint8_t *buf, size_t size)
 {
 	struct fat_file *fp = (struct fat_file *)_fp;
 
+	if((fp->file.mode & 3) != O_RDONLY && (fp->file.mode & 3) != O_RDWR)
+		return -1;
+
 	unsigned char scratch[SECTOR_SIZE];
 	uint32_t successcount;
 	uint32_t ret = DFS_ReadFile(&fp->fi, &scratch[0], buf, &successcount, size);
@@ -1474,6 +1479,9 @@ static int fat_read   (struct file *_fp, uint8_t *buf, size_t size)
 static int fat_write  (struct file *_fp, uint8_t *buf, size_t size)
 {
 	struct fat_file *fp = (struct fat_file *)_fp;
+
+	if((fp->file.mode & 3) != O_WRONLY && (fp->file.mode & 3) != O_RDWR)
+		return -1;
 
 	unsigned char scratch[SECTOR_SIZE];
 	uint32_t successcount;

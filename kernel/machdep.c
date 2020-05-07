@@ -457,11 +457,13 @@ void syscall(struct context *ctx)
 				fp = g_file_vector[fd];
 
 				if(prot & PROT_READ)
-					if((fp->mode & 1) != O_RDONLY)
+					if(((fp->mode & 3) != O_RDONLY) &&
+					   ((fp->mode & 3) != O_RDWR))
 						break;
 				if(prot & PROT_WRITE)
-					if(((fp->mode & 1) != O_WRONLY) &&
-					   ((fp->mode & 2) != O_RDWR))
+					if((flags & MAP_SHARED) &&
+					   ((fp->mode & 3) != O_WRONLY) &&
+					   ((fp->mode & 3) != O_RDWR))
 						break;
             }
 		    ctx->cf_r0 = sys_mmap((uint32_t)addr, len1/PAGE_SIZE, prot, 1, flags, fp, offset);

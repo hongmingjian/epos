@@ -176,6 +176,18 @@ void swapper(void *pv)
 			va += PAGE_SIZE;
 			if(va >= USER_MAX_ADDR)
 				va = USER_MIN_ADDR;
+
+			if((PTD[va>>PGDR_SHIFT] & L1E_V) == 0) {
+                if((va & ((1<<PGDR_SHIFT)-1)) == 0)
+                    va += (1<<PGDR_SHIFT) - PAGE_SIZE;
+                else
+                    va = ROUNDUP(va, 1<<PGDR_SHIFT) - PAGE_SIZE;
+                continue;
+            }
+
+            if(((*vtopte(va)) & L2E_V) == 0)
+				continue;
+
 			z = page_zone(va);
 			if(z != NULL) {
 				sys_sem_wait(z->lock);
@@ -207,9 +219,9 @@ void swapper(void *pv)
 					sys_sem_signal(z->lock);
 				}
 			}
-			
+
 			if(!over_allocation())
-				break;			
+				break;
 		} while(1);
 	} while(1);
 

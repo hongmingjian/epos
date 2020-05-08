@@ -211,14 +211,22 @@ int page_free(uint32_t va, int npages)
             if(p->fp) {
 				if(p->flags & MAP_SHARED) {
 					for(va = p->base; va < p->base+p->limit; va+=PAGE_SIZE) {
-						if((PTD[(va)>>PGDR_SHIFT] & L1E_V) &&
-						   ((*vtopte(va)) & L2E_V)) {
-							if(p->fp->fs->seek(p->fp, p->offset+va-p->base, SEEK_SET) >= 0 &&
-							   p->fp->fs->write(p->fp, (void *)va, PAGE_SIZE) >= 0)
-								;
+						if((PTD[va>>PGDR_SHIFT] & L1E_V) == 0) {
+							if((va & ((1<<PGDR_SHIFT)-1)) == 0)
+								va += (1<<PGDR_SHIFT) - PAGE_SIZE;
 							else
-								;
+								va = ROUNDUP(va, 1<<PGDR_SHIFT) - PAGE_SIZE;
+							continue;
 						}
+
+						if(((*vtopte(va)) & L2E_V) == 0)
+							continue;
+
+						if(p->fp->fs->seek(p->fp, p->offset+va-p->base, SEEK_SET) >= 0 &&
+						   p->fp->fs->write(p->fp, (void *)va, PAGE_SIZE) >= 0)
+							;
+						else
+							;
 					}
 				}
 
@@ -229,12 +237,20 @@ int page_free(uint32_t va, int npages)
             }
 
 			for(va = p->base; va < p->base+p->limit; va+=PAGE_SIZE) {
-				if((PTD[va>>PGDR_SHIFT] & L1E_V) &&
-				   ((*vtopte(va)) & L2E_V)) {
-					uint32_t pa=PAGE_TRUNCATE(*vtopte(va));
-					page_unmap(va, 1);
-					frame_free(pa, 1);//XXX - 可能被共享，不能free？
+				if((PTD[va>>PGDR_SHIFT] & L1E_V) == 0) {
+					if((va & ((1<<PGDR_SHIFT)-1)) == 0)
+						va += (1<<PGDR_SHIFT) - PAGE_SIZE;
+					else
+						va = ROUNDUP(va, 1<<PGDR_SHIFT) - PAGE_SIZE;
+					continue;
 				}
+
+				if(((*vtopte(va)) & L2E_V) == 0)
+					continue;
+
+				uint32_t pa=PAGE_TRUNCATE(*vtopte(va));
+				page_unmap(va, 1);
+				frame_free(pa, 1);//XXX - 可能被共享，不能free？
 			}
 //			sys_sem_signal(p->lock); //destroy will wake up all blocked threads
 			sys_sem_destory(p->lock);

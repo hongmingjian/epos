@@ -177,9 +177,6 @@ struct vmzone {
 
     struct vmzone *next;
 };
-extern struct vmzone *kvmzone;
-extern struct vmzone *uvmzone;
-
 void init_vmspace(uint32_t brk);
 struct vmzone *page_alloc(int npages, int prot, int user,
                           int flags, struct file *fp, off_t offset);

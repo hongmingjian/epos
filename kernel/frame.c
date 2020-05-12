@@ -203,7 +203,7 @@ void swapper(void *pv)
 
 							if(z->flags & MAP_SHARED) {
 								if(z->fp->fs->seek(z->fp, z->offset+va-z->base, SEEK_SET) >= 0 &&
-								   z->fp->fs->write(z->fp, (void *)va, PAGE_SIZE))
+								   z->fp->fs->write(z->fp, (void *)va, PAGE_SIZE) >= 0)
 									;
 								else
 									;

@@ -6,12 +6,15 @@ PROG=		eposkrnl
 all: run
 
 CPPFLAGS=-DVERBOSE=0 -nostdinc -I../include
-ASFLAGS=-m32 -Wall -D__ASSEMBLY__
-CFLAGS=	-m32 -Wall -pipe \
+ASFLAGS=-m32 -march=i386 -Wall -D__ASSEMBLY__
+CFLAGS=	-m32 -march=i386 -Wall -pipe \
 	-ffreestanding -fleading-underscore -mno-ms-bitfields \
 	-fno-pie
 LDFLAGS=-m32 -Tkernel.ld -nostdlib \
 		-Wl,-Map,$(PROG).map -static
+ifneq ($(OS),Windows_NT)
+	LDFLAGS+=-Wl,-melf_i386
+endif
 
 COBJS=	ide.o floppy.o e1000.o pci.o vm86.o \
 	kbd.o timer.o machdep.o task.o mktime.o sem.o \

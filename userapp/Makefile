@@ -6,13 +6,16 @@ PROG=	a
 all: run
 
 CPPFLAGS=-nostdinc -I../include -Iinclude
-ASFLAGS=-m32 -Wall -D__ASSEMBLY__
-CFLAGS=	-m32 -Wall -pipe\
+ASFLAGS=-m32 -march=i386 -Wall -D__ASSEMBLY__
+CFLAGS=	-m32 -march=i386 -Wall -pipe\
 	-DSNPRINTF_FLOATPOINT \
 	-ffreestanding -fleading-underscore -mno-ms-bitfields \
 	-fno-pie
 LDFLAGS=-m32 -nostdlib \
 		-Wl,-Map,$(PROG).map -static
+ifneq ($(OS),Windows_NT)
+	LDFLAGS+=-Wl,-melf_i386
+endif
 
 COBJS=	vm86call.o graphics.o main.o
 COBJS+=	lib/sysconf.o lib/math.o lib/stdio.o lib/stdlib.o \

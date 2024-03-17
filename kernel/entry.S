@@ -214,7 +214,7 @@ _exception_simd_fp:
     subl %edx, %esp; \
     movl %esp, %edi; \
     cld; \
-    rep movsd; \
+    rep movsl; \
     3:
 
 #define EPILOGUE \
@@ -269,7 +269,7 @@ exception_common:
     addl $(22*4), %esp
     movl 20(%esp), %edi
     cld
-    rep movsd
+    rep movsl
 
     popl %edi
     popl %esi
@@ -459,7 +459,7 @@ _sys_vm86:
     movl %esp, %edi
     movl $22, %ecx
     cld
-    rep movsd
+    rep movsl
 
     movl _g_task_running, %eax
     movl %edi, (%eax)

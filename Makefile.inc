@@ -1,7 +1,7 @@
 CROSS=
 
 ifeq ($(shell uname -s),Darwin)
-CROSS=i586-elf-
+CROSS=x86_64-elf-
 endif
 
 SHELL=		/bin/bash

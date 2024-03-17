@@ -56,7 +56,7 @@ ifeq ($(shell uname -s),Darwin)
 			   -e 'end run'
 endif
 endif
-	-qemu-system-i386$(W) -S -gdb tcp::1234,nowait,nodelay,server,ipv4 -m 32 -boot order=c -vga std -drive format=raw,file=$^,index=0,media=disk
+	-qemu-system-i386$(W) -S -s -m 32 -boot order=c -vga std -drive format=raw,file=$^,index=0,media=disk
 
 .PHONY: bochs
 bochs: hd.img

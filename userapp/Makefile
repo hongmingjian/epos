@@ -10,7 +10,7 @@ ASFLAGS=-m32 -march=i386 -Wall -D__ASSEMBLY__
 CFLAGS=	-m32 -march=i386 -Wall -pipe\
 	-DSNPRINTF_FLOATPOINT \
 	-ffreestanding -fleading-underscore -mno-ms-bitfields \
-	-fno-pie
+	-fno-pie -fno-stack-check -mno-stack-arg-probe -fno-stack-protector
 LDFLAGS=-m32 -nostdlib \
 		-Wl,-Map,$(PROG).map -static
 ifneq ($(OS),Windows_NT)

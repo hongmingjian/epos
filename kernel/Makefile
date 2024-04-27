@@ -9,7 +9,7 @@ CPPFLAGS=-DVERBOSE=0 -nostdinc -I../include
 ASFLAGS=-m32 -march=i386 -Wall -D__ASSEMBLY__
 CFLAGS=	-m32 -march=i386 -Wall -pipe \
 	-ffreestanding -fleading-underscore -mno-ms-bitfields \
-	-fno-pie
+	-fno-pie -fno-stack-check -mno-stack-arg-probe -fno-stack-protector
 LDFLAGS=-m32 -Tkernel.ld -nostdlib \
 		-Wl,-Map,$(PROG).map -static
 ifneq ($(OS),Windows_NT)

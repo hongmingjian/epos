@@ -115,19 +115,19 @@ diff:
 																-c "set go-=T" \
 																-c "syn on" \
 																-c "set ft=diff" -dmMnR - 2>&1 >/dev/null
-	
+
 .PHONY: submit
 submit: clean
 	@all=`svn status | grep '^[M?]' | cut -c9- | tr '\\\\' '/' | tr '\n' ' '`; \
 	if [ -z "$${all}" ]; then echo ">>> No files changed."; exit; fi; \
-	echo ">>> Files to be submitted: $${all}"; \
-	size=`tar -cjO $${all} | wc -c | tr -d '[:space:]'`; \
+	printf "%s\e[1;31m%s\e[0m\n" ">>> Files to be submitted: " "$${all}"; \
+	size=`tar -cf- $${all} | bzip2 | wc -c | tr -d '[:space:]'`; \
 	echo -n ">>> Total size of bytes $${size}"; \
 	if [ $${size} -gt $$((64*1024)) ]; then echo " exceeds the limit of 64KiB."; exit; else echo ""; fi; \
 	echo -n ">>> Enter student ID: "; \
 	read sid; \
 	if ! echo "$${sid}" | grep -qE '^[0-9]{8}$$'; then echo ">>> Student ID must be 8 digits."; exit; fi;\
-	tar -cjf $${sid}.tbz $${all}; \
+	tar -cf- $${all} | bzip2 >$${sid}.tbz; \
 	trap "rm $${sid}.tbz; exit" 1 2 3 15; \
 	curl -isS -X POST -H "Content-Type: multipart/form-data" -F "myFile=@$${sid}.tbz" \
 		 http://xgate.dhis.org/osexp/submit.php | sed -n 's@<div .*>\(.*\)<\/div>@>>> \1\'$$'\n@p'; \

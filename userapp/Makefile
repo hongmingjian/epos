@@ -11,10 +11,10 @@ CFLAGS=	-m32 -march=i386 -Wall -pipe\
 	-DSNPRINTF_FLOATPOINT \
 	-ffreestanding -fleading-underscore -mno-ms-bitfields \
 	-fno-pie -fno-stack-check -mno-stack-arg-probe -fno-stack-protector
-LDFLAGS=-m32 -nostdlib \
+LDFLAGS=-m32 -nostdlib -nostartfiles -nodefaultlibs \
 		-Wl,-Map,$(PROG).map -static
 ifneq ($(OS),Windows_NT)
-	LDFLAGS+=-Wl,-melf_i386
+LDFLAGS+=-Wl,-melf_i386
 endif
 
 COBJS=	vm86call.o graphics.o main.o

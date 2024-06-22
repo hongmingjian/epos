@@ -56,6 +56,6 @@ run: make.dep $(PROG).bin
 
 .PHONY: clean
 clean:
-	-$(RM) kernel.ld $(OBJS) $(PROG).bin $(PROG).out $(PROG).map make.dep *.*~
+	-$(RM) kernel.ld $(OBJS) $(PROG).bin $(PROG).out $(PROG).map make.dep .~* *.*~ ._* .DS_Store *.stackdump
 
 -include make.dep

@@ -106,7 +106,7 @@ debug: qemudbg
 .PHONY: clean
 clean:
 	@for subdir in $(SUBDIRS); do $(MAKE) -C $${subdir} $@; done
-	$(RM) hd.img hd.vmdk tags
+	$(RM) hd.img hd.vmdk tags .~* *.*~ ._* .DS_Store *.stackdump
 
 .PHONY: diff
 diff:

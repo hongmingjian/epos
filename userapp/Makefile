@@ -53,6 +53,6 @@ run: make.dep $(PROG).out
 
 .PHONY: clean
 clean:
-	-$(RM) $(OBJS) $(PROG).out $(PROG).map make.dep *.*~
+	-$(RM) $(OBJS) $(PROG).out $(PROG).map make.dep .~* *.*~ ._* .DS_Store *.stackdump
 
 -include make.dep

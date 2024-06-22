@@ -75,7 +75,7 @@ static void pci_device_read_config(struct pci_device_std *conf,
 
 static void pci_bus_scan(uint32_t bus)
 {
-	struct pci_device_std yyy;
+	struct pci_device_std yyy = {0};
 	uint32_t slot, func;
 
 	for(slot = 0; slot < 0x20; slot++){

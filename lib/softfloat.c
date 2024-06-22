@@ -58,7 +58,7 @@ int64_t __divdi3(int64_t num, int64_t den)
 int64_t __moddi3(int64_t num, int64_t den)
 {
   int minus = 0;
-  int64_t v;
+  int64_t v = 0;
 
   if ( num < 0 ) {
     num = -num;
@@ -83,7 +83,7 @@ uint64_t __udivdi3(uint64_t num, uint64_t den)
 
 uint64_t __umoddi3(uint64_t num, uint64_t den)
 {
-  uint64_t v;
+  uint64_t v = 0;
 
   (void) __udivmoddi4(num, den, &v);
   return v;

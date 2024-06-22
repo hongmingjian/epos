@@ -30,7 +30,7 @@ $(PROG).out: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 make.dep: *.c *.h
-	$(CC) $(CPPFLAGS) -M $(COBJS:.o=.c) >make.dep
+	$(CC) $(CPPFLAGS) -M $(COBJS:.o=.c) lib/syscall-wrapper.S >make.dep
 
 .DELETE_ON_ERROR: make.dep
 .FORCE:

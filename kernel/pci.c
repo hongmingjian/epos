@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include "cpu.h"
+#include "kernel.h"
 
 #define PCI_CONFIG_ADDR      0xCF8
 #define PCI_CONFIG_DATA      0xCFC
@@ -62,6 +63,8 @@ static void pci_write(uint32_t addr, uint32_t data){
 	outportl(PCI_CONFIG_DATA, data);
 }
 
+#pragma GCC push_options
+#pragma GCC optimize("O0")
 static void pci_device_read_config(struct pci_device_std *conf,
                                    uint32_t bus, uint32_t slot, uint32_t func)
 {
@@ -72,6 +75,7 @@ static void pci_device_read_config(struct pci_device_std *conf,
 		p++;
 	}
 }
+#pragma GCC pop_options
 
 static void pci_bus_scan(uint32_t bus)
 {

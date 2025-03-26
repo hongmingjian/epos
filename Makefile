@@ -118,7 +118,7 @@ diff:
 
 .PHONY: submit
 submit: clean
-	@all=`svn status | grep '^[M?]' | cut -c9- | tr '\\\\' '/' | tr '\n' ' '`; \
+	@all=`svn status | grep '^[M?]' | cut -c9- | grep -v '^[[:punct:]]' | tr '\\\\' '/' | tr '\n' ' '`; \
 	if [ -z "$${all}" ]; then echo ">>> No files changed."; exit; fi; \
 	printf "%s\e[1;31m%s\e[0m\n" ">>> Files to be submitted: " "$${all}"; \
 	size=`tar -cf- $${all} | bzip2 | wc -c | tr -d '[:space:]'`; \

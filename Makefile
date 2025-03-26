@@ -45,10 +45,10 @@ qemu: hd.img
 qemudbg: MODE=debug
 qemudbg: hd.img
 ifeq ($(OS),Windows_NT)
-	-start $(GDB)
+	-start $(GDB) -iex 'add-auto-load-safe-path .'
 else
 ifeq ($(shell uname -s),Linux)
-	-/usr/bin/x-terminal-emulator -e $(GDB) &
+	-/usr/bin/x-terminal-emulator -e $(GDB) -iex 'add-auto-load-safe-path .' &
 endif
 ifeq ($(shell uname -s),Darwin)
 	-osascript -e 'on run argv' \

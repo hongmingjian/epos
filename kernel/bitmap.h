@@ -3,9 +3,15 @@
 
 #include <sys/types.h>
 
+#if !defined(__STDC_VERSION__) || __STDC_VERSION__ < 202311L
 typedef int bool;
+#endif
+#ifndef true
 #define true 1
+#endif
+#ifndef false
 #define false 0
+#endif
 
 /* Bitmap abstract data type. */
 

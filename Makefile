@@ -127,8 +127,17 @@ submit: clean
 	echo -n ">>> Enter student ID: "; \
 	read sid; \
 	if ! echo "$${sid}" | grep -qE '^[0-9]{8}$$'; then echo ">>> Student ID must be 8 digits."; exit; fi;\
+	echo -n ">>> Enter password: "; \
+	read passwd; \
+	if [ -z "$${passwd}" ]; then echo ">>> Password cannot be empty."; exit; fi; \
 	tar -cf- $${all} | bzip2 >$${sid}.tbz; \
 	trap "rm $${sid}.tbz; exit" 1 2 3 15; \
-	curl -isS -X POST -H "Content-Type: multipart/form-data" -F "myFile=@$${sid}.tbz" \
-		 http://xgate.dhis.org/osexp/submit.php | sed -n 's@<div .*>\(.*\)<\/div>@>>> \1\'$$'\n@p'; \
-	$(RM) $${sid}.tbz
+	RESP=$$(curl -s -d "passwd=$${passwd}" "http://xgate.dhis.org:8080/osexp/submit.php?sid=$${sid}" | sed -n 's@<div .*>\(.*\)<\/div>@\1@p'); \
+	if echo "$${RESP}" | grep -q '^token='; then \
+		curl -s -F "myFile=@$${sid}.tbz" "http://xgate.dhis.org:8080/osexp/upload.php?sid=$${sid}&$${RESP}" \
+	    | sed -n 's@<div .*>\(.*\)<\/div>@>>> \1\'$$'\n@p'; \
+	else \
+		echo ">>> $${RESP}"; \
+	fi; \
+	$(RM) $${sid}.tbz;
+

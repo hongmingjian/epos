@@ -40,9 +40,11 @@ make.dep: *.c *.h
 ../lib/softfloat.o: .FORCE
 ../lib/string.o: .FORCE
 
-$(PROG).bin: kernel.ld $(OBJS)
-	$(CC) $(LDFLAGS) -o $(PROG).out $(OBJS) $(LIBS)
-	$(OBJCOPY) -S -O binary $(PROG).out $@
+$(PROG).bin: $(PROG).elf
+	$(OBJCOPY) -S -O binary $^ $@
+
+$(PROG).elf: kernel.ld $(OBJS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
 kernel.ld: kernel.ld.in
 	$(CC) -E -P -x c-header -o $@ $^
@@ -57,6 +59,6 @@ run: make.dep $(PROG).bin
 
 .PHONY: clean
 clean:
-	-$(RM) kernel.ld $(OBJS) $(PROG).bin $(PROG).out $(PROG).map make.dep .~* *.*~ ._* .DS_Store *.stackdump
+	-$(RM) kernel.ld $(OBJS) $(PROG).bin $(PROG).elf $(PROG).map make.dep .~* *.*~ ._* .DS_Store *.stackdump
 
 -include make.dep

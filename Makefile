@@ -30,7 +30,7 @@ ifeq ($(shell uname -s),Linux)
 	sudo umount /mnt
 endif
 ifeq ($(shell uname -s),Darwin)
-	if [ ! -s $@ ]; then base64 -D -i $@.bz2.txt | bunzip2 >$@ ; fi
+	if [ ! -s $@ ]; then base64 -d -i $@.bz2.txt | bunzip2 >$@ ; fi
 	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
 	cp kernel/eposkrnl.bin kernel/eposkrnl.elf userapp/a.out /Volumes/EPOSDISK
 	hdiutil detach /Volumes/EPOSDISK

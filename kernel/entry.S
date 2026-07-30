@@ -46,7 +46,7 @@ _entry:
     jmp     multiboot_entry
 
 /* Align 32 bits boundary. */
-    .align  4
+    .align  4, 0x90
 
 multiboot_header:
     .long   MULTIBOOT_HEADER_MAGIC /* magic */

@@ -16,6 +16,7 @@ LDFLAGS=-m32 -Tkernel.ld -nostdlib -nostartfiles -nodefaultlibs \
 ifneq ($(OS),Windows_NT)
 LDFLAGS+=-Wl,-melf_i386
 endif
+LDFLAGS+=-Wl,--build-id=none
 
 COBJS=	ide.o floppy.o e1000.o pci.o vm86.o \
 	kbd.o timer.o machdep.o task.o mktime.o sem.o \

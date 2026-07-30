@@ -25,7 +25,7 @@ ifeq ($(OS),Windows_NT)
 else
 ifeq ($(shell uname -s),Linux)
 	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
-	sudo mount -o loop,offset=32256,umask=0022,gid=$(shell id -g),uid=$(shell id -u) -t vfat $@ /mnt
+	sudo mount -o loop,offset=1M,umask=0022,gid=$(shell id -g),uid=$(shell id -u) -t vfat $@ /mnt
 	cp kernel/eposkrnl.bin userapp/a.out /mnt
 	sudo umount /mnt
 endif
@@ -85,7 +85,7 @@ vbox: hd.vmdk
 		VBoxManage -q storagectl epos --name IDE --remove; \
 		VBoxManage -q closemedium disk $^; \
 	fi
-	@VBoxManage -q modifyvm epos --cpus 1 --memory 32 --boot1 disk --nic1 bridged --nictype1 82540EM  --bridgeadapter1 en0 --macaddress1 auto
+	@VBoxManage -q modifyvm epos --cpus 1 --memory 48 --boot1 disk --nic1 bridged --nictype1 82540EM  --bridgeadapter1 en0 --macaddress1 auto
 	@VBoxManage -q storagectl epos --add ide --name IDE
 	@VBoxManage -q storageattach epos --storagectl IDE --port 0 --device 0 --type hdd --medium $^
 	@VBoxManage startvm epos

@@ -20,19 +20,21 @@ $(SUBDIRS):
 hd.img: subdirs
 ifeq ($(OS),Windows_NT)
 	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
-	imgcpy kernel/eposkrnl.bin $@=C:\eposkrnl.bin
+	imgcpy kernel/eposkrnl.bin $@=C:\eposkrnl
 	imgcpy userapp/a.out $@=C:\a.out
 else
 ifeq ($(shell uname -s),Linux)
 	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
 	sudo mount -o loop,offset=1M,umask=0022,gid=$(shell id -g),uid=$(shell id -u) -t vfat $@ /mnt
-	cp kernel/eposkrnl.bin kernel/eposkrnl.elf userapp/a.out /mnt
+	-cp kernel/eposkrnl.elf /mnt/eposkrnl
+	-cp userapp/a.out /mnt/
 	sudo umount /mnt
 endif
 ifeq ($(shell uname -s),Darwin)
 	if [ ! -s $@ ]; then base64 -d -i $@.bz2.txt | bunzip2 >$@ ; fi
 	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
-	cp kernel/eposkrnl.bin kernel/eposkrnl.elf userapp/a.out /Volumes/EPOSDISK
+	-cp kernel/eposkrnl.elf /Volumes/EPOSDISK/eposkrnl
+	-cp userapp/a.out /Volumes/EPOSDISK/
 	hdiutil detach /Volumes/EPOSDISK
 endif
 endif

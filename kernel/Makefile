@@ -41,7 +41,7 @@ make.dep: *.c *.h
 ../lib/string.o: .FORCE
 
 $(PROG).bin: $(PROG).elf
-	$(OBJCOPY) -S -O binary $^ $@
+	$(OBJCOPY) -S -O binary -R .note.* -R .comment $^ $@
 
 $(PROG).elf: kernel.ld $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)

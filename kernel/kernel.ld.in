@@ -30,25 +30,37 @@ OUTPUT_FORMAT("elf32-i386")
 ENTRY(_entry)
 SECTIONS {
   . = KERNBASE+LOADADDR;
-  .text : {
+  .text : AT(ADDR(.text)-KERNBASE) {
     *(.text)
+    *(.text.*)
   }
 
   . = ALIGN(4);
-  .rodata : {
+  .rodata : AT(ADDR(.rodata)-KERNBASE) {
     *(.rodata)
+    *(.rodata.*)
+
+    . = ALIGN(4);
+    *(.eh_frame)
   }
-  .rdata : {
+  .rdata : AT(ADDR(.rdata)-KERNBASE) {
     *(.rdata)
+    *(.rdata.*)
+
+    . = ALIGN(4);
+    *(.eh_frame)
   }
-  .data : {
+  .data : AT(ADDR(.data)-KERNBASE) {
     *(.data)
+    *(.data.*)
   }
+
   . = ALIGN(4);
   _edata = .;
 
-  .bss : {
+  .bss : AT(ADDR(.bss)-KERNBASE) {
     *(.bss)
+    *(.bss.*)
     *(COMMON)
   }
 

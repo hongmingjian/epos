@@ -1,9 +1,10 @@
 include Makefile.inc
 
+W=
+EXT=elf
 ifeq ($(OS),Windows_NT)
 W=w
-else
-W=
+EXT=bin
 endif
 
 .PHONY: all
@@ -18,26 +19,9 @@ $(SUBDIRS):
 	$(MAKE) -C $@ $(MODE)
 
 hd.img: subdirs
-ifeq ($(OS),Windows_NT)
-	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
-	imgcpy kernel/eposkrnl.bin $@=C:\eposkrnl
-	imgcpy userapp/a.out $@=C:\a.out
-else
-ifeq ($(shell uname -s),Linux)
-	if [ ! -s $@ ]; then base64 -d $@.bz2.txt | bunzip2 >$@ ; fi
-	sudo mount -o loop,offset=1M,umask=0022,gid=$(shell id -g),uid=$(shell id -u) -t vfat $@ /mnt
-	-cp kernel/eposkrnl.elf /mnt/eposkrnl
-	-cp userapp/a.out /mnt/
-	sudo umount /mnt
-endif
-ifeq ($(shell uname -s),Darwin)
-	if [ ! -s $@ ]; then base64 -d -i $@.bz2.txt | bunzip2 >$@ ; fi
-	hdiutil attach -imagekey diskimage-class=CRawDiskImage $@
-	-cp kernel/eposkrnl.elf /Volumes/EPOSDISK/eposkrnl
-	-cp userapp/a.out /Volumes/EPOSDISK/
-	hdiutil detach /Volumes/EPOSDISK
-endif
-endif
+	if [ ! -s $@ ]; then cat $@.bz2.txt | base64 -d | bunzip2 >$@ ; fi
+	mtools -c mcopy -i $@@@1M kernel/eposkrnl.$(EXT) ::eposkrnl
+	mtools -c mcopy -i $@@@1M userapp/a.out ::
 
 .PHONY: qemu
 qemu: hd.img

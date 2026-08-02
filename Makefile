@@ -20,8 +20,8 @@ $(SUBDIRS):
 
 hd.img: subdirs
 	if [ ! -s $@ ]; then cat $@.bz2.txt | base64 -d | bunzip2 >$@ ; fi
-	mtools -c mcopy -i $@@@1M kernel/eposkrnl.$(EXT) ::eposkrnl
-	mtools -c mcopy -i $@@@1M userapp/a.out ::
+	mtools -c mcopy -i $@@@1M -D oO kernel/eposkrnl.$(EXT) ::eposkrnl
+	mtools -c mcopy -i $@@@1M -D oO userapp/a.out ::
 
 .PHONY: qemu
 qemu: hd.img

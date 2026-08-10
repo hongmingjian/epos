@@ -119,8 +119,8 @@ submit: clean
 	tar -cf- $${all} | bzip2 >$${sid}.tbz; \
 	trap "rm $${sid}.tbz; exit" 1 2 3 15; \
 	RESP=$$(curl -s -d "passwd=$${passwd}" "http://xgate.dhis.org:8080/osexp/verify.php?sid=$${sid}" | sed -n 's@<div .*>\(.*\)<\/div>@\1@p'); \
-	if echo "$${RESP}" | grep -q '^token='; then \
-		curl -s -F "myFile=@$${sid}.tbz" "http://xgate.dhis.org:8080/osexp/upload.php?sid=$${sid}&$${RESP}" \
+	if echo "$${RESP}" | grep -q '^Authorization: Bearer '; then \
+		curl -s -H "$${RESP}" -F "myFile=@$${sid}.tbz" "http://xgate.dhis.org:8080/osexp/upload.php?sid=$${sid}" \
 	    | sed -n 's@<div .*>\(.*\)<\/div>@>>> \1\'$$'\n@p'; \
 	else \
 		echo ">>> $${RESP}"; \
